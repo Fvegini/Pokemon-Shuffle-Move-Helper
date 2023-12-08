@@ -1,0 +1,7 @@
+pyautogui
+opencv-python
+Pillow
+image-similarity-measures
+PyAutoGUI
+pyfftw
+pynput

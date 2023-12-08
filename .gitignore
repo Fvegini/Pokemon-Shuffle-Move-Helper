@@ -1,0 +1,7 @@
+env
+images
+.vscode
+icons_processed
+__pycache__
+*test
+
