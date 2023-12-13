@@ -7,6 +7,10 @@ from pathlib import Path
 from pynput import mouse
 from src.board_image_selector import BoardImageSelector, AppImageSelector
 from src import constants, custom_utils, load_from_shuffle
+import pickle
+
+last_team_to_execute = None
+LAST_TEAM_PKL = "last_team.pkl"
 
 class ImageSelectorApp:
     def __init__(self, master):
@@ -18,6 +22,7 @@ class ImageSelectorApp:
         
         self.update_image_list()
         self.configure_initial_geometry()
+        self.load_last_team()
 
     def create_app_menu(self):
         self.menubar = tk.Menu(self.master)
@@ -28,19 +33,21 @@ class ImageSelectorApp:
         menu1.add_command(label="Load Team from Shufle Move", command=self.load_team)
         menu1.add_command(label="Register Barrier Icon", command=self.open_barrier_register_screen)
         menu1.add_command(label="Remove Barrier Icon", command=lambda: self.open_app_register_screen(action="Remove"))
-        # menu1.add_command(label="Register Extra Icon", command=self.open_extra_register_screen)
+        menu1.add_command(label="Register Extra Icon", command=self.open_extra_register_screen)
         # menu1.add_command(label="Execute with Selected Images", command=self.execute_selected_images)
         self.menubar.add_cascade(label="Menu 1", menu=menu1)
 
         menu2 = tk.Menu(self.menubar, tearoff=0)
         self.has_barrier_check = tk.BooleanVar()
         self.keep_loop_check = tk.BooleanVar()
+        self.screen_capture_activated = tk.BooleanVar()
         menu2.add_checkbutton(label="Has Barrier", variable=self.has_barrier_check, command=self.reveal_or_hide_barrier_img)
         menu2.add_checkbutton(label="Activate Auto Get Images", variable=self.keep_loop_check, command=self.check_function)
+        menu2.add_checkbutton(label="Activate Screen Capture", variable=self.screen_capture_activated, command=self.screen_capture_mode)
         self.menubar.add_cascade(label="Menu 2", menu=menu2)
 
         self.menubar.add_command(label="Execute", command=self.execute_selected_images)
-        self.menubar.add_command(label="Test", command=self.destroy_selected_pokemons)
+        self.menubar.add_command(label="Debug", command=self.show_last_move)
         
 
     def create_left_app_screen(self):
@@ -215,11 +222,16 @@ class ImageSelectorApp:
         return widget_list
 
     def execute_selected_images(self):
+        global last_team_to_execute
         values_to_execute = []
         for image_widgets in self.get_selected_images_widgets_list():
             values_to_execute.append((Path(constants.IMAGES_PATH, image_widgets[0].cget("text")), image_widgets[1].get()))
-
-        match_icons.start(values_to_execute, self.has_barrier_check.get())
+        if last_team_to_execute != values_to_execute:
+            last_team_to_execute = values_to_execute
+            with open(LAST_TEAM_PKL, 'wb') as file:
+                pickle.dump(values_to_execute, file)
+        
+        match_icons.start(values_to_execute, self.has_barrier_check.get(), screen_record=self.screen_capture_activated.get())
         # print("Executing with selected images:", values_to_execute)
 
     def show_popup(self):
@@ -244,6 +256,9 @@ class ImageSelectorApp:
                 self.execute_selected_images()
             self.check_job = self.master.after(1000, self.check_function)  # Schedule next check after 2000 milliseconds (2 seconds)
 
+    def screen_capture_mode(self):
+        return
+
     def reveal_or_hide_barrier_img(self):
         if not self.has_barrier_check.get():
             for image_widgets in self.get_selected_images_widgets_list():
@@ -254,6 +269,7 @@ class ImageSelectorApp:
                 label.configure(image=photo)
                 label.photo = photo
         else:
+            self.insert_image_widget(f"_Empty.png")
             for image_widgets in self.get_selected_images_widgets_list():
                 label = image_widgets[0]
                 image_path = Path(constants.IMAGES_PATH, label.cget("text"))
@@ -271,6 +287,25 @@ class ImageSelectorApp:
                 photo = ImageTk.PhotoImage(image)
                 label.configure(image=photo)
                 label.photo = photo
+
+    def show_last_move(self):
+        image_frame = tk.Toplevel(self.master)
+        image_frame.title("Image Frame")
+        photo = ImageTk.PhotoImage(Image.fromarray(match_icons.last_image))
+        label = ttk.Label(image_frame, image=photo)
+        label.image = photo
+        label.pack()
+
+    def load_last_team(self):
+        try:
+            self.destroy_selected_pokemons()
+            with open(LAST_TEAM_PKL, 'rb') as file:
+                loaded_variable = pickle.load(file)
+            for pokemon, shortcut in loaded_variable:
+                self.insert_image_widget(pokemon.name, shortcut)
+        except:
+            pass
+        
 
     def load_team(self):
         load_from_shuffle.TeamLoader(root=self)

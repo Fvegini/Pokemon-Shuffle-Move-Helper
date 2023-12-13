@@ -16,12 +16,14 @@ from src import constants, custom_utils
 embedder = Embedder()
 downscale_res = (128, 128)
 shuffle_move_first_square_position = (1500, 90)
+mouse_after_shuffle_position = (1420, 560)
 # board_top_left = (390, 533) # Position for Airdroid Cast
 # board_bottom_right = (890, 1028) # Position for Airdroid Cast
 board_top_left = (11, 466) # Position for 5kPlayer
 board_bottom_right = (573, 1027) # Position for 5kPlayer
 
 custom_board_image = None
+last_image = None
 
 class CustomImage():
     
@@ -86,9 +88,6 @@ class Match():
     
     def inspect_match(self):
         custom_utils.show_list_images([self.board_icon, self.match_icon])
-
-
-
 
 
 def load_icon_classes(values_to_execute, has_barriers):
@@ -215,8 +214,7 @@ def compare_with_list(original_image, icons_list: List[Icon], has_barriers):
         # print(f"SSIM: {percentage_ssim:.2f} - {results_ssim}")
         # print(f"COS: {percentage_cosine:.2f} - {results_cosine}")
     # if percentage_ssim > 0: #Check a good number
-    return best_cosine
-    # else:
+    return best_cosine# else:
         # return best_rmse
 
 def calculate_percentage_difference(num1, num2):
@@ -230,10 +228,19 @@ def predict(original_image, icons_list, has_barriers) -> Match:
     return compare_with_list(np_img, icons_list, has_barriers)
     
 
-def capture_board_screensot():
+def capture_board_screensot(screen_record):
     global board_top_left, board_bottom_right, custom_board_image
+    if screen_record == "last":
+        img = Image.open(constants.LAST_BOARD_IMAGE_PATH)
     if custom_board_image:
         return Image.open(custom_board_image)
+    elif screen_record:
+        x0 = board_top_left[0]
+        x1 = board_bottom_right[0] - board_top_left[0]
+        y0 = board_top_left[1]
+        y1 = board_bottom_right[1] - board_top_left[1]
+        img = pyautogui.screenshot(region=(x0, y0, x1, y1))
+        img.save(constants.LAST_BOARD_IMAGE_PATH)
     elif os.path.exists(constants.DROPBOX_IMAGE_PATH):
         shutil.move(constants.DROPBOX_IMAGE_PATH, constants.LAST_BOARD_IMAGE_PATH)
         img = Image.open(constants.LAST_BOARD_IMAGE_PATH)
@@ -243,8 +250,8 @@ def capture_board_screensot():
         img = Image.open(constants.LAST_BOARD_IMAGE_PATH)
     return img
 
-def make_cell_list():
-    img = capture_board_screensot()
+def make_cell_list(screen_record):
+    img = capture_board_screensot(screen_record)
     cell_list = []
     cell_size = (img.size[0]/6, img.size[1]/6)
     for y in range(0, 6):
@@ -253,19 +260,20 @@ def make_cell_list():
             cell_list.append(img.crop(cell_box))
     return cell_list
             
-def start(request_values, has_barriers, show_debug=False):
+def start(request_values, has_barriers, show_debug=False, screen_record=False):
+    global last_image
     icons_list = load_icon_classes(request_values, has_barriers)
     match_list: List[Match] = []
-    cell_list = make_cell_list()
-    predict(cell_list[15], icons_list, has_barriers)
-    for cell in cell_list:
+    cell_list = make_cell_list(screen_record)
+    predict(cell_list[17], icons_list, has_barriers)
+    for idx, cell in enumerate(cell_list):
         result = predict(cell, icons_list, has_barriers)
         match_list.append(result)
     
-    if show_debug:
-        img1 = concatenate_images([match.board_icon for match in match_list])
-        img2 = concatenate_images([match.match_icon for match in match_list])
-        custom_utils.show_list_images([img1, img2])
+    # if show_debug:
+    img1 = concatenate_images([match.board_icon for match in match_list])
+    img2 = concatenate_images([match.match_icon for match in match_list])
+    last_image = custom_utils.concatenate_list_images([img1, img2])
     
     commands_list = list(chain(*[match.shortcut for match in match_list]))
     
@@ -313,6 +321,8 @@ def execute_commands(command_sequence):
     for command in command_sequence:
             pyautogui.press(command)
             time.sleep(0.005)
+    pyautogui.moveTo(x=mouse_after_shuffle_position[0], y=mouse_after_shuffle_position[1])
+
 
 IMAGES_PATH = r"assets\icons_processed"
 test_scenarios = {
