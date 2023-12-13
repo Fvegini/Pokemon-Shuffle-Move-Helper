@@ -23,6 +23,7 @@ class ImageSelectorApp:
         self.update_image_list()
         self.configure_initial_geometry()
         self.load_last_team()
+        self.update_preview_image()
 
     def create_app_menu(self):
         self.menubar = tk.Menu(self.master)
@@ -102,17 +103,18 @@ class ImageSelectorApp:
         # Set window geometry
         self.master.geometry(f"{width}x{height}+{x}+{y}")
 
-    def preview_image(self, event):
+    def update_preview_image(self, event=None):
         selected_index = self.image_listbox.curselection()
-        if selected_index:
-            selected_file = self.image_listbox.get(selected_index)
-            image_path = os.path.join(constants.IMAGES_PATH, selected_file) 
-            image = Image.open(image_path)
-            image.thumbnail((50, 50))
-            photo = ImageTk.PhotoImage(image)
+        if not selected_index:
+            selected_index = 1
+        selected_file = self.image_listbox.get(selected_index)
+        image_path = os.path.join(constants.IMAGES_PATH, selected_file) 
+        image = Image.open(image_path)
+        image.thumbnail((50, 50))
+        photo = ImageTk.PhotoImage(image)
 
-            self.image_preview.config(image=photo)
-            self.image_preview.image = photo
+        self.image_preview.config(image=photo)
+        self.image_preview.image = photo
 
     def update_image_list(self, *args):
         search_term = self.search_var.get().lower()
@@ -126,7 +128,7 @@ class ImageSelectorApp:
         for image_file in image_files:
             self.image_listbox.insert(tk.END, image_file)
 
-        self.image_listbox.bind("<<ListboxSelect>>", self.preview_image)
+        self.image_listbox.bind("<<ListboxSelect>>", self.update_preview_image)
         self.image_listbox.bind("<Double-Button-1>", self.select_image)
 
     def select_image(self, event=None):
