@@ -1,7 +1,7 @@
 env
-images
 .vscode
-icons_processed
 __pycache__
 *test
 to_remove
+last_board.png
+last_team.pkl
