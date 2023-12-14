@@ -279,7 +279,12 @@ def start(request_values, has_barriers, show_debug=False, screen_record=False):
     
     execute_commands(commands_list)
 
-def concatenate_images(images, num_columns=6):
+def concatenate_images(images, num_columns=11, blank_space=5):
+    max_height = max(image.shape[0] for image in images)
+    blank_square = custom_utils.create_blank_square(max_height, blank_space)
+    images = custom_utils.insert_in_middle(images, blank_square)
+    # images = [np.zeros((max_height, image.shape[1], 3), dtype=np.uint8) for image in new_images_test]
+    
     num_images = len(images)
 
     # Determine the number of rows needed based on the number of columns
@@ -298,8 +303,8 @@ def concatenate_images(images, num_columns=6):
         col = i % num_columns
 
         # Calculate the centering offsets
-        y_offset = row * max_height + (max_height - image.shape[0]) // 2
-        x_offset = col * max_width + (max_width - image.shape[1]) // 2
+        y_offset = 0 #row * max_height + (max_height - image.shape[0]) // 2
+        x_offset = 0 #col * max_width + (max_width - image.shape[1]) // 2
 
         canvas[y_offset:y_offset+image.shape[0], x_offset:x_offset+image.shape[1], :] = image
 
@@ -312,15 +317,15 @@ def execute_commands(command_sequence):
     # position = [el * screen_factor for el in position]
     # position
     pyautogui.click(shuffle_move_first_square_position[0], y=shuffle_move_first_square_position[1])
-    time.sleep(0.2)
-    with pyautogui.hold("ctrl"):
-            pyautogui.press("del")
-    time.sleep(0.2)
-    pyautogui.click(x=shuffle_move_first_square_position[0], y=shuffle_move_first_square_position[1])
-    time.sleep(0.2)
-    for command in command_sequence:
-            pyautogui.press(command)
-            time.sleep(0.005)
+    time.sleep(0.1)
+    # with pyautogui.hold("ctrl"):
+            # pyautogui.press("del")
+    # time.sleep(0.2)
+    # pyautogui.click(x=shuffle_move_first_square_position[0], y=shuffle_move_first_square_position[1])
+    # time.sleep(0.2)
+    # for command in command_sequence:
+    pyautogui.press(command_sequence)
+        # time.sleep(0.005)
     pyautogui.moveTo(x=mouse_after_shuffle_position[0], y=mouse_after_shuffle_position[1])
 
 
