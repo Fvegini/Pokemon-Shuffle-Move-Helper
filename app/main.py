@@ -1,7 +1,9 @@
 import os
 import tkinter as tk
 from tkinter import ttk
+import customtkinter
 from PIL import Image, ImageTk
+import keyboard
 from src import match_icons
 from pathlib import Path
 from pynput import mouse
@@ -17,7 +19,26 @@ class ImageSelectorApp:
         self.master = master
         self.master.title("Image Selector")
         self.create_app_menu()
+        
+        self.tabview = customtkinter.CTkTabview(self.master, height=150)
+        # self.tabview.pack(expand=1, fill=tkinter.X, pady=0, padx=0, anchor="n")
+        self.tabview.pack(expand=1, fill=tk.X, pady=0, padx=0, anchor="nw")
+        
+        self.tabview.add("CTkTabview")
+        self.tabview.add("Tab 2")
+        self.tabview.add("Tab 3")
+        # self.tabview.tab("CTkTabview").grid_columnconfigure(0, weight=1)  # configure grid of individual tabs
+        self.tabview.tab("Tab 2").grid_columnconfigure(0, weight=1)
+        self.tabview._segmented_button.grid(sticky="W")
+        
+        self.appview = customtkinter.CTkFrame(self.master)
+        self.appview.pack(expand=1, fill=tk.X, pady=0, padx=0, anchor="nw")
         self.create_left_app_screen()
+
+        # self.images_frame = tk.Frame(self.appview, background="lightblue")
+        # self.images_frame.pack(side=tk.LEFT, padx=10, pady=10, anchor="nw")
+        # self.images_frame.pack(padx=10, pady=10, anchor="nw")
+
         self.create_right_app_screen()
         
         self.update_image_list()
@@ -30,7 +51,10 @@ class ImageSelectorApp:
         self.master.config(menu=self.menubar)
 
         menu1 = tk.Menu(self.menubar, tearoff=0)
-        menu1.add_command(label="Configure Positions", command=self.show_popup)
+        menu1.add_command(label="Configure Board Top Left", command=lambda: self.show_popup(click_counter= 1))
+        menu1.add_command(label="Configure Board Bottom Right", command=lambda: self.show_popup(click_counter= 2))
+        menu1.add_command(label="Configure Shuffle Move First Square", command=lambda: self.show_popup(click_counter= 3))
+        menu1.add_command(label="Configure Mouse Return Position", command=lambda: self.show_popup(click_counter= 4))
         menu1.add_command(label="Load Team from Shufle Move", command=self.load_team)
         menu1.add_command(label="Register Barrier Icon", command=self.open_barrier_register_screen)
         menu1.add_command(label="Remove Barrier Icon", command=lambda: self.open_app_register_screen(action="Remove"))
@@ -49,11 +73,12 @@ class ImageSelectorApp:
 
         self.menubar.add_command(label="Execute", command=self.execute_selected_images)
         self.menubar.add_command(label="Debug", command=self.show_last_move)
-        
+        keyboard.add_hotkey('f2', self.execute_selected_images)
 
     def create_left_app_screen(self):
-        self.images_frame = tk.Frame(self.master, background="lightblue")
-        self.images_frame.pack(side=tk.LEFT, padx=10, pady=10)
+        self.images_frame = tk.Frame(self.appview, background="lightblue")
+        # self.images_frame.pack(side=tk.LEFT, padx=10, pady=10, anchor="nw")
+        self.images_frame.pack(side=tk.LEFT, padx=10, pady=10, anchor="nw")
 
         self.search_var = tk.StringVar()
         self.search_var.trace("w", self.update_image_list)
@@ -72,17 +97,21 @@ class ImageSelectorApp:
         self.image_preview.grid(row=2, column=1, padx=5, pady=5)
 
     def create_right_app_screen(self):
-        self.selected_images_frame = tk.Frame(self.master, background="aqua")
-        self.selected_images_frame.pack(side=tk.LEFT, padx=10, pady=2, expand=1)
-        self.selected_images_frame.rowconfigure((0,1), weight=1)
+        self.selected_images_frame_master = tk.Frame(self.appview, background="aqua")
+        # self.selected_images_frame.pack(side=tk.LEFT, padx=10, pady=2, expand=1)
+        self.selected_images_frame_master.pack(padx=10, pady=2, expand=1, anchor="nw")
+        # self.selected_images_frame.rowconfigure((0,1), weight=1)
         
+        self.selected_images_frame = tk.Frame(self.selected_images_frame_master, background="aqua")
+        # self.selected_images_frame.pack(side=tk.LEFT, padx=10, pady=2, expand=1)
+        self.selected_images_frame.pack(padx=10, pady=2, expand=1, anchor="nw")
 
         self.selected_images = []
         self.selected_images_canvas = tk.Canvas(self.selected_images_frame, background="aquamarine1", width=1200, height=150)
-        self.selected_images_canvas.pack(side=tk.TOP, fill=tk.BOTH)
+        self.selected_images_canvas.pack(side=tk.TOP, fill=tk.X)
 
         self.selected_images_scrollbar = tk.Scrollbar(self.selected_images_frame, orient=tk.HORIZONTAL, command=self.selected_images_canvas.xview)
-        self.selected_images_scrollbar.pack(side=tk.TOP, fill=tk.X)
+        self.selected_images_scrollbar.pack(side=tk.BOTTOM, fill=tk.X)
         self.selected_images_canvas.config(xscrollcommand=self.selected_images_scrollbar.set)
 
         self.selected_images_container = tk.Frame(self.selected_images_canvas, background="azure")
@@ -236,17 +265,36 @@ class ImageSelectorApp:
         match_icons.start(values_to_execute, self.has_barrier_check.get(), screen_record=self.screen_capture_activated.get())
         # print("Executing with selected images:", values_to_execute)
 
-    def show_popup(self):
+    def show_popup(self, click_counter):
         self.popup = tk.Toplevel(self.master)
         self.popup.title("Click Recorder")
-        label = tk.Label(self.popup, text="Click on the first cell of Shuffle Move")
+        self.click_counter = click_counter
+        if self.click_counter == 1:
+            label = tk.Label(self.popup, text="Click on the top left corner of the board")
+        elif self.click_counter == 2:
+            label = tk.Label(self.popup, text="Click on the lower right corner of the board")
+        elif self.click_counter == 3:
+            label = tk.Label(self.popup, text="Click on the first cell of Shuffle Move")
+        elif self.click_counter == 4:
+            label = tk.Label(self.popup, text="Click on the Execute button from the Shuffle Helper")
         label.pack(pady=10)
         self.mouse_listener = mouse.Listener(on_click=self.record_click)
         self.mouse_listener.start()
 
     def record_click(self, x, y, button, pressed):
         if pressed:
-            match_icons.shuffle_move_first_square_position = (x, y)
+            if self.click_counter == 1:
+                match_icons.board_top_left = (x ,y)
+                print(f"recorded first click at - {match_icons.board_top_left}")
+            elif self.click_counter == 2:
+                match_icons.board_bottom_right = (x, y)
+                print(f"recorded second click at - {match_icons.board_bottom_right}")
+            elif self.click_counter == 3:
+                match_icons.shuffle_move_first_square_position = (x, y)
+                print(f"recorded third click at - {match_icons.shuffle_move_first_square_position}")
+            elif self.click_counter == 4:
+                match_icons.mouse_after_shuffle_position = (x, y)
+                print(f"recorded third click at - {match_icons.mouse_after_shuffle_position}")
             self.mouse_listener.stop()
             self.popup.destroy()
 
@@ -315,6 +363,6 @@ class ImageSelectorApp:
         
 
 if __name__ == "__main__":    
-    root = tk.Tk()    
+    root = customtkinter.CTk()
     app = ImageSelectorApp(root)
     root.mainloop()

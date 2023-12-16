@@ -99,24 +99,6 @@ def load_icon_classes(values_to_execute, has_barriers):
     return icons_list
 
 
-# def old_load_icon_classes(values_to_execute, has_barriers):
-#     images = []
-#     for image_path, shortcut in values_to_execute:
-        
-#         np_img = custom_utils.resize_cv2_image(cv2.imread(image_path.as_posix()), downscale_res)
-#         if np_img is not None:
-#             np_img = cv2.cvtColor(np_img, cv2.COLOR_BGR2RGB)
-#         else:
-#             np_img = np.array(Image.open(image_path.as_posix()).convert('RGB'))
-#             np_img = custom_utils.resize_cv2_image(np_img,downscale_res)
-#         images.append(Icon(image_path.stem, np_img, [shortcut], image_path))
-#         if has_barriers:
-            
-#             barrier_img = add_barrier_layer(np_img)
-#             barrier_path = change_filename_in_path(image_path, prefix=constants.BARRIER_PREFIX)
-#             images.append(Icon(barrier_path.stem, barrier_img, [shortcut, "F"], barrier_path))
-#     return images
-
 def change_filename_in_path(original_path, new_filename="", suffix="", prefix=""):
     if isinstance(original_path, str):
         custom_path = Path(original_path)
@@ -166,12 +148,6 @@ def cut_borders(image, border_size=15):
 
     return cropped_image
 
-
-# def compare_images(original_image, image_to_compare):
-#     try:
-#         return rmse(original_image, image_to_compare), ssim(original_image, image_to_compare)
-#     except:
-#         return None, None
 
 def compare_with_list(original_image, icons_list: List[Icon], has_barriers):
     # Compare the input image with each image in the folder
@@ -271,45 +247,58 @@ def start(request_values, has_barriers, show_debug=False, screen_record=False):
         match_list.append(result)
     
     # if show_debug:
-    img1 = concatenate_images([match.board_icon for match in match_list])
-    img2 = concatenate_images([match.match_icon for match in match_list])
+    img1 = concatenate_cv2_images([match.board_icon for match in match_list])
+    img2 = concatenate_cv2_images([match.match_icon for match in match_list])
     last_image = custom_utils.concatenate_list_images([img1, img2])
     
     commands_list = list(chain(*[match.shortcut for match in match_list]))
     
     execute_commands(commands_list)
 
-def concatenate_images(images, num_columns=11, blank_space=5):
-    max_height = max(image.shape[0] for image in images)
-    blank_square = custom_utils.create_blank_square(max_height, blank_space)
-    images = custom_utils.insert_in_middle(images, blank_square)
-    # images = [np.zeros((max_height, image.shape[1], 3), dtype=np.uint8) for image in new_images_test]
-    
-    num_images = len(images)
+def concatenate_cv2_images(image_list, grid_size=(6, 6), spacing=10):
+    # Get image dimensions
+    image_height, image_width, _ = image_list[0].shape
 
-    # Determine the number of rows needed based on the number of columns
-    num_rows = -(-num_images // num_columns)  # Ceiling division
+    # Calculate the size of the final image
+    grid_width = grid_size[1] * image_width + (grid_size[1] - 1) * spacing
+    grid_height = grid_size[0] * image_height + (grid_size[0] - 1) * spacing
 
-    # Determine the maximum height and width among all images
-    max_height = max(image.shape[0] for image in images)
-    max_width = max(image.shape[1] for image in images)
+    # Create a blank white image as the background
+    result_image = np.ones((grid_height, grid_width, 3), dtype=np.uint8) * 255
 
-    # Create a blank canvas for the concatenated image
-    canvas = np.zeros((num_rows * max_height, num_columns * max_width, 3), dtype=np.uint8)
+    # Paste each image into the result image
+    for i in range(grid_size[0]):
+        for j in range(grid_size[1]):
+            if not image_list:
+                break
+            current_image = image_list.pop(0)
+            x_coordinate = j * (image_width + spacing)
+            y_coordinate = i * (image_height + spacing)
+            result_image[y_coordinate:y_coordinate + image_height, x_coordinate:x_coordinate + image_width, :] = current_image
 
-    # Copy each image to the centered position on the canvas
-    for i, image in enumerate(images):
-        row = i // num_columns
-        col = i % num_columns
+    return result_image
 
-        # Calculate the centering offsets
-        y_offset = 0 #row * max_height + (max_height - image.shape[0]) // 2
-        x_offset = 0 #col * max_width + (max_width - image.shape[1]) // 2
+def concatenate_PIL_images(image_list, grid_size=(6, 6), spacing=10):
+    # Calculate the size of the final image
+    image_width, image_height = image_list[0].size
+    grid_width = grid_size[1] * image_width + (grid_size[1] - 1) * spacing
+    grid_height = grid_size[0] * image_height + (grid_size[0] - 1) * spacing
 
-        canvas[y_offset:y_offset+image.shape[0], x_offset:x_offset+image.shape[1], :] = image
+    # Create a blank white image as the background
+    result_image = Image.new('RGB', (grid_width, grid_height), (255, 255, 255))
 
-    return canvas
-        
+    # Paste each image into the result image
+    for i in range(grid_size[0]):
+        for j in range(grid_size[1]):
+            if not image_list:
+                break
+            current_image = image_list.pop(0)
+            x_coordinate = j * (image_width + spacing)
+            y_coordinate = i * (image_height + spacing)
+            result_image.paste(current_image, (x_coordinate, y_coordinate))
+
+    return result_image
+
 def execute_commands(command_sequence):
     global shuffle_move_first_square_position
     print(command_sequence)
@@ -328,18 +317,6 @@ def execute_commands(command_sequence):
         # time.sleep(0.005)
     pyautogui.moveTo(x=mouse_after_shuffle_position[0], y=mouse_after_shuffle_position[1])
 
-
-IMAGES_PATH = r"assets\icons_processed"
-test_scenarios = {
-    "0": {
-        "board_image": r"test_cases\board_crystal.bmp",
-        "values": ([(Path(IMAGES_PATH, 'Altaria.png'), '1'), (Path(IMAGES_PATH, 'Dragonair.png'), (Path(IMAGES_PATH, 'Dragonite.png'), '3'),  '2'), (Path(IMAGES_PATH, 'Zygarde-50.png'), '4'), (Path(IMAGES_PATH, '_metal.png'), '5'), (Path(IMAGES_PATH, '_empty.png'), 'del')], True)
-    },
-    "1": {
-        "board_image": r"test_cases\board_mega_altaria.bmp",
-        "values": ([(Path(IMAGES_PATH, 'Mega_Altaria.png'), '1'), (Path(IMAGES_PATH, 'Dragonair.png'), '2'), (Path(IMAGES_PATH, 'Dragonite.png'), '3'), (Path(IMAGES_PATH, 'Zygarde-50.png'), '4'), (Path(IMAGES_PATH, '_metal.png'), '5'), (Path(IMAGES_PATH, 'Goomy.png'), '7'), (Path(IMAGES_PATH, '_empty.png'), 'del')], True)
-    }
-}
 
 if __name__ == "__main__":
     custom_board_image = test_scenarios.get("1").get("board_image")

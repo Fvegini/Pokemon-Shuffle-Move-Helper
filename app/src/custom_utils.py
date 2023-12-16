@@ -105,3 +105,13 @@ def insert_in_middle(lst, new_value):
         if index+1 < len(lst):
             new_list.append(new_value)
     return new_list
+
+
+def sort_by_class_attribute(obj_list, attribute_name):
+    try:
+        # Use the getattr function to dynamically get the attribute value
+        sorted_list = sorted(obj_list, key=lambda x: getattr(x, attribute_name))
+        return sorted_list
+    except AttributeError:
+        print(f"Attribute '{attribute_name}' not found in the class.")
+        return obj_list

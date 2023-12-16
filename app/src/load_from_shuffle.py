@@ -2,9 +2,19 @@ from PIL import ImageTk, Image
 import tkinter as tk
 import os
 from src import constants, custom_utils
+from pathlib import Path
 
 exception_list = ["Empty", "Coin", "Metal", "Wood"]
 custom_order = set(["NORMAL", "FIRE", "WATER", "GRASS", "ELECTRIC", "ICE", "FIGHTING", "POISON", "GROUND", "FLYING", "PSYCHIC", "BUG", "ROCK", "GHOST", "DRAGON", "DARK", "STEEL", "FAIRY", "NONE"])
+
+class TeamData():
+    
+    def __init__(self, stage, icons, moves) -> None:
+        self.stage = stage
+        self.icons = icons
+        self.moves = moves
+        
+
 class TeamLoader(tk.Toplevel):
      
     def __init__(self, master = None, root = None, folder = ""):
@@ -17,20 +27,29 @@ class TeamLoader(tk.Toplevel):
 
 
         # Read the file and parse each line into a tuple
-        with open(r"C:\Users\jgsfe\Shuffle-Move\config\teamsData.txt", "r") as file:
+        with open( Path.joinpath(Path.home(), "Shuffle-Move", "config", "teamsData.txt"), "r") as file:
             lines = file.readlines()
 
-        self.teams = []
+        self.teams: list[TeamData] = []
         for line in lines:
             parts = line.strip().split()
             if not parts[0] == "TEAM":
                 continue
             team_name = parts[1]
-            pokemons = parts[2]
+            icons = parts[2]
             for item in exception_list:
-                pokemons = pokemons.replace(item, f"_{item}")
-            moves = parts[3]
-            self.teams.append((team_name, (pokemons, moves)))
+                icons = icons.replace(item, f"_{item}")
+            icons = icons.split(",")
+            moves = parts[3].split(",")
+            #Append mega:
+            try:
+                mega_name = f"Mega_{parts[4]}"
+                mega_move = moves[icons.index(parts[4])]
+                icons.append(mega_name)
+                moves.append(mega_move)
+            except:
+                pass
+            self.teams.append(TeamData(team_name, icons, moves))
             
         self.teams = sorted(self.teams, key=custom_sort)
 
@@ -40,7 +59,7 @@ class TeamLoader(tk.Toplevel):
         # Create a Tkinter list with the second element of each tuple
         self.listbox = tk.Listbox(self, selectmode=tk.SINGLE)
         for team in self.teams:
-            self.listbox.insert(tk.END, team[0])
+            self.listbox.insert(tk.END, team.stage)
 
 
         self.images_frame = tk.Frame(self, background="lightblue")
@@ -60,12 +79,15 @@ class TeamLoader(tk.Toplevel):
     def preview_team(self, event):
         selected_index = self.listbox.curselection()
         if selected_index:
-            selected_team = self.teams[selected_index[0]][1][0]
+            selected_team: TeamData = self.teams[selected_index[0]]
             img_list = []
-            for pokemon_name in selected_team.split(","):
-                image_path = os.path.join(constants.IMAGES_PATH, f"{pokemon_name}.png")
-                image = custom_utils.open_and_resize_np_image(image_path, (50,50))
-                img_list.append(image)
+            for icon_name in selected_team.icons:
+                try:
+                    image_path = os.path.join(constants.IMAGES_PATH, f"{icon_name}.png")
+                    image = custom_utils.open_and_resize_np_image(image_path, (50,50))
+                    img_list.append(image)
+                except:
+                    pass
             
             new_img = custom_utils.concatenate_list_images(img_list, blank_space=5)
             photo = ImageTk.PhotoImage(Image.fromarray(new_img))
@@ -77,21 +99,18 @@ class TeamLoader(tk.Toplevel):
         self.root.destroy_selected_pokemons()
         selected_index = self.listbox.curselection()
         if selected_index:
-            selected_tuple = self.teams[selected_index[0]][1]
-            print("Selected Team:", selected_tuple[1])
-            pokemons = selected_tuple[0].split(",")
-            shortcuts = selected_tuple[1].split(",")
-            for pokemon, shortcut in zip(pokemons, shortcuts):
+            selected_team: TeamData = self.teams[selected_index[0]]
+            print("Selected Team:", selected_team.icons)
+            for pokemon, shortcut in zip(selected_team.icons, selected_team.moves):
                 self.root.insert_image_widget(f"{pokemon}.png", shortcut)
         self.destroy()
-        
-
-def custom_sort(item):
+    
+def custom_sort(item: TeamData):
     global custom_order
-    if item[0] in custom_order:
-        return (0, item[0])  # Assign a lower value (0) to items in the subset
+    if item.stage in custom_order:
+        return (0, item.stage)  # Assign a lower value (0) to items in the subset
     else:
-        return (1, item[0])  # Assign a higher value (1) to other items
+        return (1, item.stage)  # Assign a higher value (1) to other items
 
 
 # if __name__ == "__main__":
