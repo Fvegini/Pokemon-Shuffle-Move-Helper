@@ -11,16 +11,14 @@ from pathlib import Path
 import time
 from src.embed import Embedder
 from src import constants, custom_utils
-
+from src.config_utils import config_values
 
 embedder = Embedder()
 downscale_res = (128, 128)
-shuffle_move_first_square_position = (1500, 90)
-mouse_after_shuffle_position = (1420, 560)
-# board_top_left = (390, 533) # Position for Airdroid Cast
-# board_bottom_right = (890, 1028) # Position for Airdroid Cast
-board_top_left = (11, 466) # Position for 5kPlayer
-board_bottom_right = (573, 1027) # Position for 5kPlayer
+shuffle_move_first_square_position = config_values.get("shuffle_move_first_square_position")
+mouse_after_shuffle_position = config_values.get("mouse_after_shuffle_position")
+board_top_left = config_values.get("board_top_left")
+board_bottom_right = config_values.get("board_bottom_right")
 
 custom_board_image = None
 last_image = None
@@ -92,7 +90,9 @@ class Match():
 
 def load_icon_classes(values_to_execute, has_barriers):
     icons_list = []
-    for image_path, shortcut in values_to_execute:
+    for image_path, shortcut, disabled in values_to_execute:
+        if disabled:
+            continue
         icons_list.append(Icon(image_path, shortcut, False))
         if has_barriers:
             icons_list.append(Icon(image_path, shortcut, True))

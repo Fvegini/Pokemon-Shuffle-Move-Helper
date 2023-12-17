@@ -5,3 +5,5 @@ __pycache__
 to_remove
 last_board.png
 last_team.pkl
+custom_tk
+config.ini

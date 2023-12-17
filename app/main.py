@@ -8,7 +8,7 @@ from src import match_icons
 from pathlib import Path
 from pynput import mouse
 from src.board_image_selector import BoardImageSelector, AppImageSelector
-from src import constants, custom_utils, load_from_shuffle
+from src import constants, custom_utils, load_from_shuffle, config_utils
 import pickle
 
 last_team_to_execute = None
@@ -63,11 +63,11 @@ class ImageSelectorApp:
         self.menubar.add_cascade(label="Menu 1", menu=menu1)
 
         menu2 = tk.Menu(self.menubar, tearoff=0)
-        self.has_barrier_check = tk.BooleanVar()
-        self.keep_loop_check = tk.BooleanVar()
-        self.screen_capture_activated = tk.BooleanVar()
+        self.has_barrier_check = tk.BooleanVar(value=True)
+        # self.keep_loop_check = tk.BooleanVar(value=True)
+        self.screen_capture_activated = tk.BooleanVar(value=True)
         menu2.add_checkbutton(label="Has Barrier", variable=self.has_barrier_check, command=self.reveal_or_hide_barrier_img)
-        menu2.add_checkbutton(label="Activate Auto Get Images", variable=self.keep_loop_check, command=self.check_function)
+        # menu2.add_checkbutton(label="Activate Auto Get Images", variable=self.keep_loop_check, command=self.check_function)
         menu2.add_checkbutton(label="Activate Screen Capture", variable=self.screen_capture_activated, command=self.screen_capture_mode)
         self.menubar.add_cascade(label="Menu 2", menu=menu2)
 
@@ -76,25 +76,30 @@ class ImageSelectorApp:
         keyboard.add_hotkey('f2', self.execute_selected_images)
 
     def create_left_app_screen(self):
-        self.images_frame = tk.Frame(self.appview, background="lightblue")
-        # self.images_frame.pack(side=tk.LEFT, padx=10, pady=10, anchor="nw")
+
+        self.images_frame = customtkinter.CTkFrame(self.appview, corner_radius=0)
+        self.images_frame.grid_rowconfigure(1, weight=1)
+        self.images_frame.grid_columnconfigure(0, weight=1)
+
         self.images_frame.pack(side=tk.LEFT, padx=10, pady=10, anchor="nw")
+
+
+        self.magnifier_label = customtkinter.CTkLabel(self.images_frame, text="🔍", font=("Arial", 16), compound="left")
+        self.magnifier_label.grid(row=0, column=0, sticky="w", padx=(10, 0))
+
 
         self.search_var = tk.StringVar()
         self.search_var.trace("w", self.update_image_list)
         
-        self.search_entry = tk.Entry(self.images_frame, textvariable=self.search_var)
-        self.search_entry.grid(row=1, column=0, sticky='we', padx=(25, 0))
+        self.search_entry = customtkinter.CTkEntry(self.images_frame, placeholder_text="Search...", textvariable=self.search_var, width=100)
+        self.search_entry.grid(row=0, column=1, sticky='w', padx=(0, 0), pady=(5, 0))
+        
+        self.image_listbox = tk.Listbox(self.images_frame, selectmode=tk.SINGLE, width=20)
+        self.image_listbox.grid(row=1, column=0, sticky='w', padx=(10, 0), pady=(10,10), columnspan=2)
+        
+        self.image_preview = customtkinter.CTkLabel(self.images_frame, text="")
+        self.image_preview.grid(row=1, column=2, padx=5, pady=5, sticky='w')
 
-        self.magnifier_label = tk.Label(self.images_frame, text="🔍", font=("Arial", 12))
-        self.magnifier_label.grid(row=1, column=0, sticky="w", padx=(0, 5))
-
-
-        self.image_listbox = tk.Listbox(self.images_frame, selectmode=tk.SINGLE)
-        self.image_listbox.grid(row=2, column=0, padx=(5,0), pady=5)
-
-        self.image_preview = tk.Label(self.images_frame)
-        self.image_preview.grid(row=2, column=1, padx=5, pady=5)
 
     def create_right_app_screen(self):
         self.selected_images_frame_master = tk.Frame(self.appview, background="aqua")
@@ -107,7 +112,7 @@ class ImageSelectorApp:
         self.selected_images_frame.pack(padx=10, pady=2, expand=1, anchor="nw")
 
         self.selected_images = []
-        self.selected_images_canvas = tk.Canvas(self.selected_images_frame, background="aquamarine1", width=1200, height=150)
+        self.selected_images_canvas = tk.Canvas(self.selected_images_frame, background="aquamarine1", width=1200, height=200)
         self.selected_images_canvas.pack(side=tk.TOP, fill=tk.X)
 
         self.selected_images_scrollbar = tk.Scrollbar(self.selected_images_frame, orient=tk.HORIZONTAL, command=self.selected_images_canvas.xview)
@@ -115,7 +120,7 @@ class ImageSelectorApp:
         self.selected_images_canvas.config(xscrollcommand=self.selected_images_scrollbar.set)
 
         self.selected_images_container = tk.Frame(self.selected_images_canvas, background="azure")
-        self.selected_images_canvas.create_window((0, 0), window=self.selected_images_container, anchor=tk.NW, height=150)
+        self.selected_images_canvas.create_window((0, 0), window=self.selected_images_container, anchor=tk.CENTER, height=200)
 
     def configure_initial_geometry(self):
         self.master.update()
@@ -133,17 +138,20 @@ class ImageSelectorApp:
         self.master.geometry(f"{width}x{height}+{x}+{y}")
 
     def update_preview_image(self, event=None):
-        selected_index = self.image_listbox.curselection()
-        if not selected_index:
-            selected_index = 1
-        selected_file = self.image_listbox.get(selected_index)
-        image_path = os.path.join(constants.IMAGES_PATH, selected_file) 
-        image = Image.open(image_path)
-        image.thumbnail((50, 50))
-        photo = ImageTk.PhotoImage(image)
+        try:
+            selected_index = self.image_listbox.curselection()
+            if not selected_index:
+                selected_index = 1
+            selected_file = self.image_listbox.get(selected_index)
+            image_path = os.path.join(constants.IMAGES_PATH, selected_file) 
+            image = Image.open(image_path)
+            image.thumbnail((50, 50))
+            photo = customtkinter.CTkImage(image, size=image.size)
 
-        self.image_preview.config(image=photo)
-        self.image_preview.image = photo
+            self.image_preview.configure(image=photo)
+            self.image_preview.image = photo
+        except:
+            pass
 
     def update_image_list(self, *args):
         search_term = self.search_var.get().lower()
@@ -166,7 +174,7 @@ class ImageSelectorApp:
             selected_file = self.image_listbox.get(selected_index)
             self.insert_image_widget(selected_file)
     
-    def insert_image_widget(self, selected_file, forced_shortcut=None):
+    def insert_image_widget(self, selected_file, forced_shortcut=None, disabled=False):
         image_path = os.path.join(constants.IMAGES_PATH, selected_file)  # Change this to the path of your folder
 
         if any([value for value in self.selected_images if value[1] == selected_file]):
@@ -182,7 +190,7 @@ class ImageSelectorApp:
 
         # Display in the selected images panel
         selected_image_frame = tk.Frame(self.selected_images_container)
-        selected_image_frame.pack(fill=tk.BOTH, side=tk.RIGHT, padx=5)
+        selected_image_frame.pack(fill=tk.BOTH, side=tk.RIGHT, padx=5, anchor=tk.CENTER)
 
         selected_image_label = tk.Label(selected_image_frame, image=photo, text=selected_file, compound=tk.TOP)
         selected_image_label.photo = photo # Keep a reference to avoid garbage collection issues
@@ -190,7 +198,7 @@ class ImageSelectorApp:
 
         options = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'del', 'a', 'b', 'c', 'd', 'e','f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o',
                     'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z']
-        combobox = ttk.Combobox(selected_image_frame, values=options)
+        combobox = customtkinter.CTkComboBox(selected_image_frame, values=options, width=80)
         if forced_shortcut:
             combobox.set(forced_shortcut)
         elif Path(image_path).stem == "_Empty":
@@ -199,9 +207,18 @@ class ImageSelectorApp:
             combobox.set(str(len(self.selected_images)))
         combobox.pack()
 
-        remove_button = tk.Button(selected_image_frame, text="Remove", command=lambda: self.remove_selected_image(selected_image_frame, image_path))
-        remove_button.pack()
+        # remove_button = tk.Button(selected_image_frame, text="Remove", command=lambda: self.remove_selected_image(selected_image_frame, image_path))
+        disable_button = customtkinter.CTkButton(selected_image_frame, text="Remove", width=80, fg_color="transparent", border_width=2, text_color=("gray10", "#DCE4EE"), command=lambda: self.remove_selected_image(selected_image_frame, image_path))
+        disable_button.pack()
 
+        checkbox_1 = customtkinter.CTkCheckBox(selected_image_frame, text="Disable", checkbox_width=12, checkbox_height=12, corner_radius=0, onvalue=True, offvalue=False)
+        checkbox_1.pack(padx=(25, 0))
+        if disabled:
+            checkbox_1.select()
+
+
+        # disable_button = customtkinter.CTkButton(selected_image_frame, fg_color="transparent", border_width=2, text_color=("gray10", "#DCE4EE"))
+        # disable_button.pack()
 
         # selected_image_frame2 = tk.Frame(self.selected_images_container2, width=selected_image_frame.winfo_width())
         # selected_image_frame2.pack(side=tk.RIGHT, padx=5, expand=1, fill=tk.BOTH)
@@ -248,15 +265,14 @@ class ImageSelectorApp:
                 image_frames = frame.winfo_children()
                 for image_frame in image_frames:
                     image_widgets = image_frame.winfo_children()
-                    if len(image_widgets) == 3 and isinstance(image_widgets[1], ttk.Combobox):
-                        widget_list.append(image_widgets)
+                    widget_list.append(image_widgets)
         return widget_list
 
     def execute_selected_images(self):
         global last_team_to_execute
         values_to_execute = []
         for image_widgets in self.get_selected_images_widgets_list():
-            values_to_execute.append((Path(constants.IMAGES_PATH, image_widgets[0].cget("text")), image_widgets[1].get()))
+            values_to_execute.append((Path(constants.IMAGES_PATH, image_widgets[0].cget("text")), image_widgets[1].get(), image_widgets[3].get()))
         if last_team_to_execute != values_to_execute:
             last_team_to_execute = values_to_execute
             with open(LAST_TEAM_PKL, 'wb') as file:
@@ -285,16 +301,20 @@ class ImageSelectorApp:
         if pressed:
             if self.click_counter == 1:
                 match_icons.board_top_left = (x ,y)
-                print(f"recorded first click at - {match_icons.board_top_left}")
+                config_utils.update_config("board_top_left", (x ,y))
+                print(f"recorded click at - {match_icons.board_top_left}")
             elif self.click_counter == 2:
                 match_icons.board_bottom_right = (x, y)
-                print(f"recorded second click at - {match_icons.board_bottom_right}")
+                config_utils.update_config("board_bottom_right", (x ,y))
+                print(f"recorded click at - {match_icons.board_bottom_right}")
             elif self.click_counter == 3:
                 match_icons.shuffle_move_first_square_position = (x, y)
-                print(f"recorded third click at - {match_icons.shuffle_move_first_square_position}")
+                config_utils.update_config("shuffle_move_first_square_position", (x ,y))
+                print(f"recorded click at - {match_icons.shuffle_move_first_square_position}")
             elif self.click_counter == 4:
                 match_icons.mouse_after_shuffle_position = (x, y)
-                print(f"recorded third click at - {match_icons.mouse_after_shuffle_position}")
+                config_utils.update_config("mouse_after_shuffle_position", (x ,y))
+                print(f"recorded click at - {match_icons.mouse_after_shuffle_position}")
             self.mouse_listener.stop()
             self.popup.destroy()
 
@@ -351,8 +371,9 @@ class ImageSelectorApp:
             self.destroy_selected_pokemons()
             with open(LAST_TEAM_PKL, 'rb') as file:
                 loaded_variable = pickle.load(file)
-            for pokemon, shortcut in loaded_variable:
-                self.insert_image_widget(pokemon.name, shortcut)
+            for pokemon, shortcut, disabled in loaded_variable:
+                self.insert_image_widget(pokemon.name, shortcut, disabled)
+            self.selected_images_scrollbar.set(0.0)
         except:
             pass
         
