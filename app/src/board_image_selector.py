@@ -23,7 +23,7 @@ class BoardImageSelector(tk.Toplevel):
         row_index = 0
         col_index = 0
 
-        icons_list = match_icons.make_cell_list("last")
+        icons_list = match_icons.make_cell_list(force_last_image=True)
         for image in icons_list:
             tk_image = ImageTk.PhotoImage(image)
             self.image_widgets.append(tk_image)

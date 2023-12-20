@@ -30,7 +30,6 @@ class ImageSelectorApp():
         
         self.master = master
         self.master.title("Image Selector")
-        # self.create_app_menu()
         
         self.create_tab_menu()
         
@@ -47,14 +46,11 @@ class ImageSelectorApp():
 
     def create_tab_menu(self):
         self.tabview = customtkinter.CTkTabview(self.master, height=100)
-        # self.tabview.pack(expand=1, fill=tkinter.X, pady=0, padx=0, anchor="n")
         self.tabview.pack(expand=1, fill=tk.X, pady=0, padx=0, anchor="nw")
         
         self.tab1 = self.tabview.add("Configurations")
         self.tab2 = self.tabview.add("Icons")
         self.tab3 = self.tabview.add("Execute")
-        # self.tabview.tab("CTkTabview").grid_columnconfigure(0, weight=1)  # configure grid of individual tabs
-        # self.tabview.tab("Tab 2").grid_columnconfigure(0, weight=1)
         self.tabview._segmented_button.grid(sticky="W")
         self.tabview.pack_propagate(False)
         self.tab_button_style = {
@@ -170,7 +166,7 @@ class ImageSelectorApp():
         self.control_loop_var = tk.BooleanVar(value=False)
 
         customtkinter.CTkSwitch(frame3_1_top, text="Print Screen Mode", variable=self.board_capture_var, onvalue=True, offvalue=False, command=self.update_board_capture_mode).pack(side=tk.TOP, anchor=tk.W)
-        customtkinter.CTkSwitch(frame3_1_top, text="Capture Loop", variable=self.control_loop_var, onvalue=True, offvalue=False, command=lambda: self.control_loop_function(force_click=True)).pack(side=tk.TOP, anchor=tk.W)
+        customtkinter.CTkSwitch(frame3_1_top, text="Capture Loop", variable=self.control_loop_var, onvalue=True, offvalue=False, command=lambda: self.control_loop_function(mouse_click=True)).pack(side=tk.TOP, anchor=tk.W)
         
         
         customtkinter.CTkSwitch(frame3_1_top, text="Has Barriers", variable=self.has_barrier, command=self.reveal_or_hide_barrier_img).pack(side=tk.TOP, anchor=tk.W)
@@ -184,10 +180,10 @@ class ImageSelectorApp():
         tk.ttk.Separator(self.tab3, orient='vertical').pack(side=tk.LEFT, fill='y', anchor=tk.W)
 
         customtkinter.CTkLabel(frame3_2_bottom, text="").pack(side=tk.BOTTOM)
-        btn3_2_1 = customtkinter.CTkButton(frame3_2_top, text="Execute", command=lambda: self.start_board_analysis(force_click=True), image=icon_to_image("mouse", fill="#ffffff", scale_to_width=25), **self.tab_button_style)
+        btn3_2_1 = customtkinter.CTkButton(frame3_2_top, text="Execute", command=lambda: self.start_board_analysis(mouse_click=True), image=icon_to_image("mouse", fill="#ffffff", scale_to_width=25), **self.tab_button_style)
         CTkToolTip(btn3_2_1, delay=0.5, message="Execute (F3)")
         btn3_2_1.pack(side=tk.LEFT)
-        keyboard.add_hotkey('f3', lambda: self.start_board_analysis(force_click=True))
+        keyboard.add_hotkey('f3', lambda: self.start_board_analysis(mouse_click=True))
         customtkinter.CTkButton(frame3_2_top, text="View Last Board", command=self.show_last_move, image=icon_to_image("mouse", fill="#ffffff", scale_to_width=25), **self.tab_button_style).pack(side=tk.LEFT)
 
         frame3_3 = customtkinter.CTkFrame(self.tab3, fg_color="transparent")
@@ -205,36 +201,7 @@ class ImageSelectorApp():
         customtkinter.CTkSwitch(frame3_3_top, text="Image File Mode", variable=self.board_capture_var, onvalue=False, offvalue=True, command=self.update_board_capture_mode).pack(side=tk.TOP, anchor=tk.W)
 
 
-
         self.update_board_capture_mode()
-
-    def create_app_menu(self):
-        self.menubar = tk.Menu(self.master)
-        self.master.config(menu=self.menubar)
-
-        menu1 = tk.Menu(self.menubar, tearoff=0)
-        menu1.add_command(label="Configure Board Top Left", command=lambda: self.show_click_popup(click_counter= 1))
-        menu1.add_command(label="Configure Board Bottom Right", command=lambda: self.show_click_popup(click_counter= 2))
-        menu1.add_command(label="Configure Shuffle Move First Square", command=lambda: self.show_click_popup(click_counter= 3))
-        menu1.add_command(label="Configure Mouse Return Position", command=lambda: self.show_click_popup(click_counter= 4))
-        menu1.add_command(label="Load Team from Shufle Move", command=self.load_team)
-        menu1.add_command(label="Register Barrier Icon", command=self.open_barrier_register_screen)
-        menu1.add_command(label="Remove Barrier Icon", command=lambda: self.open_app_register_screen(action="Remove"))
-        menu1.add_command(label="Register Extra Icon", command=self.open_extra_register_screen)
-        # menu1.add_command(label="Execute with Selected Images", command=self.execute_selected_images)
-        self.menubar.add_cascade(label="Menu 1", menu=menu1)
-
-        menu2 = tk.Menu(self.menubar, tearoff=0)
-        self.has_barrier = tk.BooleanVar(value=True)
-        # self.keep_loop_check = tk.BooleanVar(value=True)
-        self.screen_capture_activated = tk.BooleanVar(value=True)
-        menu2.add_checkbutton(label="Has Barrier", variable=self.has_barrier, command=self.reveal_or_hide_barrier_img)
-        # menu2.add_checkbutton(label="Activate Auto Get Images", variable=self.keep_loop_check, command=self.check_function)
-        menu2.add_checkbutton(label="Activate Screen Capture", variable=self.screen_capture_activated, command=self.update_board_capture_mode)
-        self.menubar.add_cascade(label="Menu 2", menu=menu2)
-
-        # self.menubar.add_command(label="Execute", command=self.start_board_analysis)
-        self.menubar.add_command(label="Debug", command=self.show_last_move)
 
     def create_left_app_screen(self):
 
@@ -377,18 +344,6 @@ class ImageSelectorApp():
         if disabled:
             checkbox_1.select()
 
-
-        # disable_button = customtkinter.CTkButton(selected_image_frame, fg_color="transparent", border_width=2, text_color=("gray10", "#DCE4EE"))
-        # disable_button.pack()
-
-        # selected_image_frame2 = tk.Frame(self.selected_images_container2, width=selected_image_frame.winfo_width())
-        # selected_image_frame2.pack(side=tk.RIGHT, padx=5, expand=1, fill=tk.BOTH)
-
-        # selected_image_label2 = tk.Label(selected_image_frame2, image=photo, compound=tk.TOP)
-        # # selected_image_label2.photo = photo
-        # selected_image_label2.pack(expand=1, fill=tk.BOTH)
-
-        
         if self.has_barrier.get():
             self.reveal_or_hide_barrier_img()
 
@@ -429,7 +384,7 @@ class ImageSelectorApp():
                     widget_list.append(image_widgets)
         return widget_list
 
-    def start_board_analysis(self, force_click=False):
+    def start_board_analysis(self, mouse_click=False):
         global last_team_to_execute
         values_to_execute = []
         for image_widgets in self.get_selected_images_widgets_list():
@@ -439,12 +394,12 @@ class ImageSelectorApp():
             with open(LAST_TEAM_PKL, 'wb') as file:
                 pickle.dump(values_to_execute, file)
         
-        if force_click:
-            force_click = True
+        if mouse_click:
+            mouse_click = True
         else:
-            force_click = self.control_loop_var.get()
+            mouse_click = not self.control_loop_var.get()
         
-        match_icons.start(values_to_execute, self.has_barrier.get(), screen_record=self.board_capture_var.get(), force_click=force_click)
+        match_icons.start(values_to_execute, self.has_barrier.get(), screen_record=self.board_capture_var.get(), mouse_click=mouse_click)
         # print("Executing with selected images:", values_to_execute)
 
     def show_click_popup(self, click_counter):
@@ -484,15 +439,15 @@ class ImageSelectorApp():
             self.mouse_listener.stop()
             self.popup.destroy()
 
-    def control_loop_function(self, force_click=False):
+    def control_loop_function(self, mouse_click=False):
         if not self.control_loop_var.get():
             return
         else:
             if not self.board_capture_var.get():
                 if config_utils.config_values.get("board_image_path") and os.path.exists(config_utils.config_values.get("board_image_path")):
-                    self.start_board_analysis(force_click)
+                    self.start_board_analysis(mouse_click)
             else:
-                self.start_board_analysis(force_click)
+                self.start_board_analysis(mouse_click)
             self.check_job = self.master.after(1000, self.control_loop_function)  # Schedule next check after 2000 milliseconds (2 seconds)
 
     def update_search_dir(self):

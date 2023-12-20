@@ -204,13 +204,12 @@ def predict(original_image, icons_list, has_barriers) -> Match:
     return compare_with_list(np_img, icons_list, has_barriers)
     
 
-def capture_board_screensot(screen_record):
+def capture_board_screensot(force_last_image):
     global board_top_left, board_bottom_right, custom_board_image
-    if screen_record == "last":
+    capture_board = config_utils.config_values.get("board_capture_var")
+    if force_last_image:
         img = Image.open(constants.LAST_BOARD_IMAGE_PATH)
-    if custom_board_image:
-        return Image.open(custom_board_image)
-    elif screen_record:
+    elif capture_board:
         x0 = board_top_left[0]
         x1 = board_bottom_right[0] - board_top_left[0]
         y0 = board_top_left[1]
@@ -226,8 +225,8 @@ def capture_board_screensot(screen_record):
         img = Image.open(constants.LAST_BOARD_IMAGE_PATH)
     return img
 
-def make_cell_list(screen_record):
-    img = capture_board_screensot(screen_record)
+def make_cell_list(force_last_image=False):
+    img = capture_board_screensot(force_last_image)
     cell_list = []
     cell_size = (img.size[0]/6, img.size[1]/6)
     for y in range(0, 6):
@@ -236,7 +235,7 @@ def make_cell_list(screen_record):
             cell_list.append(img.crop(cell_box))
     return cell_list
             
-def start(request_values, has_barriers, show_debug=False, screen_record=False, force_click=False):
+def start(request_values, has_barriers, screen_record=False, mouse_click=False):
     global last_image
     icons_list = load_icon_classes(request_values, has_barriers)
     match_list: List[Match] = []
@@ -246,14 +245,13 @@ def start(request_values, has_barriers, show_debug=False, screen_record=False, f
         result = predict(cell, icons_list, has_barriers)
         match_list.append(result)
     
-    # if show_debug:
     img1 = concatenate_cv2_images([match.board_icon for match in match_list])
     img2 = concatenate_cv2_images([match.match_icon for match in match_list])
     last_image = custom_utils.concatenate_list_images([img1, img2])
     
     commands_list = list(chain(*[match.shortcut for match in match_list]))
     
-    execute_commands(commands_list, force_click)
+    execute_commands(commands_list, mouse_click)
 
 def concatenate_cv2_images(image_list, grid_size=(6, 6), spacing=10):
     # Get image dimensions
@@ -299,28 +297,18 @@ def concatenate_PIL_images(image_list, grid_size=(6, 6), spacing=10):
 
     return result_image
 
-def execute_commands(command_sequence, force_click):
+def execute_commands(command_sequence, mouse_click):
     global shuffle_move_first_square_position
     print(command_sequence)
-    # screen_factor = 0.68
-    # position = [el * screen_factor for el in position]
-    # position
-    if force_click:
+    if mouse_click:
         pyautogui.click(shuffle_move_first_square_position[0], y=shuffle_move_first_square_position[1])
         time.sleep(0.1)
-    # with pyautogui.hold("ctrl"):
-            # pyautogui.press("del")
-    # time.sleep(0.2)
-    # pyautogui.click(x=shuffle_move_first_square_position[0], y=shuffle_move_first_square_position[1])
-    # time.sleep(0.2)
-    # for command in command_sequence:
-    # pyautogui.press(command_sequence)
-        # time.sleep(0.005)
-    if force_click:
+    pyautogui.press(command_sequence)
+    if mouse_click:
         pyautogui.moveTo(x=mouse_after_shuffle_position[0], y=mouse_after_shuffle_position[1])
 
 
-if __name__ == "__main__":
-    custom_board_image = test_scenarios.get("1").get("board_image")
-    values = test_scenarios.get("1").get("values")
-    start(*values, show_debug=True)
+# if __name__ == "__main__":
+#     custom_board_image = test_scenarios.get("1").get("board_image")
+#     values = test_scenarios.get("1").get("values")
+#     start(*values, show_debug=True)
