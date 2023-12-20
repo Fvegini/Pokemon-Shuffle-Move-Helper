@@ -1,5 +1,4 @@
 BARRIER_PREFIX = "Barrier_"
-DROPBOX_IMAGE_PATH = r"D:\Dropbox\Envio da câmera\Imagem.png"
 LAST_BOARD_IMAGE_PATH = r"last_board.png"
 IMAGES_BARRIER_PATH = r"assets\icons_barrier"
 IMAGES_EXTRA_PATH = r"assets\icons_extra"

@@ -6,7 +6,10 @@ def create_default_config():
     "shuffle_move_first_square_position": "(1500, 90)",
     "mouse_after_shuffle_position": "(1420, 560)",
     "board_top_left": "(11, 466)",
-    "board_bottom_right": "(573, 1027)"
+    "board_bottom_right": "(573, 1027)",
+    "board_capture_var": True,
+    "has_barrier": False,
+    "board_image_path": r"D:\Dropbox\Envio da câmera\Imagem.png"
     }
 
     with open('config.ini', 'w') as configfile:
@@ -17,7 +20,10 @@ def read_config():
     config.read('config.ini')
     config_converted = {}
     for key in config.options('SETTINGS'):
-        config_converted[key] = ast.literal_eval(config['SETTINGS'].get(key))
+        try:
+            config_converted[key] = ast.literal_eval(config['SETTINGS'].get(key))
+        except:
+            config_converted[key] = config['SETTINGS'].get(key)
     return config_converted
 
 def update_config(variable, new_value):

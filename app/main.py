@@ -1,6 +1,6 @@
 import os
 import tkinter as tk
-from tkinter import ttk
+from tkinter import ttk, filedialog
 import customtkinter
 from PIL import Image, ImageTk
 import keyboard
@@ -10,35 +10,34 @@ from pynput import mouse
 from src.board_image_selector import BoardImageSelector, AppImageSelector
 from src import constants, custom_utils, load_from_shuffle, config_utils
 import pickle
+from tkfontawesome import icon_to_image
+import warnings
+from CTkToolTip import CTkToolTip
+# from tktooltip import ToolTip
+warnings.filterwarnings("ignore", category=UserWarning, message="CTkButton Warning: Given image is not CTkImage but*")
 
+
+customtkinter.set_appearance_mode("dark")  # Modes: "System" (standard), "Dark", "Light"
+customtkinter.set_default_color_theme("blue")  # Themes: "blue" (standard), "green", "dark-blue"
+
+
+# import cairosvg
 last_team_to_execute = None
 LAST_TEAM_PKL = "last_team.pkl"
 
-class ImageSelectorApp:
+class ImageSelectorApp():
     def __init__(self, master):
+        
         self.master = master
         self.master.title("Image Selector")
-        self.create_app_menu()
+        # self.create_app_menu()
         
-        self.tabview = customtkinter.CTkTabview(self.master, height=150)
-        # self.tabview.pack(expand=1, fill=tkinter.X, pady=0, padx=0, anchor="n")
-        self.tabview.pack(expand=1, fill=tk.X, pady=0, padx=0, anchor="nw")
-        
-        self.tabview.add("CTkTabview")
-        self.tabview.add("Tab 2")
-        self.tabview.add("Tab 3")
-        # self.tabview.tab("CTkTabview").grid_columnconfigure(0, weight=1)  # configure grid of individual tabs
-        self.tabview.tab("Tab 2").grid_columnconfigure(0, weight=1)
-        self.tabview._segmented_button.grid(sticky="W")
+        self.create_tab_menu()
         
         self.appview = customtkinter.CTkFrame(self.master)
         self.appview.pack(expand=1, fill=tk.X, pady=0, padx=0, anchor="nw")
+
         self.create_left_app_screen()
-
-        # self.images_frame = tk.Frame(self.appview, background="lightblue")
-        # self.images_frame.pack(side=tk.LEFT, padx=10, pady=10, anchor="nw")
-        # self.images_frame.pack(padx=10, pady=10, anchor="nw")
-
         self.create_right_app_screen()
         
         self.update_image_list()
@@ -46,15 +45,178 @@ class ImageSelectorApp:
         self.load_last_team()
         self.update_preview_image()
 
+    def create_tab_menu(self):
+        self.tabview = customtkinter.CTkTabview(self.master, height=100)
+        # self.tabview.pack(expand=1, fill=tkinter.X, pady=0, padx=0, anchor="n")
+        self.tabview.pack(expand=1, fill=tk.X, pady=0, padx=0, anchor="nw")
+        
+        self.tab1 = self.tabview.add("Configurations")
+        self.tab2 = self.tabview.add("Icons")
+        self.tab3 = self.tabview.add("Execute")
+        # self.tabview.tab("CTkTabview").grid_columnconfigure(0, weight=1)  # configure grid of individual tabs
+        # self.tabview.tab("Tab 2").grid_columnconfigure(0, weight=1)
+        self.tabview._segmented_button.grid(sticky="W")
+        self.tabview.pack_propagate(False)
+        self.tab_button_style = {
+            'compound': 'top',
+            'width': 0,
+            'fg_color': 'transparent',
+            'text_color': ('gray10', 'gray90'),
+            'hover_color': ('gray70', 'gray30'),
+        }
+        
+        self.create_tab_1()
+        self.create_tab_2()
+        self.create_tab_3()
+
+        
+    def create_tab_1(self):
+        frame1_1 = customtkinter.CTkFrame(self.tab1, fg_color="transparent")
+        frame1_1_top = customtkinter.CTkFrame(frame1_1, fg_color="transparent")
+        frame1_1_bottom = customtkinter.CTkFrame(frame1_1, fg_color="transparent")
+        
+        frame1_1.pack(side=tk.LEFT, expand=False, fill=tk.Y, anchor=tk.W)
+        frame1_1_top.pack(side=tk.TOP)
+        frame1_1_bottom.pack(side=tk.BOTTOM)
+        tk.ttk.Separator(self.tab1, orient='vertical').pack(side=tk.LEFT, fill='y', anchor=tk.W)
+
+        customtkinter.CTkLabel(frame1_1_bottom, text="Mouse Positions", font=customtkinter.CTkFont(size=10), bg_color="white").pack(side=tk.BOTTOM, anchor=tk.S)
+
+        icon = icon_to_image("mouse", fill="#ffffff", scale_to_width=25)
+
+        btn1_1 = customtkinter.CTkButton(frame1_1_top, text="Top Left", command=lambda: self.show_click_popup(click_counter= 1), image=icon, **self.tab_button_style)
+        btn1_2 = customtkinter.CTkButton(frame1_1_top, text="Bottom Right", command=lambda: self.show_click_popup(click_counter= 2), image=icon, **self.tab_button_style)
+        btn1_3 = customtkinter.CTkButton(frame1_1_top, text="First Square", command=lambda: self.show_click_popup(click_counter= 3), image=icon, **self.tab_button_style)
+        btn1_4 = customtkinter.CTkButton(frame1_1_top, text="Return Position", command=lambda: self.show_click_popup(click_counter= 4), image=icon, **self.tab_button_style)
+
+        CTkToolTip(btn1_1, delay=0.5, message="Configure Board Top Left")
+        CTkToolTip(btn1_2, delay=0.5, message="Configure Board Bottom Right")
+        CTkToolTip(btn1_3, delay=0.5, message="Configure Shuffle Move First Square")
+        CTkToolTip(btn1_4, delay=0.5, message="Configure Mouse Return Position")
+
+        btn1_1.pack(side=tk.LEFT)
+        btn1_2.pack(side=tk.LEFT)
+        btn1_3.pack(side=tk.LEFT)
+        btn1_4.pack(side=tk.LEFT)       
+
+    def create_tab_2(self):
+        frame2_1 = customtkinter.CTkFrame(self.tab2, fg_color="transparent")
+        frame2_1_top = customtkinter.CTkFrame(frame2_1, fg_color="transparent")
+        frame2_1_bottom = customtkinter.CTkFrame(frame2_1, fg_color="transparent")
+        frame2_1.pack(side=tk.LEFT, expand=False, fill=tk.Y, anchor=tk.W)
+        frame2_1_top.pack(side=tk.TOP)
+        frame2_1_bottom.pack(side=tk.BOTTOM)
+        tk.ttk.Separator(self.tab2, orient='vertical').pack(side=tk.LEFT, fill='y', anchor=tk.W)
+
+        frame2_2 = customtkinter.CTkFrame(self.tab2, fg_color="transparent")
+        frame2_2_top = customtkinter.CTkFrame(frame2_2, fg_color="transparent")
+        frame2_2_bottom = customtkinter.CTkFrame(frame2_2, fg_color="transparent")
+        frame2_2.pack(side=tk.LEFT, expand=False, fill=tk.Y, anchor=tk.W)
+        frame2_2_top.pack(side=tk.TOP)
+        frame2_2_bottom.pack(side=tk.BOTTOM)
+        tk.ttk.Separator(self.tab2, orient='vertical').pack(side=tk.LEFT, fill='y', anchor=tk.W)
+
+
+        frame2_3 = customtkinter.CTkFrame(self.tab2, fg_color="transparent")
+        frame2_3_top = customtkinter.CTkFrame(frame2_3, fg_color="transparent")
+        frame2_3_bottom = customtkinter.CTkFrame(frame2_3, fg_color="transparent")
+        frame2_3.pack(side=tk.LEFT, expand=False, fill=tk.Y, anchor=tk.W)
+        frame2_3_top.pack(side=tk.TOP)
+        frame2_3_bottom.pack(side=tk.BOTTOM)
+        tk.ttk.Separator(self.tab2, orient='vertical').pack(side=tk.LEFT, fill='y', anchor=tk.W)        
+
+
+        #Block 1
+        customtkinter.CTkLabel(frame2_1_bottom, text="Current Team").pack(side=tk.BOTTOM)
+        btn2_1_1 = customtkinter.CTkButton(frame2_1_top, text="Load Team", command=self.load_team, image=icon_to_image("mouse", fill="#ffffff", scale_to_width=25), **self.tab_button_style)
+        CTkToolTip(btn2_1_1, delay=0.5, message="Load Team From Shuffle Move Config File")
+        btn2_1_1.pack(side=tk.LEFT)
+        
+        
+        #Block 2
+        customtkinter.CTkLabel(frame2_2_bottom, text="Register Icons").pack(side=tk.BOTTOM)
+        btn2_2_1 = customtkinter.CTkButton(frame2_2_top, text="Register Barrier", command=self.open_barrier_register_screen, image=icon_to_image("mouse", fill="#ffffff", scale_to_width=25), **self.tab_button_style)
+        CTkToolTip(btn2_2_1, delay=0.5, message="Create or Substitute the Barrier Icon")
+        btn2_2_1.pack(side=tk.LEFT)
+        btn2_2_2 = customtkinter.CTkButton(frame2_2_top, text="Register Extra", command=self.open_extra_register_screen, image=icon_to_image("mouse", fill="#ffffff", scale_to_width=25), **self.tab_button_style)
+        CTkToolTip(btn2_2_2, delay=0.5, message="Insert a new Extra Icon")
+        btn2_2_2.pack(side=tk.LEFT)   
+
+
+        # #Block 3
+        customtkinter.CTkLabel(frame2_3_bottom, text="Remove Icons").pack(side=tk.BOTTOM)
+        btn2_3_1 = customtkinter.CTkButton(frame2_3_top, text="Remove Barrier", command=lambda: self.open_app_register_screeat(action="Remove_Barrier"), image=icon_to_image("mouse", fill="#ffffff", scale_to_width=25), **self.tab_button_style)
+        CTkToolTip(btn2_3_1, delay=0.5, message="Remove the Barrier Icon")
+        btn2_3_1.pack(side=tk.LEFT)
+        btn2_3_2 = customtkinter.CTkButton(frame2_3_top, text="Remove Extra", command=lambda: self.open_app_register_screen(action="Remove_Extra"), image=icon_to_image("mouse", fill="#ffffff", scale_to_width=25), **self.tab_button_style)
+        CTkToolTip(btn2_3_2, delay=0.5, message="Remove One of the Extra Icons")
+        btn2_3_2.pack(side=tk.LEFT)   
+
+
+    def create_tab_3(self):
+        frame3_1 = customtkinter.CTkFrame(self.tab3, fg_color="transparent")
+        frame3_1_top = customtkinter.CTkFrame(frame3_1)
+        frame3_1_bottom = customtkinter.CTkFrame(frame3_1)
+        frame3_1.pack(side=tk.LEFT, expand=False, fill=tk.Y, anchor=tk.W)
+        frame3_1_top.pack(side=tk.TOP)
+        frame3_1_bottom.pack(side=tk.BOTTOM)
+        tk.ttk.Separator(self.tab3, orient='vertical').pack(side=tk.LEFT, fill='y', anchor=tk.W)
+        
+        
+        customtkinter.CTkLabel(frame3_1_bottom, text="Board Capture Mode", bg_color="transparent").pack(side=tk.BOTTOM)
+        
+        self.board_capture_var = tk.BooleanVar(value=config_utils.config_values.get("board_capture_var")) 
+        self.has_barrier = tk.BooleanVar(value=config_utils.config_values.get("has_barrier")) 
+        self.control_loop_var = tk.BooleanVar(value=False)
+
+        customtkinter.CTkSwitch(frame3_1_top, text="Print Screen Mode", variable=self.board_capture_var, onvalue=True, offvalue=False, command=self.update_board_capture_mode).pack(side=tk.TOP, anchor=tk.W)
+        customtkinter.CTkSwitch(frame3_1_top, text="Capture Loop", variable=self.control_loop_var, onvalue=True, offvalue=False, command=lambda: self.control_loop_function(force_click=True)).pack(side=tk.TOP, anchor=tk.W)
+        
+        
+        customtkinter.CTkSwitch(frame3_1_top, text="Has Barriers", variable=self.has_barrier, command=self.reveal_or_hide_barrier_img).pack(side=tk.TOP, anchor=tk.W)
+        
+        frame3_2 = customtkinter.CTkFrame(self.tab3, fg_color="transparent")
+        frame3_2_top = customtkinter.CTkFrame(frame3_2, fg_color="transparent")
+        frame3_2_bottom = customtkinter.CTkFrame(frame3_2, fg_color="transparent")
+        frame3_2.pack(side=tk.LEFT, expand=False, fill=tk.Y, anchor=tk.W)
+        frame3_2_top.pack(side=tk.TOP)
+        frame3_2_bottom.pack(side=tk.BOTTOM)
+        tk.ttk.Separator(self.tab3, orient='vertical').pack(side=tk.LEFT, fill='y', anchor=tk.W)
+
+        customtkinter.CTkLabel(frame3_2_bottom, text="").pack(side=tk.BOTTOM)
+        btn3_2_1 = customtkinter.CTkButton(frame3_2_top, text="Execute", command=lambda: self.start_board_analysis(force_click=True), image=icon_to_image("mouse", fill="#ffffff", scale_to_width=25), **self.tab_button_style)
+        CTkToolTip(btn3_2_1, delay=0.5, message="Execute (F3)")
+        btn3_2_1.pack(side=tk.LEFT)
+        keyboard.add_hotkey('f3', lambda: self.start_board_analysis(force_click=True))
+        customtkinter.CTkButton(frame3_2_top, text="View Last Board", command=self.show_last_move, image=icon_to_image("mouse", fill="#ffffff", scale_to_width=25), **self.tab_button_style).pack(side=tk.LEFT)
+
+        frame3_3 = customtkinter.CTkFrame(self.tab3, fg_color="transparent")
+        frame3_3_top = customtkinter.CTkFrame(frame3_3, fg_color="transparent")
+        frame3_3_bottom = customtkinter.CTkFrame(frame3_3, fg_color="transparent")
+        frame3_3.pack(side=tk.LEFT, expand=False, fill=tk.Y, anchor=tk.W)
+        frame3_3_top.pack(side=tk.TOP)
+        frame3_3_bottom.pack(side=tk.BOTTOM)
+        tk.ttk.Separator(self.tab3, orient='vertical').pack(side=tk.LEFT, fill='y', anchor=tk.W)
+
+        customtkinter.CTkLabel(frame3_3_bottom, text="").pack(side=tk.BOTTOM)
+        self.update_search_dir_button = customtkinter.CTkButton(frame3_3_top, text="Update Search Directory", command=self.update_search_dir, image=icon_to_image("mouse", fill="#ffffff", scale_to_width=25), **self.tab_button_style)
+        CTkToolTip(self.update_search_dir_button, delay=0.5, message="Execute (F3)")
+        self.update_search_dir_button.pack(side=tk.TOP)
+        customtkinter.CTkSwitch(frame3_3_top, text="Image File Mode", variable=self.board_capture_var, onvalue=False, offvalue=True, command=self.update_board_capture_mode).pack(side=tk.TOP, anchor=tk.W)
+
+
+
+        self.update_board_capture_mode()
+
     def create_app_menu(self):
         self.menubar = tk.Menu(self.master)
         self.master.config(menu=self.menubar)
 
         menu1 = tk.Menu(self.menubar, tearoff=0)
-        menu1.add_command(label="Configure Board Top Left", command=lambda: self.show_popup(click_counter= 1))
-        menu1.add_command(label="Configure Board Bottom Right", command=lambda: self.show_popup(click_counter= 2))
-        menu1.add_command(label="Configure Shuffle Move First Square", command=lambda: self.show_popup(click_counter= 3))
-        menu1.add_command(label="Configure Mouse Return Position", command=lambda: self.show_popup(click_counter= 4))
+        menu1.add_command(label="Configure Board Top Left", command=lambda: self.show_click_popup(click_counter= 1))
+        menu1.add_command(label="Configure Board Bottom Right", command=lambda: self.show_click_popup(click_counter= 2))
+        menu1.add_command(label="Configure Shuffle Move First Square", command=lambda: self.show_click_popup(click_counter= 3))
+        menu1.add_command(label="Configure Mouse Return Position", command=lambda: self.show_click_popup(click_counter= 4))
         menu1.add_command(label="Load Team from Shufle Move", command=self.load_team)
         menu1.add_command(label="Register Barrier Icon", command=self.open_barrier_register_screen)
         menu1.add_command(label="Remove Barrier Icon", command=lambda: self.open_app_register_screen(action="Remove"))
@@ -63,17 +225,16 @@ class ImageSelectorApp:
         self.menubar.add_cascade(label="Menu 1", menu=menu1)
 
         menu2 = tk.Menu(self.menubar, tearoff=0)
-        self.has_barrier_check = tk.BooleanVar(value=True)
+        self.has_barrier = tk.BooleanVar(value=True)
         # self.keep_loop_check = tk.BooleanVar(value=True)
         self.screen_capture_activated = tk.BooleanVar(value=True)
-        menu2.add_checkbutton(label="Has Barrier", variable=self.has_barrier_check, command=self.reveal_or_hide_barrier_img)
+        menu2.add_checkbutton(label="Has Barrier", variable=self.has_barrier, command=self.reveal_or_hide_barrier_img)
         # menu2.add_checkbutton(label="Activate Auto Get Images", variable=self.keep_loop_check, command=self.check_function)
-        menu2.add_checkbutton(label="Activate Screen Capture", variable=self.screen_capture_activated, command=self.screen_capture_mode)
+        menu2.add_checkbutton(label="Activate Screen Capture", variable=self.screen_capture_activated, command=self.update_board_capture_mode)
         self.menubar.add_cascade(label="Menu 2", menu=menu2)
 
-        self.menubar.add_command(label="Execute", command=self.execute_selected_images)
+        # self.menubar.add_command(label="Execute", command=self.start_board_analysis)
         self.menubar.add_command(label="Debug", command=self.show_last_move)
-        keyboard.add_hotkey('f2', self.execute_selected_images)
 
     def create_left_app_screen(self):
 
@@ -228,7 +389,7 @@ class ImageSelectorApp:
         # selected_image_label2.pack(expand=1, fill=tk.BOTH)
 
         
-        if self.has_barrier_check.get():
+        if self.has_barrier.get():
             self.reveal_or_hide_barrier_img()
 
         # Update the scroll region of the canvas
@@ -268,7 +429,7 @@ class ImageSelectorApp:
                     widget_list.append(image_widgets)
         return widget_list
 
-    def execute_selected_images(self):
+    def start_board_analysis(self, force_click=False):
         global last_team_to_execute
         values_to_execute = []
         for image_widgets in self.get_selected_images_widgets_list():
@@ -278,10 +439,15 @@ class ImageSelectorApp:
             with open(LAST_TEAM_PKL, 'wb') as file:
                 pickle.dump(values_to_execute, file)
         
-        match_icons.start(values_to_execute, self.has_barrier_check.get(), screen_record=self.screen_capture_activated.get())
+        if force_click:
+            force_click = True
+        else:
+            force_click = self.control_loop_var.get()
+        
+        match_icons.start(values_to_execute, self.has_barrier.get(), screen_record=self.board_capture_var.get(), force_click=force_click)
         # print("Executing with selected images:", values_to_execute)
 
-    def show_popup(self, click_counter):
+    def show_click_popup(self, click_counter):
         self.popup = tk.Toplevel(self.master)
         self.popup.title("Click Recorder")
         self.click_counter = click_counter
@@ -318,19 +484,39 @@ class ImageSelectorApp:
             self.mouse_listener.stop()
             self.popup.destroy()
 
-    def check_function(self):
-        if not self.keep_loop_check.get():
+    def control_loop_function(self, force_click=False):
+        if not self.control_loop_var.get():
             return
         else:
-            if os.path.exists(constants.DROPBOX_IMAGE_PATH):
-                self.execute_selected_images()
-            self.check_job = self.master.after(1000, self.check_function)  # Schedule next check after 2000 milliseconds (2 seconds)
+            if not self.board_capture_var.get():
+                if config_utils.config_values.get("board_image_path") and os.path.exists(config_utils.config_values.get("board_image_path")):
+                    self.start_board_analysis(force_click)
+            else:
+                self.start_board_analysis(force_click)
+            self.check_job = self.master.after(1000, self.control_loop_function)  # Schedule next check after 2000 milliseconds (2 seconds)
 
-    def screen_capture_mode(self):
-        return
+    def update_search_dir(self):
+        file_path = filedialog.askopenfilename()
+        if file_path:
+            config_utils.update_config("board_image_path", file_path)
+            return
+
+    def update_board_capture_mode(self):
+        value = self.board_capture_var.get()
+        self.control_loop_var.set(False)
+        config_utils.update_config("board_capture_var", self.board_capture_var.get())
+        if not value:
+            self.update_search_dir_button.configure(state=tk.NORMAL)  # Enable the button
+        else:
+            self.update_search_dir_button.configure(state=tk.DISABLED)  # Disable the button
+
+
 
     def reveal_or_hide_barrier_img(self):
-        if not self.has_barrier_check.get():
+        has_barrier = self.has_barrier.get()
+        config_utils.update_config("has_barrier", has_barrier)
+        if not has_barrier:
+            
             for image_widgets in self.get_selected_images_widgets_list():
                 label = image_widgets[0]
                 image = Image.open(Path(constants.IMAGES_PATH, label.cget("text")))

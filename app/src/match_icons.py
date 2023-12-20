@@ -10,7 +10,7 @@ from PIL import Image
 from pathlib import Path
 import time
 from src.embed import Embedder
-from src import constants, custom_utils
+from src import constants, custom_utils, config_utils
 from src.config_utils import config_values
 
 embedder = Embedder()
@@ -217,8 +217,8 @@ def capture_board_screensot(screen_record):
         y1 = board_bottom_right[1] - board_top_left[1]
         img = pyautogui.screenshot(region=(x0, y0, x1, y1))
         img.save(constants.LAST_BOARD_IMAGE_PATH)
-    elif os.path.exists(constants.DROPBOX_IMAGE_PATH):
-        shutil.move(constants.DROPBOX_IMAGE_PATH, constants.LAST_BOARD_IMAGE_PATH)
+    elif os.path.exists(config_utils.config_values.get("board_image_path")):
+        shutil.move(config_utils.config_values.get("board_image_path"), constants.LAST_BOARD_IMAGE_PATH)
         img = Image.open(constants.LAST_BOARD_IMAGE_PATH)
         img =  img.crop((10,600,740,1320)).convert('RGB')
         img.save(constants.LAST_BOARD_IMAGE_PATH)
@@ -236,7 +236,7 @@ def make_cell_list(screen_record):
             cell_list.append(img.crop(cell_box))
     return cell_list
             
-def start(request_values, has_barriers, show_debug=False, screen_record=False):
+def start(request_values, has_barriers, show_debug=False, screen_record=False, force_click=False):
     global last_image
     icons_list = load_icon_classes(request_values, has_barriers)
     match_list: List[Match] = []
@@ -253,7 +253,7 @@ def start(request_values, has_barriers, show_debug=False, screen_record=False):
     
     commands_list = list(chain(*[match.shortcut for match in match_list]))
     
-    execute_commands(commands_list)
+    execute_commands(commands_list, force_click)
 
 def concatenate_cv2_images(image_list, grid_size=(6, 6), spacing=10):
     # Get image dimensions
@@ -299,23 +299,25 @@ def concatenate_PIL_images(image_list, grid_size=(6, 6), spacing=10):
 
     return result_image
 
-def execute_commands(command_sequence):
+def execute_commands(command_sequence, force_click):
     global shuffle_move_first_square_position
     print(command_sequence)
     # screen_factor = 0.68
     # position = [el * screen_factor for el in position]
     # position
-    pyautogui.click(shuffle_move_first_square_position[0], y=shuffle_move_first_square_position[1])
-    time.sleep(0.1)
+    if force_click:
+        pyautogui.click(shuffle_move_first_square_position[0], y=shuffle_move_first_square_position[1])
+        time.sleep(0.1)
     # with pyautogui.hold("ctrl"):
             # pyautogui.press("del")
     # time.sleep(0.2)
     # pyautogui.click(x=shuffle_move_first_square_position[0], y=shuffle_move_first_square_position[1])
     # time.sleep(0.2)
     # for command in command_sequence:
-    pyautogui.press(command_sequence)
+    # pyautogui.press(command_sequence)
         # time.sleep(0.005)
-    pyautogui.moveTo(x=mouse_after_shuffle_position[0], y=mouse_after_shuffle_position[1])
+    if force_click:
+        pyautogui.moveTo(x=mouse_after_shuffle_position[0], y=mouse_after_shuffle_position[1])
 
 
 if __name__ == "__main__":
