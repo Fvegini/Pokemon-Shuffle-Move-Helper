@@ -1,12 +1,13 @@
 import shutil
-from PIL import ImageTk, Image
+from PIL import Image
 import tkinter as tk
 from src import match_icons
 from pathlib import Path
 import os
-from src import constants
+from src import constants, custom_utils
+import customtkinter
 
-class BoardImageSelector(tk.Toplevel):
+class BoardIconSelector(tk.Toplevel):
      
     def __init__(self, master = None, root = None, folder = ""):
          
@@ -23,12 +24,12 @@ class BoardImageSelector(tk.Toplevel):
         row_index = 0
         col_index = 0
 
-        icons_list = match_icons.make_cell_list(force_last_image=True)
+        icons_list = match_icons.make_cell_list(force_last_image=False)
         for image in icons_list:
-            tk_image = ImageTk.PhotoImage(image)
+            tk_image = customtkinter.CTkImage(image, size=image.size)
             self.image_widgets.append(tk_image)
 
-            label = tk.Label(self, image=tk_image, cursor="hand2")
+            label = customtkinter.CTkLabel(self, image=tk_image, text="", cursor="hand2")
             label.image = tk_image  # Keep a reference to avoid garbage collection
             label.bind("<Button-1>", lambda event, custom_image=image: self.on_image_click(custom_image))
             label.grid(row=row_index, column=col_index, padx=10, pady=10)
@@ -44,7 +45,7 @@ class BoardImageSelector(tk.Toplevel):
         self.root.open_app_register_screen()
         self.destroy()
 
-class AppImageSelector(tk.Toplevel):
+class AppIconSelector(tk.Toplevel):
      
     def __init__(self, master = None, root = None, action = None):
          
@@ -63,9 +64,9 @@ class AppImageSelector(tk.Toplevel):
         widgets_list = self.root.get_selected_images_widgets_list()
         for widgets in widgets_list:
             image = Image.open(Path(constants.IMAGES_PATH, widgets[0].cget("text")))
-            tk_image = ImageTk.PhotoImage(image)
+            tk_image = customtkinter.CTkImage(image, size=image.size)
 
-            label = tk.Label(self, image=tk_image, cursor="hand2")
+            label = customtkinter.CTkLabel(self, image=tk_image, text="", cursor="hand2")
             label.image = tk_image  # Keep a reference to avoid garbage collection
             label.bind("<Button-1>", lambda event, image_name=widgets[0].cget("text"): self.on_image_click(image_name))
             label.grid(row=row_index, column=col_index, padx=10, pady=10)
@@ -77,16 +78,59 @@ class AppImageSelector(tk.Toplevel):
     
     def on_image_click(self, image_name):
         self.selected_image_name = image_name
-        if self.action == "Remove":
+        if self.action == "Remove_Barrier":
             remove_icon(Path(constants.IMAGES_BARRIER_PATH, image_name))
+        elif self.action == "Remove_Extra":
+            ExtraIconSelector(root=self.root, selected_image = image_name)
         else:
             save_new_icon(self.root.board_image_selector.selected_image, image_name, self.root.board_image_selector.folder)
         self.root.reveal_or_hide_barrier_img()
         self.destroy()
 
+
+class ExtraIconSelector(tk.Toplevel):
+     
+    def __init__(self, master = None, root = None, selected_image = None):
+         
+        super().__init__(master = master)
+        self.title("Select The Extra Icon that you want to remove")
+        self.root = root
+        self.selected_image = selected_image
+        self.create_widgets()
+        
+    def create_widgets(self):
+        num_columns = 6
+        row_index = 0
+        col_index = 0
+
+        images_path = custom_utils.find_matching_files(constants.IMAGES_EXTRA_PATH, Path(self.selected_image).stem, ".*")
+
+        for extra_image_path in images_path:
+            image_path = Path(extra_image_path)
+            image = Image.open(Path(extra_image_path))
+            tk_image = customtkinter.CTkImage(image, size=image.size)
+
+            label = customtkinter.CTkLabel(self, image=tk_image, text="", cursor="hand2")
+            label.image = tk_image  # Keep a reference to avoid garbage collection
+            label.bind("<Button-1>", lambda event, image_path=image_path: self.on_image_click(image_path))
+            label.grid(row=row_index, column=col_index, padx=10, pady=10)
+
+            col_index += 1
+            if col_index >= num_columns:
+                col_index = 0
+                row_index += 1
+
+    def on_image_click(self, image_path):
+        self.image_path = image_path
+        remove_icon(image_path)
+        self.root.reveal_or_hide_barrier_img()
+        self.destroy()
+
 def remove_icon(image_path):
     if os.path.exists(image_path):
+        # print(f"Teria removido {image_path}")
         os.remove(image_path)
+        print(f"Eliminado o Arquivo: {image_path}")
 
 def save_new_icon(image, image_name, folder):
     if folder == "barrier":

@@ -7,7 +7,7 @@ import keyboard
 from src import match_icons
 from pathlib import Path
 from pynput import mouse
-from src.board_image_selector import BoardImageSelector, AppImageSelector
+from src.board_image_selector import BoardIconSelector, AppIconSelector
 from src import constants, custom_utils, load_from_shuffle, config_utils
 import pickle
 from tkfontawesome import icon_to_image
@@ -18,7 +18,8 @@ warnings.filterwarnings("ignore", category=UserWarning, message="CTkButton Warni
 
 
 customtkinter.set_appearance_mode("dark")  # Modes: "System" (standard), "Dark", "Light"
-customtkinter.set_default_color_theme("blue")  # Themes: "blue" (standard), "green", "dark-blue"
+# customtkinter.set_appearance_mode("light")
+customtkinter.set_default_color_theme("dark-blue")  # Themes: "blue" (standard), "green", "dark-blue"
 
 
 # import cairosvg
@@ -30,7 +31,6 @@ class ImageSelectorApp():
         
         self.master = master
         self.master.title("Image Selector")
-        
         self.create_tab_menu()
         
         self.appview = customtkinter.CTkFrame(self.master)
@@ -52,7 +52,7 @@ class ImageSelectorApp():
         self.tab2 = self.tabview.add("Icons")
         self.tab3 = self.tabview.add("Execute")
         self.tabview._segmented_button.grid(sticky="W")
-        self.tabview.pack_propagate(False)
+        self.tabview.pack_propagate(True)
         self.tab_button_style = {
             'compound': 'top',
             'width': 0,
@@ -64,6 +64,8 @@ class ImageSelectorApp():
         self.create_tab_1()
         self.create_tab_2()
         self.create_tab_3()
+        
+        self.tabview.set("Execute")
 
         
     def create_tab_1(self):
@@ -76,7 +78,7 @@ class ImageSelectorApp():
         frame1_1_bottom.pack(side=tk.BOTTOM)
         tk.ttk.Separator(self.tab1, orient='vertical').pack(side=tk.LEFT, fill='y', anchor=tk.W)
 
-        customtkinter.CTkLabel(frame1_1_bottom, text="Mouse Positions", font=customtkinter.CTkFont(size=10), bg_color="white").pack(side=tk.BOTTOM, anchor=tk.S)
+        customtkinter.CTkLabel(frame1_1_bottom, text="Mouse Positions").pack(side=tk.BOTTOM, anchor=tk.S)
 
         icon = icon_to_image("mouse", fill="#ffffff", scale_to_width=25)
 
@@ -124,29 +126,29 @@ class ImageSelectorApp():
 
         #Block 1
         customtkinter.CTkLabel(frame2_1_bottom, text="Current Team").pack(side=tk.BOTTOM)
-        btn2_1_1 = customtkinter.CTkButton(frame2_1_top, text="Load Team", command=self.load_team, image=icon_to_image("mouse", fill="#ffffff", scale_to_width=25), **self.tab_button_style)
+        btn2_1_1 = customtkinter.CTkButton(frame2_1_top, text="Load Team", command=self.load_team, image=icon_to_image("cloud-download-alt", fill="#ffffff", scale_to_width=25), **self.tab_button_style)
         CTkToolTip(btn2_1_1, delay=0.5, message="Load Team From Shuffle Move Config File")
-        btn2_1_1.pack(side=tk.LEFT)
+        btn2_1_1.pack(side=tk.LEFT, padx=5)
         
         
         #Block 2
         customtkinter.CTkLabel(frame2_2_bottom, text="Register Icons").pack(side=tk.BOTTOM)
-        btn2_2_1 = customtkinter.CTkButton(frame2_2_top, text="Register Barrier", command=self.open_barrier_register_screen, image=icon_to_image("mouse", fill="#ffffff", scale_to_width=25), **self.tab_button_style)
+        btn2_2_1 = customtkinter.CTkButton(frame2_2_top, text="Register Barrier", command=lambda: self.open_create_register_screen(folder="barrier"), image=icon_to_image("plus", fill="#ffffff", scale_to_width=25), **self.tab_button_style)
         CTkToolTip(btn2_2_1, delay=0.5, message="Create or Substitute the Barrier Icon")
-        btn2_2_1.pack(side=tk.LEFT)
-        btn2_2_2 = customtkinter.CTkButton(frame2_2_top, text="Register Extra", command=self.open_extra_register_screen, image=icon_to_image("mouse", fill="#ffffff", scale_to_width=25), **self.tab_button_style)
+        btn2_2_1.pack(side=tk.LEFT, padx=5)
+        btn2_2_2 = customtkinter.CTkButton(frame2_2_top, text="Register Extra", command=lambda: self.open_create_register_screen(folder="extra"), image=icon_to_image("plus", fill="#ffffff", scale_to_width=25), **self.tab_button_style)
         CTkToolTip(btn2_2_2, delay=0.5, message="Insert a new Extra Icon")
-        btn2_2_2.pack(side=tk.LEFT)   
+        btn2_2_2.pack(side=tk.LEFT, padx=5)
 
 
         # #Block 3
         customtkinter.CTkLabel(frame2_3_bottom, text="Remove Icons").pack(side=tk.BOTTOM)
-        btn2_3_1 = customtkinter.CTkButton(frame2_3_top, text="Remove Barrier", command=lambda: self.open_app_register_screeat(action="Remove_Barrier"), image=icon_to_image("mouse", fill="#ffffff", scale_to_width=25), **self.tab_button_style)
+        btn2_3_1 = customtkinter.CTkButton(frame2_3_top, text="Remove Barrier", command=lambda: self.open_remove_register_screen(action="Remove_Barrier"), image=icon_to_image("trash-alt", fill="#ffffff", scale_to_width=25), **self.tab_button_style)
         CTkToolTip(btn2_3_1, delay=0.5, message="Remove the Barrier Icon")
-        btn2_3_1.pack(side=tk.LEFT)
-        btn2_3_2 = customtkinter.CTkButton(frame2_3_top, text="Remove Extra", command=lambda: self.open_app_register_screen(action="Remove_Extra"), image=icon_to_image("mouse", fill="#ffffff", scale_to_width=25), **self.tab_button_style)
+        btn2_3_1.pack(side=tk.LEFT, padx=5)
+        btn2_3_2 = customtkinter.CTkButton(frame2_3_top, text="Remove Extra", command=lambda: self.open_remove_register_screen(action="Remove_Extra"), image=icon_to_image("trash-alt", fill="#ffffff", scale_to_width=25), **self.tab_button_style)
         CTkToolTip(btn2_3_2, delay=0.5, message="Remove One of the Extra Icons")
-        btn2_3_2.pack(side=tk.LEFT)   
+        btn2_3_2.pack(side=tk.LEFT, padx=5)
 
 
     def create_tab_3(self):
@@ -157,19 +159,23 @@ class ImageSelectorApp():
         frame3_1_top.pack(side=tk.TOP)
         frame3_1_bottom.pack(side=tk.BOTTOM)
         tk.ttk.Separator(self.tab3, orient='vertical').pack(side=tk.LEFT, fill='y', anchor=tk.W)
-        
-        
         customtkinter.CTkLabel(frame3_1_bottom, text="Board Capture Mode", bg_color="transparent").pack(side=tk.BOTTOM)
+        
+        
+        frame3_1_top_1 = customtkinter.CTkFrame(frame3_1_top, fg_color="transparent")
+        frame3_1_top_2 = customtkinter.CTkFrame(frame3_1_top, fg_color="transparent")
+        frame3_1_top_1.pack(side=tk.LEFT)
+        frame3_1_top_2.pack(side=tk.LEFT)
         
         self.board_capture_var = tk.BooleanVar(value=config_utils.config_values.get("board_capture_var")) 
         self.has_barrier = tk.BooleanVar(value=config_utils.config_values.get("has_barrier")) 
         self.control_loop_var = tk.BooleanVar(value=False)
 
-        customtkinter.CTkSwitch(frame3_1_top, text="Print Screen Mode", variable=self.board_capture_var, onvalue=True, offvalue=False, command=self.update_board_capture_mode).pack(side=tk.TOP, anchor=tk.W)
-        customtkinter.CTkSwitch(frame3_1_top, text="Capture Loop", variable=self.control_loop_var, onvalue=True, offvalue=False, command=lambda: self.control_loop_function(mouse_click=True)).pack(side=tk.TOP, anchor=tk.W)
-        
-        
-        customtkinter.CTkSwitch(frame3_1_top, text="Has Barriers", variable=self.has_barrier, command=self.reveal_or_hide_barrier_img).pack(side=tk.TOP, anchor=tk.W)
+        customtkinter.CTkSwitch(frame3_1_top_1, text="Print Screen Mode", variable=self.board_capture_var, onvalue=True, offvalue=False, command=self.update_board_capture_mode).pack(side=tk.TOP, anchor=tk.W, padx=5)
+        customtkinter.CTkSwitch(frame3_1_top_1, text="Image File Mode", variable=self.board_capture_var, onvalue=False, offvalue=True, command=self.update_board_capture_mode).pack(side=tk.TOP, anchor=tk.W, padx=5)
+       
+        customtkinter.CTkSwitch(frame3_1_top_2, text="Capture Loop", variable=self.control_loop_var, onvalue=True, offvalue=False, command=lambda: self.control_loop_function(mouse_click=True)).pack(side=tk.TOP, anchor=tk.W, padx=5)
+        customtkinter.CTkSwitch(frame3_1_top_2, text="Has Barriers", variable=self.has_barrier, command=self.reveal_or_hide_barrier_img).pack(side=tk.TOP, anchor=tk.W, padx=5)
         
         frame3_2 = customtkinter.CTkFrame(self.tab3, fg_color="transparent")
         frame3_2_top = customtkinter.CTkFrame(frame3_2, fg_color="transparent")
@@ -178,13 +184,13 @@ class ImageSelectorApp():
         frame3_2_top.pack(side=tk.TOP)
         frame3_2_bottom.pack(side=tk.BOTTOM)
         tk.ttk.Separator(self.tab3, orient='vertical').pack(side=tk.LEFT, fill='y', anchor=tk.W)
-
         customtkinter.CTkLabel(frame3_2_bottom, text="").pack(side=tk.BOTTOM)
-        btn3_2_1 = customtkinter.CTkButton(frame3_2_top, text="Execute", command=lambda: self.start_board_analysis(mouse_click=True), image=icon_to_image("mouse", fill="#ffffff", scale_to_width=25), **self.tab_button_style)
+
+        btn3_2_1 = customtkinter.CTkButton(frame3_2_top, text="Execute", command=lambda: self.start_board_analysis(mouse_click=True), image=icon_to_image("play-circle", fill="#ffffff", scale_to_width=25), **self.tab_button_style)
         CTkToolTip(btn3_2_1, delay=0.5, message="Execute (F3)")
         btn3_2_1.pack(side=tk.LEFT)
         keyboard.add_hotkey('f3', lambda: self.start_board_analysis(mouse_click=True))
-        customtkinter.CTkButton(frame3_2_top, text="View Last Board", command=self.show_last_move, image=icon_to_image("mouse", fill="#ffffff", scale_to_width=25), **self.tab_button_style).pack(side=tk.LEFT)
+        customtkinter.CTkButton(frame3_2_top, text="View Last Board", command=self.show_last_move, image=icon_to_image("search", fill="#ffffff", scale_to_width=25), **self.tab_button_style).pack(side=tk.LEFT)
 
         frame3_3 = customtkinter.CTkFrame(self.tab3, fg_color="transparent")
         frame3_3_top = customtkinter.CTkFrame(frame3_3, fg_color="transparent")
@@ -195,11 +201,9 @@ class ImageSelectorApp():
         tk.ttk.Separator(self.tab3, orient='vertical').pack(side=tk.LEFT, fill='y', anchor=tk.W)
 
         customtkinter.CTkLabel(frame3_3_bottom, text="").pack(side=tk.BOTTOM)
-        self.update_search_dir_button = customtkinter.CTkButton(frame3_3_top, text="Update Search Directory", command=self.update_search_dir, image=icon_to_image("mouse", fill="#ffffff", scale_to_width=25), **self.tab_button_style)
+        self.update_search_dir_button = customtkinter.CTkButton(frame3_3_top, text="Update Search Directory", command=self.update_search_dir, image=icon_to_image("folder-open", fill="#ffffff", scale_to_width=25), **self.tab_button_style)
         CTkToolTip(self.update_search_dir_button, delay=0.5, message="Execute (F3)")
         self.update_search_dir_button.pack(side=tk.TOP)
-        customtkinter.CTkSwitch(frame3_3_top, text="Image File Mode", variable=self.board_capture_var, onvalue=False, offvalue=True, command=self.update_board_capture_mode).pack(side=tk.TOP, anchor=tk.W)
-
 
         self.update_board_capture_mode()
 
@@ -224,31 +228,21 @@ class ImageSelectorApp():
         
         self.image_listbox = tk.Listbox(self.images_frame, selectmode=tk.SINGLE, width=20)
         self.image_listbox.grid(row=1, column=0, sticky='w', padx=(10, 0), pady=(10,10), columnspan=2)
-        
+
+        scrollbar = tk.Scrollbar(self.images_frame, orient="vertical")
+        scrollbar.config(command=self.image_listbox.yview)
+        scrollbar.grid(row=1, column=2, sticky='ns', padx=(0, 10), pady=(10,10))
+
+        self.image_listbox.config(yscrollcommand=scrollbar.set)
+
         self.image_preview = customtkinter.CTkLabel(self.images_frame, text="")
-        self.image_preview.grid(row=1, column=2, padx=5, pady=5, sticky='w')
+        self.image_preview.grid(row=1, column=3, padx=5, pady=5, sticky='w')
 
 
     def create_right_app_screen(self):
-        self.selected_images_frame_master = tk.Frame(self.appview, background="aqua")
-        # self.selected_images_frame.pack(side=tk.LEFT, padx=10, pady=2, expand=1)
-        self.selected_images_frame_master.pack(padx=10, pady=2, expand=1, anchor="nw")
-        # self.selected_images_frame.rowconfigure((0,1), weight=1)
-        
-        self.selected_images_frame = tk.Frame(self.selected_images_frame_master, background="aqua")
-        # self.selected_images_frame.pack(side=tk.LEFT, padx=10, pady=2, expand=1)
-        self.selected_images_frame.pack(padx=10, pady=2, expand=1, anchor="nw")
-
         self.selected_images = []
-        self.selected_images_canvas = tk.Canvas(self.selected_images_frame, background="aquamarine1", width=1200, height=200)
-        self.selected_images_canvas.pack(side=tk.TOP, fill=tk.X)
-
-        self.selected_images_scrollbar = tk.Scrollbar(self.selected_images_frame, orient=tk.HORIZONTAL, command=self.selected_images_canvas.xview)
-        self.selected_images_scrollbar.pack(side=tk.BOTTOM, fill=tk.X)
-        self.selected_images_canvas.config(xscrollcommand=self.selected_images_scrollbar.set)
-
-        self.selected_images_container = tk.Frame(self.selected_images_canvas, background="azure")
-        self.selected_images_canvas.create_window((0, 0), window=self.selected_images_container, anchor=tk.CENTER, height=200)
+        self.scrollable_frame = customtkinter.CTkScrollableFrame(self.appview, width=200, height=200, orientation="horizontal")
+        self.scrollable_frame.pack(side=tk.TOP, fill=tk.X)
 
     def configure_initial_geometry(self):
         self.master.update()
@@ -302,28 +296,30 @@ class ImageSelectorApp():
             selected_file = self.image_listbox.get(selected_index)
             self.insert_image_widget(selected_file)
     
-    def insert_image_widget(self, selected_file, forced_shortcut=None, disabled=False):
+    def insert_image_widget(self, selected_file, forced_shortcut=None, disabled=False, skip_barrier=False):
         image_path = os.path.join(constants.IMAGES_PATH, selected_file)  # Change this to the path of your folder
 
         if any([value for value in self.selected_images if value[1] == selected_file]):
             return
 
+        # Display in the selected images panel
+        selected_image_frame = customtkinter.CTkFrame(self.scrollable_frame)
+        selected_image_frame.pack(fill=tk.Y, side=tk.RIGHT, padx=5, anchor=tk.CENTER)
+        selected_image_frame.original_fg_color = selected_image_frame._fg_color
+        
+        self.selected_images.append((image_path, selected_file))
+        
         # Create a thumbnail for preview
         image = Image.open(image_path)
-        image.thumbnail((50, 50))
-        photo = ImageTk.PhotoImage(image)
+        image.thumbnail((50,50))
+        photo = customtkinter.CTkImage(image, size=(50, 50))
 
-        # Add to the selected images list
-        self.selected_images.append((image_path, selected_file))
-
-        # Display in the selected images panel
-        selected_image_frame = tk.Frame(self.selected_images_container)
-        selected_image_frame.pack(fill=tk.BOTH, side=tk.RIGHT, padx=5, anchor=tk.CENTER)
-
-        selected_image_label = tk.Label(selected_image_frame, image=photo, text=selected_file, compound=tk.TOP)
-        selected_image_label.photo = photo # Keep a reference to avoid garbage collection issues
+        selected_image_label = customtkinter.CTkLabel(selected_image_frame, image=photo, text=selected_file, compound=tk.TOP)
         selected_image_label.pack()
+        
 
+        self.insert_extra_images_tooltip(image_path, selected_image_label)
+        
         options = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'del', 'a', 'b', 'c', 'd', 'e','f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o',
                     'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z']
         combobox = customtkinter.CTkComboBox(selected_image_frame, values=options, width=80)
@@ -333,26 +329,44 @@ class ImageSelectorApp():
             combobox.set("del")
         else:
             combobox.set(str(len(self.selected_images)))
-        combobox.pack()
+        combobox.pack(pady=5)
 
-        # remove_button = tk.Button(selected_image_frame, text="Remove", command=lambda: self.remove_selected_image(selected_image_frame, image_path))
-        disable_button = customtkinter.CTkButton(selected_image_frame, text="Remove", width=80, fg_color="transparent", border_width=2, text_color=("gray10", "#DCE4EE"), command=lambda: self.remove_selected_image(selected_image_frame, image_path))
-        disable_button.pack()
+        disable_button = customtkinter.CTkButton(selected_image_frame, text="Remove", width=80, command=lambda: self.remove_selected_image(selected_image_frame, image_path))
+        disable_button.pack(pady=5)
 
-        checkbox_1 = customtkinter.CTkCheckBox(selected_image_frame, text="Disable", checkbox_width=12, checkbox_height=12, corner_radius=0, onvalue=True, offvalue=False)
+        checkbox_1 = customtkinter.CTkCheckBox(selected_image_frame, text="Disable", checkbox_width=12, checkbox_height=12, corner_radius=0, onvalue=True, offvalue=False, command=lambda: self.transparency_set(checkbox_1, selected_image_frame))
         checkbox_1.pack(padx=(25, 0))
         if disabled:
-            checkbox_1.select()
+            checkbox_1.toggle()
 
-        if self.has_barrier.get():
+        if self.has_barrier.get() and not skip_barrier:
             self.reveal_or_hide_barrier_img()
 
-        # Update the scroll region of the canvas
-        self.master.update_idletasks()
-        self.selected_images_canvas.config(scrollregion=self.selected_images_canvas.bbox(tk.ALL))
+    def transparency_set(self, checkbox_1, selected_image_frame):
+        if checkbox_1.get():
+            print("add_transparency")
+            selected_image_frame.configure(fg_color="gray")
+        else:
+            print("remove_transparency")
+            selected_image_frame.configure(fg_color=selected_image_frame.original_fg_color)
+
+    def insert_extra_images_tooltip(self, image_path, selected_image_label):
+        extra_image_list = []
+        original_path = Path(image_path)
+        images_path = [original_path] + custom_utils.find_matching_files(constants.IMAGES_EXTRA_PATH, original_path.stem, ".*")
+
+
+        for extra_image_path in images_path:
+            extra_image = Image.open(extra_image_path)
+            extra_image.thumbnail((50,50))
+            extra_image_list.append(extra_image)
+        
+        extra_complete_image = custom_utils.merge_pil_images_list(extra_image_list)
+        extra_photo = customtkinter.CTkImage(extra_complete_image, size=extra_complete_image.size)
+        CTkToolTip(selected_image_label, delay=0.5, message="", image=extra_photo)
 
     def destroy_selected_pokemons(self):
-        for widget in self.selected_images_container.winfo_children():
+        for widget in self.scrollable_frame.winfo_children():
             widget.destroy()
         self.selected_images = []
         
@@ -361,27 +375,22 @@ class ImageSelectorApp():
         # Remove the image from the selected images list
         self.selected_images = [(path, name) for path, name in self.selected_images if path != image_path]
 
-        # Update the scroll region of the canvas
-        self.master.update_idletasks()
-        self.selected_images_canvas.config(scrollregion=self.selected_images_canvas.bbox(tk.ALL))
-
-    def open_barrier_register_screen(self):
-        self.board_image_selector = BoardImageSelector(root=self, folder="barrier")
-
-    def open_extra_register_screen(self):
-        self.board_image_selector = BoardImageSelector(root=self, folder="extra")
+    def open_create_register_screen(self, folder):
+        self.board_image_selector = BoardIconSelector(root=self, folder=folder)
     
+    def open_remove_register_screen(self, action=None):
+        self.app_image_selector = AppIconSelector(root=self, action=action)
+
     def open_app_register_screen(self, action=None):
-        self.app_image_selector = AppImageSelector(root=self, action=action)
+        self.app_image_selector = AppIconSelector(root=self, action=action)
+
 
     def get_selected_images_widgets_list(self):
         widget_list = []
-        for frame in self.selected_images_canvas.winfo_children():
-            if isinstance(frame, tk.Frame):
-                image_frames = frame.winfo_children()
-                for image_frame in image_frames:
-                    image_widgets = image_frame.winfo_children()
-                    widget_list.append(image_widgets)
+        for frame in self.scrollable_frame.winfo_children():
+            if isinstance(frame, customtkinter.CTkFrame):
+                image_widgets = frame.winfo_children()
+                widget_list.append(image_widgets)
         return widget_list
 
     def start_board_analysis(self, mouse_click=False):
@@ -399,8 +408,7 @@ class ImageSelectorApp():
         else:
             mouse_click = not self.control_loop_var.get()
         
-        match_icons.start(values_to_execute, self.has_barrier.get(), screen_record=self.board_capture_var.get(), mouse_click=mouse_click)
-        # print("Executing with selected images:", values_to_execute)
+        match_icons.start(values_to_execute, self.has_barrier.get(), mouse_click=mouse_click)
 
     def show_click_popup(self, click_counter):
         self.popup = tk.Toplevel(self.master)
@@ -476,7 +484,7 @@ class ImageSelectorApp():
                 label = image_widgets[0]
                 image = Image.open(Path(constants.IMAGES_PATH, label.cget("text")))
                 image.thumbnail((50, 50))
-                photo = ImageTk.PhotoImage(image)
+                photo = customtkinter.CTkImage(image, size=image.size)
                 label.configure(image=photo)
                 label.photo = photo
         else:
@@ -489,21 +497,20 @@ class ImageSelectorApp():
                 if os.path.exists(image2_path):
                     image2 = Image.open(image2_path)
                 else:
-                    # image2 = custom_utils.open_and_resize_np_image(image_path, match_icons.downscale_res)
-                    # image2 = Image.fromarray(match_icons.add_barrier_layer(image2))
                     image2 = Image.open(r"assets\x.png")
                 image.thumbnail((50, 50))
                 image2.thumbnail((50, 50))
                 image = custom_utils.merge_pil_images(image, image2)
-                photo = ImageTk.PhotoImage(image)
+                photo = customtkinter.CTkImage(image, size=image.size)
                 label.configure(image=photo)
                 label.photo = photo
 
     def show_last_move(self):
         image_frame = tk.Toplevel(self.master)
         image_frame.title("Image Frame")
-        photo = ImageTk.PhotoImage(Image.fromarray(match_icons.last_image))
-        label = ttk.Label(image_frame, image=photo)
+        image = Image.fromarray(match_icons.last_image)
+        photo = customtkinter.CTkImage(image, size=image.size)
+        label = customtkinter.CTkLabel(image_frame, image=photo)
         label.image = photo
         label.pack()
 
@@ -513,16 +520,17 @@ class ImageSelectorApp():
             with open(LAST_TEAM_PKL, 'rb') as file:
                 loaded_variable = pickle.load(file)
             for pokemon, shortcut, disabled in loaded_variable:
-                self.insert_image_widget(pokemon.name, shortcut, disabled)
-            self.selected_images_scrollbar.set(0.0)
-        except:
+                self.insert_image_widget(pokemon.name, shortcut, disabled, skip_barrier=True)
+            if self.has_barrier.get():
+                self.reveal_or_hide_barrier_img()
+        except Exception as ex:
+            print(ex)
             pass
+        
         
 
     def load_team(self):
         load_from_shuffle.TeamLoader(root=self)
-        # self.app_image_selector = AppImageSelector(root=self, action=action)
-        
 
 if __name__ == "__main__":    
     root = customtkinter.CTk()

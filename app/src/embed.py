@@ -1,10 +1,11 @@
 import mediapipe as mp
 import glob
+from pathlib import Path
+
 BaseOptions = mp.tasks.BaseOptions
 ImageEmbedder = mp.tasks.vision.ImageEmbedder
 ImageEmbedderOptions = mp.tasks.vision.ImageEmbedderOptions
 VisionRunningMode = mp.tasks.vision.RunningMode
-from pathlib import Path
 
 model_path = Path(r"models\1.tflite")
 

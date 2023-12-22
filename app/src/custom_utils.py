@@ -51,6 +51,23 @@ def merge_pil_images(image1, image2):
     # Save the merged image
     return merged_image
 
+def merge_pil_images_list(image_list):
+    # Get the total width and maximum height
+    total_width = sum(img.width for img in image_list)
+    max_height = max(img.height for img in image_list)
+
+    # Create a new blank image with the calculated dimensions
+    merged_image = Image.new("RGB", (total_width, max_height))
+
+    # Paste each image horizontally
+    current_x = 0
+    for img in image_list:
+        merged_image.paste(img, (current_x, 0))
+        current_x += img.width
+
+    return merged_image
+
+
 def get_taskbar_size():
     try:
         import ctypes

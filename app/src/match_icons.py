@@ -19,6 +19,7 @@ shuffle_move_first_square_position = config_values.get("shuffle_move_first_squar
 mouse_after_shuffle_position = config_values.get("mouse_after_shuffle_position")
 board_top_left = config_values.get("board_top_left")
 board_bottom_right = config_values.get("board_bottom_right")
+fake_barrier_active = False
 
 custom_board_image = None
 last_image = None
@@ -66,7 +67,7 @@ class Icon():
         for image_path in matching_files:
             image = custom_utils.open_and_resize_np_image(image_path, downscale_res)
             self.images_list.append(CustomImage(image))
-        if len(self.images_list) == 0 and self.barrier:
+        if len(self.images_list) == 0 and self.barrier and fake_barrier_active:
             original_img = custom_utils.open_and_resize_np_image(self.original_path, downscale_res)
             barrier_img = add_barrier_layer(original_img)
             self.images_list.append(CustomImage(barrier_img))
@@ -79,7 +80,10 @@ class Match():
         self.board_icon = board_icon
         self.shortcut = icon.shortcut
         cosine_tuples_list = [(embedder.cosine_similarity(embed, icon_image.embed), icon_image.image) for icon_image in icon.images_list]
-        self.cosine_similarity, self.match_icon = max(cosine_tuples_list, key=lambda x: x[0])
+        if len(cosine_tuples_list) > 0:
+            self.cosine_similarity, self.match_icon = max(cosine_tuples_list, key=lambda x: x[0])
+        else:
+            self.cosine_similarity, self.match_icon = (0, None)
 
     def __repr__(self):
         return self.name 
@@ -206,10 +210,10 @@ def predict(original_image, icons_list, has_barriers) -> Match:
 
 def capture_board_screensot(force_last_image):
     global board_top_left, board_bottom_right, custom_board_image
-    capture_board = config_utils.config_values.get("board_capture_var")
+    print_screen_mode = config_utils.config_values.get("board_capture_var")
     if force_last_image:
         img = Image.open(constants.LAST_BOARD_IMAGE_PATH)
-    elif capture_board:
+    elif print_screen_mode:
         x0 = board_top_left[0]
         x1 = board_bottom_right[0] - board_top_left[0]
         y0 = board_top_left[1]
@@ -235,11 +239,11 @@ def make_cell_list(force_last_image=False):
             cell_list.append(img.crop(cell_box))
     return cell_list
             
-def start(request_values, has_barriers, screen_record=False, mouse_click=False):
+def start(request_values, has_barriers, force_last_image=False, mouse_click=False):
     global last_image
     icons_list = load_icon_classes(request_values, has_barriers)
     match_list: List[Match] = []
-    cell_list = make_cell_list(screen_record)
+    cell_list = make_cell_list(force_last_image)
     predict(cell_list[17], icons_list, has_barriers)
     for idx, cell in enumerate(cell_list):
         result = predict(cell, icons_list, has_barriers)
@@ -299,7 +303,7 @@ def concatenate_PIL_images(image_list, grid_size=(6, 6), spacing=10):
 
 def execute_commands(command_sequence, mouse_click):
     global shuffle_move_first_square_position
-    print(command_sequence)
+    # print(command_sequence)
     if mouse_click:
         pyautogui.click(shuffle_move_first_square_position[0], y=shuffle_move_first_square_position[1])
         time.sleep(0.1)

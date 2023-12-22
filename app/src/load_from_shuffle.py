@@ -3,6 +3,7 @@ import tkinter as tk
 import os
 from src import constants, custom_utils
 from pathlib import Path
+import customtkinter
 
 exception_list = ["Empty", "Coin", "Metal", "Wood"]
 custom_order = set(["NORMAL", "FIRE", "WATER", "GRASS", "ELECTRIC", "ICE", "FIGHTING", "POISON", "GROUND", "FLYING", "PSYCHIC", "BUG", "ROCK", "GHOST", "DRAGON", "DARK", "STEEL", "FAIRY", "NONE"])
@@ -22,6 +23,7 @@ class TeamLoader(tk.Toplevel):
         super().__init__(master = master)
         self.title(f"Select a Team")
         self.root = root
+        # self.geometry('500x500')        
         # self.create_widgets()
 
 
@@ -61,19 +63,24 @@ class TeamLoader(tk.Toplevel):
         for team in self.teams:
             self.listbox.insert(tk.END, team.stage)
 
+        scrollbar = tk.Scrollbar(self, orient="vertical")
+        scrollbar.config(command=self.listbox.yview)
+        scrollbar.grid(row=1, column=2, sticky='ns', padx=(0, 10), pady=(10,10))
 
-        self.images_frame = tk.Frame(self, background="lightblue")
-        self.images_frame.pack(side=tk.RIGHT, padx=10, pady=10)
-        self.image_preview = tk.Label(self.images_frame)
-        self.image_preview.grid(row=2, column=1, padx=5, pady=5)
+        self.listbox.config(yscrollcommand=scrollbar.set)
 
+
+        # self.images_frame = customtkinter.CTkFrame(self)
+        # self.images_frame.pack(side=tk.RIGHT, padx=10, pady=10)
+        self.image_preview = tk.Label(self)
+        self.image_preview.grid(row=1, column=3, padx=5, pady=5)
 
         # Bind double-click event to print the third element of the selected tuple
         self.listbox.bind("<<ListboxSelect>>", self.preview_team)
         self.listbox.bind("<Double-Button-1>", self.on_double_click)
 
         # Pack the listbox into the window
-        self.listbox.pack(expand=True, fill=tk.BOTH)
+        self.listbox.grid(row=1, column=1)
 
 
     def preview_team(self, event):
