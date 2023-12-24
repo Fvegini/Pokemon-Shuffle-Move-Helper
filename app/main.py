@@ -40,9 +40,9 @@ class ImageSelectorApp():
         self.create_right_app_screen()
         
         self.update_image_list()
-        self.configure_initial_geometry()
         self.load_last_team()
         self.update_preview_image()
+        self.configure_initial_geometry()
 
     def create_tab_menu(self):
         self.tabview = customtkinter.CTkTabview(self.master, height=100)
@@ -258,6 +258,21 @@ class ImageSelectorApp():
 
         # Set window geometry
         self.master.geometry(f"{width}x{height}+{x}+{y}")
+        if self.master.winfo_width() != width:
+            scale_factor = self.master.winfo_width() / width
+            self.master.geometry(f"{int(width*scale_factor)}x{int(height*scale_factor)}+{x}+{y}")
+        self.check_current_position()
+
+
+    def check_current_position(self):
+        self.master.update()
+        screen_width = self.master.winfo_screenwidth()
+        screen_height = self.master.winfo_screenheight()
+        app_width = self.master.winfo_width()
+        app_height = self.master.winfo_height()
+        screen_position_x = self.master.winfo_x()
+        screen_position_y = self.master.winfo_y()
+        print(f"The screen size is {app_width}x{app_height} pixels and its position is ({screen_position_x}, {screen_position_y}).")
 
     def update_preview_image(self, event=None):
         try:
