@@ -79,9 +79,10 @@ class AppIconSelector(tk.Toplevel):
     def on_image_click(self, image_name):
         self.selected_image_name = image_name
         if self.action == "Remove_Barrier":
-            remove_icon(Path(constants.IMAGES_BARRIER_PATH, image_name))
+            # remove_icon(Path(constants.IMAGES_BARRIER_PATH, image_name))
+            ExtraIconSelector(root=self.root, selected_image = image_name, action=self.action)
         elif self.action == "Remove_Extra":
-            ExtraIconSelector(root=self.root, selected_image = image_name)
+            ExtraIconSelector(root=self.root, selected_image = image_name, action=self.action)
         else:
             save_new_icon(self.root.board_image_selector.selected_image, image_name, self.root.board_image_selector.folder)
         self.root.reveal_or_hide_barrier_img()
@@ -90,11 +91,12 @@ class AppIconSelector(tk.Toplevel):
 
 class ExtraIconSelector(tk.Toplevel):
      
-    def __init__(self, master = None, root = None, selected_image = None):
+    def __init__(self, master = None, root = None, selected_image = None, action = None):
          
         super().__init__(master = master)
         self.title("Select The Extra Icon that you want to remove")
         self.root = root
+        self.action = action
         self.selected_image = selected_image
         self.create_widgets()
         
@@ -103,11 +105,14 @@ class ExtraIconSelector(tk.Toplevel):
         row_index = 0
         col_index = 0
 
-        images_path = custom_utils.find_matching_files(constants.IMAGES_EXTRA_PATH, Path(self.selected_image).stem, ".*")
+        if self.action == "Remove_Extra":
+            images_path = custom_utils.find_matching_files(constants.IMAGES_EXTRA_PATH, Path(self.selected_image).stem, ".*")
+        else:
+            images_path = custom_utils.find_matching_files(constants.IMAGES_BARRIER_PATH, Path(self.selected_image).stem, ".*")
 
-        for extra_image_path in images_path:
-            image_path = Path(extra_image_path)
-            image = Image.open(Path(extra_image_path))
+        for image_path in images_path:
+            image_path = Path(image_path)
+            image = Image.open(Path(image_path))
             tk_image = customtkinter.CTkImage(image, size=image.size)
 
             label = customtkinter.CTkLabel(self, image=tk_image, text="", cursor="hand2")
@@ -136,6 +141,7 @@ def save_new_icon(image, image_name, folder):
     if folder == "barrier":
         os.makedirs(constants.IMAGES_BARRIER_PATH, exist_ok=True)
         image_path = Path(constants.IMAGES_BARRIER_PATH, image_name)
+        image_path = get_next_filename(image_path)
     else:
         os.makedirs(constants.IMAGES_EXTRA_PATH, exist_ok=True)
         image_path = Path(constants.IMAGES_EXTRA_PATH, image_name)

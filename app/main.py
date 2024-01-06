@@ -168,14 +168,19 @@ class ImageSelectorApp():
         frame3_1_top_2.pack(side=tk.LEFT)
         
         self.board_capture_var = tk.BooleanVar(value=config_utils.config_values.get("board_capture_var")) 
-        self.has_barrier = tk.BooleanVar(value=config_utils.config_values.get("has_barrier")) 
+        self.has_barrier_var = tk.BooleanVar(value=config_utils.config_values.get("has_barrier")) 
         self.control_loop_var = tk.BooleanVar(value=False)
 
         customtkinter.CTkSwitch(frame3_1_top_1, text="Print Screen Mode", variable=self.board_capture_var, onvalue=True, offvalue=False, command=self.update_board_capture_mode).pack(side=tk.TOP, anchor=tk.W, padx=5)
         customtkinter.CTkSwitch(frame3_1_top_1, text="Image File Mode", variable=self.board_capture_var, onvalue=False, offvalue=True, command=self.update_board_capture_mode).pack(side=tk.TOP, anchor=tk.W, padx=5)
        
-        customtkinter.CTkSwitch(frame3_1_top_2, text="Capture Loop", variable=self.control_loop_var, onvalue=True, offvalue=False, command=lambda: self.control_loop_function(mouse_click=True)).pack(side=tk.TOP, anchor=tk.W, padx=5)
-        customtkinter.CTkSwitch(frame3_1_top_2, text="Has Barriers", variable=self.has_barrier, command=self.reveal_or_hide_barrier_img).pack(side=tk.TOP, anchor=tk.W, padx=5)
+        self.control_loop_switch = customtkinter.CTkSwitch(frame3_1_top_2, text="Capture Loop", variable=self.control_loop_var, onvalue=True, offvalue=False, command=lambda: self.control_loop_function(mouse_click=True))
+        self.has_barrier_switch = customtkinter.CTkSwitch(frame3_1_top_2, text="Has Barriers", variable=self.has_barrier_var, command=self.reveal_or_hide_barrier_img)
+        self.control_loop_switch.pack(side=tk.TOP, anchor=tk.W, padx=5)
+        self.has_barrier_switch.pack(side=tk.TOP, anchor=tk.W, padx=5)
+        
+        keyboard.add_hotkey('f3', lambda:  self.control_loop_switch.toggle())
+        keyboard.add_hotkey('f4', lambda: self.has_barrier_switch.toggle())
         
         frame3_2 = customtkinter.CTkFrame(self.tab3, fg_color="transparent")
         frame3_2_top = customtkinter.CTkFrame(frame3_2, fg_color="transparent")
@@ -189,7 +194,11 @@ class ImageSelectorApp():
         btn3_2_1 = customtkinter.CTkButton(frame3_2_top, text="Execute", command=lambda: self.start_board_analysis(mouse_click=True), image=icon_to_image("play-circle", fill="#ffffff", scale_to_width=25), **self.tab_button_style)
         CTkToolTip(btn3_2_1, delay=0.5, message="Execute (F3)")
         btn3_2_1.pack(side=tk.LEFT)
-        keyboard.add_hotkey('f3', lambda: self.start_board_analysis(mouse_click=True))
+        keyboard.add_hotkey('f2', lambda: self.start_board_analysis(mouse_click=True))
+        
+        btn2_1_1 = customtkinter.CTkButton(frame3_2_top, text="Load Team", command=self.load_team, image=icon_to_image("cloud-download-alt", fill="#ffffff", scale_to_width=25), **self.tab_button_style)
+        CTkToolTip(btn2_1_1, delay=0.5, message="Load Team From Shuffle Move Config File")
+        btn2_1_1.pack(side=tk.LEFT, padx=5)
         customtkinter.CTkButton(frame3_2_top, text="View Last Board", command=self.show_last_move, image=icon_to_image("search", fill="#ffffff", scale_to_width=25), **self.tab_button_style).pack(side=tk.LEFT)
 
         frame3_3 = customtkinter.CTkFrame(self.tab3, fg_color="transparent")
@@ -258,6 +267,7 @@ class ImageSelectorApp():
 
         # Set window geometry
         self.master.geometry(f"{width}x{height}+{x}+{y}")
+        self.master.update()
         if self.master.winfo_width() != width:
             scale_factor = self.master.winfo_width() / width
             self.master.geometry(f"{int(width*scale_factor)}x{int(height*scale_factor)}+{x}+{y}")
@@ -354,7 +364,7 @@ class ImageSelectorApp():
         if disabled:
             checkbox_1.toggle()
 
-        if self.has_barrier.get() and not skip_barrier:
+        if self.has_barrier_var.get() and not skip_barrier:
             self.reveal_or_hide_barrier_img()
 
     def transparency_set(self, checkbox_1, selected_image_frame):
@@ -368,7 +378,7 @@ class ImageSelectorApp():
     def insert_extra_images_tooltip(self, image_path, selected_image_label):
         extra_image_list = []
         original_path = Path(image_path)
-        images_path = [original_path] + custom_utils.find_matching_files(constants.IMAGES_EXTRA_PATH, original_path.stem, ".*")
+        images_path = [original_path] + custom_utils.find_matching_files(constants.IMAGES_EXTRA_PATH, original_path.stem, ".*") + custom_utils.find_matching_files(constants.IMAGES_BARRIER_PATH, original_path.stem, ".*")
 
 
         for extra_image_path in images_path:
@@ -423,7 +433,7 @@ class ImageSelectorApp():
         else:
             mouse_click = not self.control_loop_var.get()
         
-        match_icons.start(values_to_execute, self.has_barrier.get(), mouse_click=mouse_click)
+        match_icons.start(values_to_execute, self.has_barrier_var.get(), mouse_click=mouse_click)
 
     def show_click_popup(self, click_counter):
         self.popup = tk.Toplevel(self.master)
@@ -471,7 +481,7 @@ class ImageSelectorApp():
                     self.start_board_analysis(mouse_click)
             else:
                 self.start_board_analysis(mouse_click)
-            self.check_job = self.master.after(1000, self.control_loop_function)  # Schedule next check after 2000 milliseconds (2 seconds)
+            self.check_job = self.master.after(200, self.control_loop_function)  # Schedule next check after 2000 milliseconds (2 seconds)
 
     def update_search_dir(self):
         file_path = filedialog.askopenfilename()
@@ -491,7 +501,7 @@ class ImageSelectorApp():
 
 
     def reveal_or_hide_barrier_img(self):
-        has_barrier = self.has_barrier.get()
+        has_barrier = self.has_barrier_var.get()
         config_utils.update_config("has_barrier", has_barrier)
         if not has_barrier:
             
@@ -536,7 +546,7 @@ class ImageSelectorApp():
                 loaded_variable = pickle.load(file)
             for pokemon, shortcut, disabled in loaded_variable:
                 self.insert_image_widget(pokemon.name, shortcut, disabled, skip_barrier=True)
-            if self.has_barrier.get():
+            if self.has_barrier_var.get():
                 self.reveal_or_hide_barrier_img()
         except Exception as ex:
             print(ex)

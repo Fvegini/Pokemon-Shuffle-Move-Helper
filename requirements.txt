@@ -7,3 +7,4 @@ pyautogui==0.9.54
 pynput==1.7.6
 mediapipe==0.10.8
 CTkToolTip==0.8
+# pyinstaller==6.3.0

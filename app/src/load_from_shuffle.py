@@ -76,11 +76,38 @@ class TeamLoader(tk.Toplevel):
         self.image_preview.grid(row=1, column=3, padx=5, pady=5)
 
         # Bind double-click event to print the third element of the selected tuple
-        self.listbox.bind("<<ListboxSelect>>", self.preview_team)
+        # self.listbox.bind("<<ListboxSelect>>", self.preview_team)
         self.listbox.bind("<Double-Button-1>", self.on_double_click)
 
         # Pack the listbox into the window
-        self.listbox.grid(row=1, column=1)
+        self.listbox.grid(row=1, column=1, sticky='ns')
+        self.rowconfigure(1, weight=1)
+        
+        
+        self.configure_initial_geometry()
+
+
+    def configure_initial_geometry(self):
+        self.update()
+        screen_width = self.winfo_screenwidth()
+        screen_height = self.winfo_screenheight() - custom_utils.get_taskbar_size()
+
+        width = int(screen_width / 2)
+        height = int(screen_height / 2)
+
+        # Calculate window position at the bottom-right corner
+        x = screen_width - width
+        y = screen_height - height
+
+        app_width = self.winfo_width()
+        app_height = self.winfo_height()
+
+        # Set window geometry
+        self.geometry(f"{app_width}x{height}+{x}+{y}")
+        # self.update()
+        # if self.winfo_width() != width:
+        #     scale_factor = self.winfo_width() / width
+        #     self.geometry(f"{int(width*scale_factor)}x{int(height*scale_factor)}+{x}+{y}")
 
 
     def preview_team(self, event):

@@ -23,6 +23,7 @@ fake_barrier_active = False
 
 custom_board_image = None
 last_image = None
+last_board_commands = []
 
 class CustomImage():
     
@@ -240,7 +241,7 @@ def make_cell_list(force_last_image=False):
     return cell_list
             
 def start(request_values, has_barriers, force_last_image=False, mouse_click=False):
-    global last_image
+    global last_image, last_board_commands
     icons_list = load_icon_classes(request_values, has_barriers)
     match_list: List[Match] = []
     cell_list = make_cell_list(force_last_image)
@@ -254,8 +255,9 @@ def start(request_values, has_barriers, force_last_image=False, mouse_click=Fals
     last_image = custom_utils.concatenate_list_images([img1, img2])
     
     commands_list = list(chain(*[match.shortcut for match in match_list]))
-    
-    execute_commands(commands_list, mouse_click)
+    if commands_list != last_board_commands or mouse_click:
+        last_board_commands = commands_list
+        execute_commands(commands_list, mouse_click)
 
 def concatenate_cv2_images(image_list, grid_size=(6, 6), spacing=10):
     # Get image dimensions
