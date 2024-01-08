@@ -7,3 +7,6 @@ last_board.png
 last_team.pkl
 custom_tk
 config.ini
+build
+dist
+main.exe
