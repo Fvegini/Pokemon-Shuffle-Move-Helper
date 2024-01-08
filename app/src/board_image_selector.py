@@ -1,4 +1,3 @@
-import shutil
 from PIL import Image
 import tkinter as tk
 from src import match_icons

@@ -1,8 +1,8 @@
 import os
 import tkinter as tk
-from tkinter import ttk, filedialog
+from tkinter import filedialog
 import customtkinter
-from PIL import Image, ImageTk
+from PIL import Image
 import keyboard
 from src import match_icons
 from pathlib import Path
@@ -10,10 +10,8 @@ from pynput import mouse
 from src.board_image_selector import BoardIconSelector, AppIconSelector
 from src import constants, custom_utils, load_from_shuffle, config_utils
 import pickle
-from tkfontawesome import icon_to_image
 import warnings
 from CTkToolTip import CTkToolTip
-# from tktooltip import ToolTip
 warnings.filterwarnings("ignore", category=UserWarning, message="CTkButton Warning: Given image is not CTkImage but*")
 
 
@@ -80,7 +78,7 @@ class ImageSelectorApp():
 
         customtkinter.CTkLabel(frame1_1_bottom, text="Mouse Positions").pack(side=tk.BOTTOM, anchor=tk.S)
 
-        icon = icon_to_image("mouse", fill="#ffffff", scale_to_width=25)
+        icon = self.get_icon("mouse")
 
         btn1_1 = customtkinter.CTkButton(frame1_1_top, text="Top Left", command=lambda: self.show_click_popup(click_counter= 1), image=icon, **self.tab_button_style)
         btn1_2 = customtkinter.CTkButton(frame1_1_top, text="Bottom Right", command=lambda: self.show_click_popup(click_counter= 2), image=icon, **self.tab_button_style)
@@ -126,30 +124,29 @@ class ImageSelectorApp():
 
         #Block 1
         customtkinter.CTkLabel(frame2_1_bottom, text="Current Team").pack(side=tk.BOTTOM)
-        btn2_1_1 = customtkinter.CTkButton(frame2_1_top, text="Load Team", command=self.load_team, image=icon_to_image("cloud-download-alt", fill="#ffffff", scale_to_width=25), **self.tab_button_style)
+        btn2_1_1 = customtkinter.CTkButton(frame2_1_top, text="Load Team", command=self.load_team, image=self.get_icon("cloud-download-alt"), **self.tab_button_style)
         CTkToolTip(btn2_1_1, delay=0.5, message="Load Team From Shuffle Move Config File")
         btn2_1_1.pack(side=tk.LEFT, padx=5)
         
         
         #Block 2
         customtkinter.CTkLabel(frame2_2_bottom, text="Register Icons").pack(side=tk.BOTTOM)
-        btn2_2_1 = customtkinter.CTkButton(frame2_2_top, text="Register Barrier", command=lambda: self.open_create_register_screen(folder="barrier"), image=icon_to_image("plus", fill="#ffffff", scale_to_width=25), **self.tab_button_style)
+        btn2_2_1 = customtkinter.CTkButton(frame2_2_top, text="Register Barrier", command=lambda: self.open_create_register_screen(folder="barrier"), image=self.get_icon("plus"), **self.tab_button_style)
         CTkToolTip(btn2_2_1, delay=0.5, message="Create or Substitute the Barrier Icon")
         btn2_2_1.pack(side=tk.LEFT, padx=5)
-        btn2_2_2 = customtkinter.CTkButton(frame2_2_top, text="Register Extra", command=lambda: self.open_create_register_screen(folder="extra"), image=icon_to_image("plus", fill="#ffffff", scale_to_width=25), **self.tab_button_style)
+        btn2_2_2 = customtkinter.CTkButton(frame2_2_top, text="Register Extra", command=lambda: self.open_create_register_screen(folder="extra"), image=self.get_icon("plus"), **self.tab_button_style)
         CTkToolTip(btn2_2_2, delay=0.5, message="Insert a new Extra Icon")
         btn2_2_2.pack(side=tk.LEFT, padx=5)
 
 
         # #Block 3
         customtkinter.CTkLabel(frame2_3_bottom, text="Remove Icons").pack(side=tk.BOTTOM)
-        btn2_3_1 = customtkinter.CTkButton(frame2_3_top, text="Remove Barrier", command=lambda: self.open_remove_register_screen(action="Remove_Barrier"), image=icon_to_image("trash-alt", fill="#ffffff", scale_to_width=25), **self.tab_button_style)
+        btn2_3_1 = customtkinter.CTkButton(frame2_3_top, text="Remove Barrier", command=lambda: self.open_remove_register_screen(action="Remove_Barrier"), image=self.get_icon("trash-alt"), **self.tab_button_style)
         CTkToolTip(btn2_3_1, delay=0.5, message="Remove the Barrier Icon")
         btn2_3_1.pack(side=tk.LEFT, padx=5)
-        btn2_3_2 = customtkinter.CTkButton(frame2_3_top, text="Remove Extra", command=lambda: self.open_remove_register_screen(action="Remove_Extra"), image=icon_to_image("trash-alt", fill="#ffffff", scale_to_width=25), **self.tab_button_style)
+        btn2_3_2 = customtkinter.CTkButton(frame2_3_top, text="Remove Extra", command=lambda: self.open_remove_register_screen(action="Remove_Extra"), image=self.get_icon("trash-alt"), **self.tab_button_style)
         CTkToolTip(btn2_3_2, delay=0.5, message="Remove One of the Extra Icons")
         btn2_3_2.pack(side=tk.LEFT, padx=5)
-
 
     def create_tab_3(self):
         frame3_1 = customtkinter.CTkFrame(self.tab3, fg_color="transparent")
@@ -191,15 +188,15 @@ class ImageSelectorApp():
         tk.ttk.Separator(self.tab3, orient='vertical').pack(side=tk.LEFT, fill='y', anchor=tk.W)
         customtkinter.CTkLabel(frame3_2_bottom, text="").pack(side=tk.BOTTOM)
 
-        btn3_2_1 = customtkinter.CTkButton(frame3_2_top, text="Execute", command=lambda: self.start_board_analysis(mouse_click=True), image=icon_to_image("play-circle", fill="#ffffff", scale_to_width=25), **self.tab_button_style)
+        btn3_2_1 = customtkinter.CTkButton(frame3_2_top, text="Execute", command=lambda: self.start_board_analysis(mouse_click=True), image=self.get_icon("play-circle"), **self.tab_button_style)
         CTkToolTip(btn3_2_1, delay=0.5, message="Execute (F3)")
         btn3_2_1.pack(side=tk.LEFT)
         keyboard.add_hotkey('f2', lambda: self.start_board_analysis(mouse_click=True))
         
-        btn2_1_1 = customtkinter.CTkButton(frame3_2_top, text="Load Team", command=self.load_team, image=icon_to_image("cloud-download-alt", fill="#ffffff", scale_to_width=25), **self.tab_button_style)
+        btn2_1_1 = customtkinter.CTkButton(frame3_2_top, text="Load Team", command=self.load_team, image=self.get_icon("cloud-download-alt"), **self.tab_button_style)
         CTkToolTip(btn2_1_1, delay=0.5, message="Load Team From Shuffle Move Config File")
         btn2_1_1.pack(side=tk.LEFT, padx=5)
-        customtkinter.CTkButton(frame3_2_top, text="View Last Board", command=self.show_last_move, image=icon_to_image("search", fill="#ffffff", scale_to_width=25), **self.tab_button_style).pack(side=tk.LEFT)
+        customtkinter.CTkButton(frame3_2_top, text="View Last Board", command=self.show_last_move, image=self.get_icon("search"), **self.tab_button_style).pack(side=tk.LEFT)
 
         frame3_3 = customtkinter.CTkFrame(self.tab3, fg_color="transparent")
         frame3_3_top = customtkinter.CTkFrame(frame3_3, fg_color="transparent")
@@ -210,7 +207,7 @@ class ImageSelectorApp():
         tk.ttk.Separator(self.tab3, orient='vertical').pack(side=tk.LEFT, fill='y', anchor=tk.W)
 
         customtkinter.CTkLabel(frame3_3_bottom, text="").pack(side=tk.BOTTOM)
-        self.update_search_dir_button = customtkinter.CTkButton(frame3_3_top, text="Update Search Directory", command=self.update_search_dir, image=icon_to_image("folder-open", fill="#ffffff", scale_to_width=25), **self.tab_button_style)
+        self.update_search_dir_button = customtkinter.CTkButton(frame3_3_top, text="Update Search Directory", command=self.update_search_dir, image=self.get_icon("folder-open"), **self.tab_button_style)
         CTkToolTip(self.update_search_dir_button, delay=0.5, message="Execute (F3)")
         self.update_search_dir_button.pack(side=tk.TOP)
 
@@ -498,7 +495,11 @@ class ImageSelectorApp():
         else:
             self.update_search_dir_button.configure(state=tk.DISABLED)  # Disable the button
 
-
+    def get_icon(self, icon_name):
+        if customtkinter.get_appearance_mode() == "Dark":
+            return customtkinter.CTkImage(Image.open(Path("assets", "fonts", f"{icon_name}-solid_w.png")), size=(25, 25))
+        else:
+            return customtkinter.CTkImage(Image.open(Path("assets", "fonts", f"{icon_name}-solid.png")), size=(25, 25))
 
     def reveal_or_hide_barrier_img(self):
         has_barrier = self.has_barrier_var.get()
@@ -551,8 +552,6 @@ class ImageSelectorApp():
         except Exception as ex:
             print(ex)
             pass
-        
-        
 
     def load_team(self):
         load_from_shuffle.TeamLoader(root=self)

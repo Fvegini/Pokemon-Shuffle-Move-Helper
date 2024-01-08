@@ -3,7 +3,6 @@ import tkinter as tk
 import os
 from src import constants, custom_utils
 from pathlib import Path
-import customtkinter
 
 exception_list = ["Empty", "Coin", "Metal", "Wood"]
 custom_order = set(["NORMAL", "FIRE", "WATER", "GRASS", "ELECTRIC", "ICE", "FIGHTING", "POISON", "GROUND", "FLYING", "PSYCHIC", "BUG", "ROCK", "GHOST", "DRAGON", "DARK", "STEEL", "FAIRY", "NONE"])
