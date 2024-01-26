@@ -171,7 +171,7 @@ class ImageSelectorApp():
         customtkinter.CTkSwitch(frame3_1_top_1, text="Print Screen Mode", variable=self.board_capture_var, onvalue=True, offvalue=False, command=self.update_board_capture_mode).pack(side=tk.TOP, anchor=tk.W, padx=5)
         customtkinter.CTkSwitch(frame3_1_top_1, text="Image File Mode", variable=self.board_capture_var, onvalue=False, offvalue=True, command=self.update_board_capture_mode).pack(side=tk.TOP, anchor=tk.W, padx=5)
        
-        self.control_loop_switch = customtkinter.CTkSwitch(frame3_1_top_2, text="Capture Loop", variable=self.control_loop_var, onvalue=True, offvalue=False, command=lambda: self.control_loop_function(mouse_click=True))
+        self.control_loop_switch = customtkinter.CTkSwitch(frame3_1_top_2, text="Capture Loop", variable=self.control_loop_var, onvalue=True, offvalue=False, command=lambda: self.control_loop_function())
         self.has_barrier_switch = customtkinter.CTkSwitch(frame3_1_top_2, text="Has Barriers", variable=self.has_barrier_var, command=self.reveal_or_hide_barrier_img)
         self.control_loop_switch.pack(side=tk.TOP, anchor=tk.W, padx=5)
         self.has_barrier_switch.pack(side=tk.TOP, anchor=tk.W, padx=5)
@@ -188,10 +188,10 @@ class ImageSelectorApp():
         tk.ttk.Separator(self.tab3, orient='vertical').pack(side=tk.LEFT, fill='y', anchor=tk.W)
         customtkinter.CTkLabel(frame3_2_bottom, text="").pack(side=tk.BOTTOM)
 
-        btn3_2_1 = customtkinter.CTkButton(frame3_2_top, text="Execute", command=lambda: self.start_board_analysis(mouse_click=True), image=self.get_icon("play-circle"), **self.tab_button_style)
+        btn3_2_1 = customtkinter.CTkButton(frame3_2_top, text="Execute", command=lambda: self.start_board_analysis(source="button"), image=self.get_icon("play-circle"), **self.tab_button_style)
         CTkToolTip(btn3_2_1, delay=0.5, message="Execute (F3)")
         btn3_2_1.pack(side=tk.LEFT)
-        keyboard.add_hotkey('f2', lambda: self.start_board_analysis(mouse_click=True))
+        keyboard.add_hotkey('f2', lambda: self.start_board_analysis(source="shortcut"))
         
         btn2_1_1 = customtkinter.CTkButton(frame3_2_top, text="Load Team", command=self.load_team, image=self.get_icon("cloud-download-alt"), **self.tab_button_style)
         CTkToolTip(btn2_1_1, delay=0.5, message="Load Team From Shuffle Move Config File")
@@ -269,6 +269,9 @@ class ImageSelectorApp():
             scale_factor = self.master.winfo_width() / width
             self.master.geometry(f"{int(width*scale_factor)}x{int(height*scale_factor)}+{x}+{y}")
         self.check_current_position()
+        if os.getenv("DEV_MODE") == "1":
+            print("Dev Mode Activated")
+            self.force_update_mouse_buttons()
 
 
     def check_current_position(self):
@@ -279,7 +282,7 @@ class ImageSelectorApp():
         app_height = self.master.winfo_height()
         screen_position_x = self.master.winfo_x()
         screen_position_y = self.master.winfo_y()
-        print(f"The screen size is {app_width}x{app_height} pixels and its position is ({screen_position_x}, {screen_position_y}).")
+        print(f"The screen size is {screen_width}x{screen_height}, the app size is {app_width}x{app_height} and its position is ({screen_position_x}, {screen_position_y}).")
 
     def update_preview_image(self, event=None):
         try:
@@ -366,10 +369,8 @@ class ImageSelectorApp():
 
     def transparency_set(self, checkbox_1, selected_image_frame):
         if checkbox_1.get():
-            print("add_transparency")
             selected_image_frame.configure(fg_color="gray")
         else:
-            print("remove_transparency")
             selected_image_frame.configure(fg_color=selected_image_frame.original_fg_color)
 
     def insert_extra_images_tooltip(self, image_path, selected_image_label):
@@ -415,7 +416,7 @@ class ImageSelectorApp():
                 widget_list.append(image_widgets)
         return widget_list
 
-    def start_board_analysis(self, mouse_click=False):
+    def start_board_analysis(self, source=None):
         global last_team_to_execute
         values_to_execute = []
         for image_widgets in self.get_selected_images_widgets_list():
@@ -424,13 +425,7 @@ class ImageSelectorApp():
             last_team_to_execute = values_to_execute
             with open(LAST_TEAM_PKL, 'wb') as file:
                 pickle.dump(values_to_execute, file)
-        
-        if mouse_click:
-            mouse_click = True
-        else:
-            mouse_click = not self.control_loop_var.get()
-        
-        match_icons.start(values_to_execute, self.has_barrier_var.get(), mouse_click=mouse_click)
+        return match_icons.start(values_to_execute, self.has_barrier_var.get(), source=source)
 
     def show_click_popup(self, click_counter):
         self.popup = tk.Toplevel(self.master)
@@ -469,16 +464,17 @@ class ImageSelectorApp():
             self.mouse_listener.stop()
             self.popup.destroy()
 
-    def control_loop_function(self, mouse_click=False):
+    def control_loop_function(self):
+        extra_delay = 0
         if not self.control_loop_var.get():
             return
         else:
             if not self.board_capture_var.get():
                 if config_utils.config_values.get("board_image_path") and os.path.exists(config_utils.config_values.get("board_image_path")):
-                    self.start_board_analysis(mouse_click)
+                    extra_delay = self.start_board_analysis(source="loop")
             else:
-                self.start_board_analysis(mouse_click)
-            self.check_job = self.master.after(200, self.control_loop_function)  # Schedule next check after 2000 milliseconds (2 seconds)
+                extra_delay = self.start_board_analysis(source="loop")
+            self.check_job = self.master.after(200 + extra_delay, self.control_loop_function)  # Schedule next check after 2000 milliseconds (2 seconds)
 
     def update_search_dir(self):
         file_path = filedialog.askopenfilename()
@@ -555,6 +551,24 @@ class ImageSelectorApp():
 
     def load_team(self):
         load_from_shuffle.TeamLoader(root=self)
+
+    def force_update_mouse_buttons(self):
+        self.master.update()
+        screen_width = self.master.winfo_screenwidth()
+        if screen_width == 2560:
+            print("Updating to Ultra Wide Positions")
+            match_icons.board_top_left = (364, 488)
+            match_icons.board_bottom_right = (914, 1031)
+            match_icons.shuffle_move_first_square_position = (1496, 96)
+            match_icons.mouse_after_shuffle_position = (2039, 443)
+        elif screen_width == 1920:
+            print("Updating to Full HD Positions")
+            match_icons.board_top_left = (214, 488)
+            match_icons.board_bottom_right = (741, 1010)
+            match_icons.shuffle_move_first_square_position = (1045, 133)
+            match_icons.mouse_after_shuffle_position = (1607, 487)
+        else:
+            return
 
 if __name__ == "__main__":    
     root = customtkinter.CTk()

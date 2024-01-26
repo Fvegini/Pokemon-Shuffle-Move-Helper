@@ -9,7 +9,9 @@ def create_default_config():
     "board_bottom_right": "(573, 1027)",
     "board_capture_var": True,
     "has_barrier": False,
-    "board_image_path": r"D:\Dropbox\Envio da câmera\Imagem.png"
+    "board_image_path": r"D:\Dropbox\Envio da câmera\Imagem.png",
+    "airplay_app_name": ["air screen", "EasyCast"],
+    "shuffle_move_name": "shuffle move"
     }
 
     with open('config.ini', 'w') as configfile:

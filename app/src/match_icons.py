@@ -12,6 +12,7 @@ import time
 from src.embed import Embedder
 from src import constants, custom_utils, config_utils
 from src.config_utils import config_values
+from src import get_window
 
 embedder = Embedder()
 downscale_res = (128, 128)
@@ -19,6 +20,8 @@ shuffle_move_first_square_position = config_values.get("shuffle_move_first_squar
 mouse_after_shuffle_position = config_values.get("mouse_after_shuffle_position")
 board_top_left = config_values.get("board_top_left")
 board_bottom_right = config_values.get("board_bottom_right")
+shuffle_move_name = config_values.get("shuffle_move_name")
+airplay_app_name = config_values.get("airplay_app_name")
 fake_barrier_active = False
 
 custom_board_image = None
@@ -240,8 +243,11 @@ def make_cell_list(force_last_image=False):
             cell_list.append(img.crop(cell_box))
     return cell_list
             
-def start(request_values, has_barriers, force_last_image=False, mouse_click=False):
+def start(request_values, has_barriers, force_last_image=False, source=None):
     global last_image, last_board_commands
+    if source == "loop" and has_airplay_and_move_on_screen():
+        print("airplay or move not on screen, ignoring")
+        return 2000
     icons_list = load_icon_classes(request_values, has_barriers)
     match_list: List[Match] = []
     cell_list = make_cell_list(force_last_image)
@@ -255,9 +261,10 @@ def start(request_values, has_barriers, force_last_image=False, mouse_click=Fals
     last_image = custom_utils.concatenate_list_images([img1, img2])
     
     commands_list = list(chain(*[match.shortcut for match in match_list]))
-    if commands_list != last_board_commands or mouse_click:
+    if commands_list != last_board_commands or source != "loop":
         last_board_commands = commands_list
-        execute_commands(commands_list, mouse_click)
+        execute_commands(commands_list, source)
+    return 0
 
 def concatenate_cv2_images(image_list, grid_size=(6, 6), spacing=10):
     # Get image dimensions
@@ -303,14 +310,43 @@ def concatenate_PIL_images(image_list, grid_size=(6, 6), spacing=10):
 
     return result_image
 
-def execute_commands(command_sequence, mouse_click):
+def has_airplay_and_move_on_screen():
+    global shuffle_move_first_square_position   
+
+    app_in_move_position = get_window.get_window_name_at_coordinate(shuffle_move_first_square_position[0], y=shuffle_move_first_square_position[1])
+    is_move = (shuffle_move_name in app_in_move_position.lower())
+    app_in_airplay_position = get_window.get_window_name_at_coordinate(board_top_left[0], y=board_top_left[1])
+    is_airplay = any([app_in_airplay_position.lower() in name.lower() for name in airplay_app_name])
+
+    if not is_move or not is_airplay:
+        print(app_in_move_position)
+        print(shuffle_move_first_square_position[0], shuffle_move_first_square_position[1])
+        print(app_in_airplay_position)
+        print(board_top_left[0], board_top_left[1])
+
+    return is_move and is_airplay
+
+def execute_commands(command_sequence, source):
     global shuffle_move_first_square_position
-    # print(command_sequence)
+
+    focused_name = get_window.get_focused_window_name()
+    behind_name = get_window.get_window_name_at_coordinate(shuffle_move_first_square_position[0], y=shuffle_move_first_square_position[1])
+    move_is_focused = (shuffle_move_name in focused_name.lower())
+    move_is_behind = (shuffle_move_name in behind_name.lower())
+    mouse_click = False
+    if source == "loop" and not move_is_focused and not move_is_behind:
+        return
+    elif source == "loop" and not move_is_focused and move_is_behind:
+        mouse_click = True
+    elif source == "loop":
+        pass
+    else:
+        mouse_click = True
     if mouse_click:
         pyautogui.click(shuffle_move_first_square_position[0], y=shuffle_move_first_square_position[1])
         time.sleep(0.1)
     pyautogui.press(command_sequence)
-    if mouse_click:
+    if source != "loop":
         pyautogui.moveTo(x=mouse_after_shuffle_position[0], y=mouse_after_shuffle_position[1])
 
 

@@ -10,3 +10,5 @@ config.ini
 build
 dist
 main.exe
+*.rar
+.env

@@ -5,7 +5,7 @@ from src import constants, custom_utils
 from pathlib import Path
 
 exception_list = ["Empty", "Coin", "Metal", "Wood"]
-custom_order = set(["NORMAL", "FIRE", "WATER", "GRASS", "ELECTRIC", "ICE", "FIGHTING", "POISON", "GROUND", "FLYING", "PSYCHIC", "BUG", "ROCK", "GHOST", "DRAGON", "DARK", "STEEL", "FAIRY", "NONE"])
+custom_order = set(["SP_084", "NORMAL", "FIRE", "WATER", "GRASS", "ELECTRIC", "ICE", "FIGHTING", "POISON", "GROUND", "FLYING", "PSYCHIC", "BUG", "ROCK", "GHOST", "DRAGON", "DARK", "STEEL", "FAIRY", "NONE"])
 
 class TeamData():
     
