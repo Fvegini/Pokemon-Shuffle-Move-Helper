@@ -3,16 +3,16 @@ import tkinter as tk
 import os
 from src import constants, custom_utils
 from pathlib import Path
-
+from src.execution_variables import execution_variables
 exception_list = ["Empty", "Coin", "Metal", "Wood"]
 custom_order = set(["SP_084", "NORMAL", "FIRE", "WATER", "GRASS", "ELECTRIC", "ICE", "FIGHTING", "POISON", "GROUND", "FLYING", "PSYCHIC", "BUG", "ROCK", "GHOST", "DRAGON", "DARK", "STEEL", "FAIRY", "NONE"])
+fixed_list = ["SP_084", "NORMAL", "FIRE", "WATER", "GRASS", "ELECTRIC", "ICE", "FIGHTING", "POISON", "GROUND", "FLYING", "PSYCHIC", "BUG", "ROCK", "GHOST", "DRAGON", "DARK", "STEEL", "FAIRY", "NONE", "MEOWTH COIN MANIA"]
 
 class TeamData():
     
-    def __init__(self, stage, icons, moves) -> None:
+    def __init__(self, stage, icons) -> None:
         self.stage = stage
         self.icons = icons
-        self.moves = moves
         
 
 class TeamLoader(tk.Toplevel):
@@ -37,22 +37,25 @@ class TeamLoader(tk.Toplevel):
             if not parts[0] == "TEAM":
                 continue
             team_name = parts[1]
+            if team_name not in fixed_list:
+                continue
             icons = parts[2]
             for item in exception_list:
                 icons = icons.replace(item, f"_{item}")
             icons = icons.split(",")
-            moves = parts[3].split(",")
             #Append mega:
             try:
                 mega_name = f"Mega_{parts[4]}"
-                mega_move = moves[icons.index(parts[4])]
                 icons.append(mega_name)
-                moves.append(mega_move)
             except:
                 pass
-            self.teams.append(TeamData(team_name, icons, moves))
+            self.teams.append(TeamData(team_name, icons))
+            if team_name == "SP_084":
+                self.teams.append(TeamData("MEOWTH COIN MANIA", icons))
             
-        self.teams = sorted(self.teams, key=custom_sort)
+        self.teams.sort(key=lambda x: fixed_list.index(x.stage))
+
+        # self.teams = sorted(self.teams, key=custom_sort)
 
         # Create the main Tkinter window
         # root.title("Team List")
@@ -132,21 +135,20 @@ class TeamLoader(tk.Toplevel):
         self.root.destroy_selected_pokemons()
         selected_index = self.listbox.curselection()
         if selected_index:
+            execution_variables.current_stage = self.teams[selected_index[0]].stage
+            if execution_variables.current_stage == "SP_084":
+                execution_variables.current_stage = "MEOWTH COIN MANIA"
+            if execution_variables.current_stage == "MEOWTH COIN MANIA":
+                execution_variables.current_strategy = "WeekendMeowth"
+            else:
+                execution_variables.current_strategy = "Total Score"
+            execution_variables.has_modifications = True
             selected_team: TeamData = self.teams[selected_index[0]]
             print("Selected Team:", selected_team.icons)
-            for pokemon, shortcut in zip(selected_team.icons, selected_team.moves):
-                self.root.insert_image_widget(f"{pokemon}.png", shortcut)
+            for pokemon in selected_team.icons:
+                self.root.insert_image_widget(f"{pokemon}.png")
+        
+        self.root.stage_combobox.set(execution_variables.current_stage)
+        self.root.strategy_combobox.set(execution_variables.current_strategy)
+        
         self.destroy()
-    
-def custom_sort(item: TeamData):
-    global custom_order
-    if item.stage in custom_order:
-        return (0, item.stage)  # Assign a lower value (0) to items in the subset
-    else:
-        return (1, item.stage)  # Assign a higher value (1) to other items
-
-
-# if __name__ == "__main__":
-#     root = tk.Tk()    
-#     app = TeamLoader(root)
-#     root.mainloop()

@@ -12,8 +12,8 @@ import time
 from src.embed import Embedder
 from src import constants, custom_utils, config_utils
 from src.config_utils import config_values
-from src import get_window
-
+from src import get_window, socket_utils
+from src.execution_variables import execution_variables
 embedder = Embedder()
 downscale_res = (128, 128)
 shuffle_move_first_square_position = config_values.get("shuffle_move_first_square_position")
@@ -27,6 +27,9 @@ fake_barrier_active = False
 custom_board_image = None
 last_image = None
 last_board_commands = []
+CROW = "false,false,false,false,false,false"
+KEYS_LIST = ','.join(['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e','f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o',
+                    'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z'])
 
 class CustomImage():
     
@@ -44,7 +47,14 @@ class Icon():
     shortcut: List[str]
 
     def __init__(self, path, shortcut, barrier):
-        self.name = path.stem
+        if path.stem == "_Fog":
+            self.name = "Pikachu_a"
+        elif path.stem == "_Empty":
+            self.name = "Air"
+        elif path.stem.startswith("_"):
+            self.name = path.stem[1:]
+        else:
+            self.name = path.stem
         self.barrier = barrier
         self.barrier_type = None
         self.original_path = path
@@ -216,7 +226,7 @@ def capture_board_screensot(force_last_image):
     global board_top_left, board_bottom_right, custom_board_image
     print_screen_mode = config_utils.config_values.get("board_capture_var")
     if force_last_image:
-        img = Image.open(constants.LAST_BOARD_IMAGE_PATH)
+        img = Image.open(constants.LAST_BOARD_IMAGE_PATH).convert('RGB')
     elif print_screen_mode:
         x0 = board_top_left[0]
         x1 = board_bottom_right[0] - board_top_left[0]
@@ -230,7 +240,7 @@ def capture_board_screensot(force_last_image):
         img =  img.crop((10,600,740,1320)).convert('RGB')
         img.save(constants.LAST_BOARD_IMAGE_PATH)
     else:
-        img = Image.open(constants.LAST_BOARD_IMAGE_PATH)
+        img = Image.open(constants.LAST_BOARD_IMAGE_PATH).convert('RGB')
     return img
 
 def make_cell_list(force_last_image=False):
@@ -245,8 +255,8 @@ def make_cell_list(force_last_image=False):
             
 def start(request_values, has_barriers, force_last_image=False, source=None):
     global last_image, last_board_commands
-    if source == "loop" and has_airplay_and_move_on_screen():
-        print("airplay or move not on screen, ignoring")
+    if source == "loop" and not has_airplay_on_screen():
+        print("airplay not on screen, ignoring")
         return 2000
     icons_list = load_icon_classes(request_values, has_barriers)
     match_list: List[Match] = []
@@ -260,11 +270,136 @@ def start(request_values, has_barriers, force_last_image=False, source=None):
     img2 = concatenate_cv2_images([match.match_icon for match in match_list])
     last_image = custom_utils.concatenate_list_images([img1, img2])
     
+    extra_supports_list = [pokemon[0].name for pokemon in request_values if pokemon[2]]
+    
     commands_list = list(chain(*[match.shortcut for match in match_list]))
     if commands_list != last_board_commands or source != "loop":
+        create_board_files([match.name for match in match_list], [icon.name for icon in icons_list], extra_supports_list)
         last_board_commands = commands_list
         execute_commands(commands_list, source)
     return 0
+
+def create_board_files(sequence_names_list, original_complete_names_list, extra_supports_list):
+    names_list = []
+    frozen_list = []
+    extra_list = []
+    mega_activated = "0"
+    mega_name = "-"
+
+
+    for name in sequence_names_list:
+        if "Barrier_" in name:
+            name = name.split("Barrier_")[1]
+            frozen_list.append("true")
+        else:
+            frozen_list.append("false")
+        if "Mega_" in name:
+            new_name = name.split("Mega_")[1]
+            names_list.append(new_name)
+            mega_activated = "99"
+            mega_name = new_name
+        else:
+            names_list.append(name)
+
+    names_list, frozen_list, mega_name = process_names_list(sequence_names_list)
+    complete_names_list, _, forced_mega_name = process_names_list(original_complete_names_list)
+    if mega_name == "-":
+        mega_name = forced_mega_name
+    else:
+        mega_activated = "99"
+
+    update_board_file(names_list, frozen_list, mega_activated)
+    if execution_variables.has_modifications:
+        update_teams_file(complete_names_list, mega_name, extra_supports_list)
+        update_gradingModes_file()
+        execution_variables.has_modifications = False
+    return
+
+def process_names_list(original_names_list):
+    names_list = []
+    frozen_list = []
+    mega_name = "-"
+
+    for name in original_names_list:
+        if "Barrier_" in name:
+            name = name.split("Barrier_")[1]
+            frozen_list.append("true")
+        else:
+            frozen_list.append("false")
+        if "Mega_" in name:
+            new_name = name.split("Mega_")[1]
+            names_list.append(new_name)
+            mega_name = new_name
+        else:
+            names_list.append(name)    
+    return names_list, frozen_list, mega_name
+
+
+def update_board_file(names_list, frozen_list, mega_activated):
+    board_file_content = f"""STAGE {execution_variables.current_stage}
+MEGA_PROGRESS {mega_activated}
+STATUS NONE
+STATUS_DURATION 0
+ROW_1 {",".join(names_list[0:6])}
+FROW_1 {",".join(frozen_list[0:6])}
+CROW_1 {CROW}
+ROW_2 {",".join(names_list[6:12])}
+FROW_2 {",".join(frozen_list[6:12])}
+CROW_2 {CROW}
+ROW_3 {",".join(names_list[12:18])}
+FROW_3 {",".join(frozen_list[12:18])}
+CROW_3 {CROW}
+ROW_4 {",".join(names_list[18:24])}
+FROW_4 {",".join(frozen_list[18:24])}
+CROW_4 {CROW}
+ROW_5 {",".join(names_list[24:30])}
+FROW_5 {",".join(frozen_list[24:30])}
+CROW_5 {CROW}
+ROW_6 {",".join(names_list[30:36])}
+FROW_6 {",".join(frozen_list[30:36])}
+CROW_6 {CROW}
+"""
+    with open(Path.joinpath(Path.home(), "Shuffle-Move", "config", "boards", "board.txt"), 'w') as file:
+        file.write(board_file_content)
+
+def update_teams_file(names_list, mega_name, extra_supports_list):
+    file_path = Path.joinpath(Path.home(), "Shuffle-Move", "config", "teamsData.txt")
+    
+    prefix_to_replace = f"TEAM {execution_variables.current_stage}"
+    new_line = f"TEAM {execution_variables.current_stage} {','.join(list(set(names_list)))} {KEYS_LIST} {mega_name} {','.join(list(set(extra_supports_list)))}\n"
+    with open(file_path, 'r') as file:
+        lines = file.readlines()
+
+    # Find the line with the specified prefix
+    for i, line in enumerate(lines):
+        if line.startswith(prefix_to_replace):
+            # Replace the line
+            lines[i] = new_line
+    # Write the modified content back to the file
+    with open(file_path, 'w') as file:
+        file.writelines(lines)
+        
+    return
+
+def update_gradingModes_file():
+    file_path = Path.joinpath(Path.home(), "Shuffle-Move", "config", "gradingModes.txt")
+    
+    prefix_to_replace = f"STRING CURRENT_MODE"
+    new_line = f"STRING CURRENT_MODE {execution_variables.current_strategy}\n"
+    with open(file_path, 'r') as file:
+        lines = file.readlines()
+
+    # Find the line with the specified prefix
+    for i, line in enumerate(lines):
+        if line.startswith(prefix_to_replace):
+            # Replace the line
+            lines[i] = new_line
+    # Write the modified content back to the file
+    with open(file_path, 'w') as file:
+        file.writelines(lines)
+        
+    return
+
 
 def concatenate_cv2_images(image_list, grid_size=(6, 6), spacing=10):
     # Get image dimensions
@@ -310,25 +445,25 @@ def concatenate_PIL_images(image_list, grid_size=(6, 6), spacing=10):
 
     return result_image
 
-def has_airplay_and_move_on_screen():
+def has_airplay_on_screen():
     global shuffle_move_first_square_position   
 
-    app_in_move_position = get_window.get_window_name_at_coordinate(shuffle_move_first_square_position[0], y=shuffle_move_first_square_position[1])
-    is_move = (shuffle_move_name in app_in_move_position.lower())
+    # app_in_move_position = get_window.get_window_name_at_coordinate(shuffle_move_first_square_position[0], y=shuffle_move_first_square_position[1])
+    # is_move = (shuffle_move_name in app_in_move_position.lower())
     app_in_airplay_position = get_window.get_window_name_at_coordinate(board_top_left[0], y=board_top_left[1])
-    is_airplay = any([app_in_airplay_position.lower() in name.lower() for name in airplay_app_name])
+    has_airplay = any([name.lower() in app_in_airplay_position.lower() for name in airplay_app_name])
+    if not has_airplay:
+        print(f"App Found in AirPlay Position: {app_in_airplay_position} - In Position ({board_top_left[0]}, {board_top_left[1]})")
+        print(f"List of possible app names is: {airplay_app_name}")
 
-    if not is_move or not is_airplay:
-        print(app_in_move_position)
-        print(shuffle_move_first_square_position[0], shuffle_move_first_square_position[1])
-        print(app_in_airplay_position)
-        print(board_top_left[0], board_top_left[1])
-
-    return is_move and is_airplay
+    return has_airplay
 
 def execute_commands(command_sequence, source):
     global shuffle_move_first_square_position
 
+    if execution_variables.socket_mode:
+        socket_utils.loadNewBoard()
+        return
     focused_name = get_window.get_focused_window_name()
     behind_name = get_window.get_window_name_at_coordinate(shuffle_move_first_square_position[0], y=shuffle_move_first_square_position[1])
     move_is_focused = (shuffle_move_name in focused_name.lower())
@@ -345,9 +480,9 @@ def execute_commands(command_sequence, source):
     if mouse_click:
         pyautogui.click(shuffle_move_first_square_position[0], y=shuffle_move_first_square_position[1])
         time.sleep(0.1)
-    pyautogui.press(command_sequence)
-    if source != "loop":
-        pyautogui.moveTo(x=mouse_after_shuffle_position[0], y=mouse_after_shuffle_position[1])
+    pyautogui.hotkey('ctrl', 'l')
+    # if source != "loop":
+        # pyautogui.moveTo(x=mouse_after_shuffle_position[0], y=mouse_after_shuffle_position[1])
 
 
 # if __name__ == "__main__":

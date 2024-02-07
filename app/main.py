@@ -9,6 +9,7 @@ from pathlib import Path
 from pynput import mouse
 from src.board_image_selector import BoardIconSelector, AppIconSelector
 from src import constants, custom_utils, load_from_shuffle, config_utils
+from src.execution_variables import execution_variables
 import pickle
 import warnings
 from CTkToolTip import CTkToolTip
@@ -19,12 +20,12 @@ customtkinter.set_appearance_mode("dark")  # Modes: "System" (standard), "Dark",
 # customtkinter.set_appearance_mode("light")
 customtkinter.set_default_color_theme("dark-blue")  # Themes: "blue" (standard), "green", "dark-blue"
 
-
 # import cairosvg
 last_team_to_execute = None
 LAST_TEAM_PKL = "last_team.pkl"
 
 class ImageSelectorApp():
+
     def __init__(self, master):
         
         self.master = master
@@ -38,6 +39,7 @@ class ImageSelectorApp():
         self.create_right_app_screen()
         
         self.update_image_list()
+        self.set_mega_list()
         self.load_last_team()
         self.update_preview_image()
         self.configure_initial_geometry()
@@ -57,6 +59,12 @@ class ImageSelectorApp():
             'fg_color': 'transparent',
             'text_color': ('gray10', 'gray90'),
             'hover_color': ('gray70', 'gray30'),
+        }
+        self.tab_comboboxmenu_style = {
+            # 'width': 0,
+            # 'fg_color': 'dark_color',
+            # 'text_color': ('gray10', 'gray90'),
+            # 'dropdown_hover_color': ('gray70', 'gray30'),
         }
         
         self.create_tab_1()
@@ -80,20 +88,58 @@ class ImageSelectorApp():
 
         icon = self.get_icon("mouse")
 
-        btn1_1 = customtkinter.CTkButton(frame1_1_top, text="Top Left", command=lambda: self.show_click_popup(click_counter= 1), image=icon, **self.tab_button_style)
-        btn1_2 = customtkinter.CTkButton(frame1_1_top, text="Bottom Right", command=lambda: self.show_click_popup(click_counter= 2), image=icon, **self.tab_button_style)
-        btn1_3 = customtkinter.CTkButton(frame1_1_top, text="First Square", command=lambda: self.show_click_popup(click_counter= 3), image=icon, **self.tab_button_style)
-        btn1_4 = customtkinter.CTkButton(frame1_1_top, text="Return Position", command=lambda: self.show_click_popup(click_counter= 4), image=icon, **self.tab_button_style)
+        btn1_1_1 = customtkinter.CTkButton(frame1_1_top, text="Top Left", command=lambda: self.show_click_popup(click_counter= 1), image=icon, **self.tab_button_style)
+        btn1_1_2 = customtkinter.CTkButton(frame1_1_top, text="Bottom Right", command=lambda: self.show_click_popup(click_counter= 2), image=icon, **self.tab_button_style)
+        btn1_1_3 = customtkinter.CTkButton(frame1_1_top, text="First Square", command=lambda: self.show_click_popup(click_counter= 3), image=icon, **self.tab_button_style)
+        # btn1_1_4 = customtkinter.CTkButton(frame1_1_top, text="Return Position", command=lambda: self.show_click_popup(click_counter= 4), image=icon, **self.tab_button_style)
 
-        CTkToolTip(btn1_1, delay=0.5, message="Configure Board Top Left")
-        CTkToolTip(btn1_2, delay=0.5, message="Configure Board Bottom Right")
-        CTkToolTip(btn1_3, delay=0.5, message="Configure Shuffle Move First Square")
-        CTkToolTip(btn1_4, delay=0.5, message="Configure Mouse Return Position")
+        CTkToolTip(btn1_1_1, delay=0.5, message="Configure Board Top Left")
+        CTkToolTip(btn1_1_2, delay=0.5, message="Configure Board Bottom Right")
+        CTkToolTip(btn1_1_3, delay=0.5, message="Configure Shuffle Move First Square")
+        # CTkToolTip(btn1_1_4, delay=0.5, message="Configure Mouse Return Position")
 
-        btn1_1.pack(side=tk.LEFT)
-        btn1_2.pack(side=tk.LEFT)
-        btn1_3.pack(side=tk.LEFT)
-        btn1_4.pack(side=tk.LEFT)       
+        btn1_1_1.pack(side=tk.LEFT)
+        btn1_1_2.pack(side=tk.LEFT)
+        btn1_1_3.pack(side=tk.LEFT)
+        # btn1_1_4.pack(side=tk.LEFT)
+
+        frame1_2 = customtkinter.CTkFrame(self.tab1, fg_color="transparent")
+        frame1_2_top = customtkinter.CTkFrame(frame1_2, fg_color="transparent")
+        frame1_2_bottom = customtkinter.CTkFrame(frame1_2, fg_color="transparent")
+        frame1_2.pack(side=tk.LEFT, expand=False, fill=tk.Y, anchor=tk.W)
+        frame1_2_top.pack(side=tk.TOP)
+        frame1_2_bottom.pack(side=tk.BOTTOM)
+        tk.ttk.Separator(self.tab1, orient='vertical').pack(side=tk.LEFT, fill='y', anchor=tk.W)
+        
+        customtkinter.CTkLabel(frame1_2_bottom, text="Execution").pack(side=tk.BOTTOM, anchor=tk.S)
+        
+        frame1_2_top_1 = customtkinter.CTkFrame(frame1_2_top, fg_color="transparent")
+        frame1_2_top_2 = customtkinter.CTkFrame(frame1_2_top, fg_color="transparent")
+        frame1_2_top_1.pack(side=tk.LEFT)
+        frame1_2_top_2.pack(side=tk.LEFT)
+        
+        
+        stage_combobox_var = customtkinter.StringVar(value="NORMAL")
+        self.stage_combobox = customtkinter.CTkComboBox(frame1_2_top_1, values=constants.move_stages.values(),
+                                     command=self.set_stage_var, variable=stage_combobox_var, state="readonly", **self.tab_comboboxmenu_style)
+        
+        strategy_combobox_var = customtkinter.StringVar(value="Total Blocks")
+        self.strategy_combobox = customtkinter.CTkComboBox(frame1_2_top_1, values=constants.move_strategy.values(),
+                                     command=self.set_strategy_var, variable=strategy_combobox_var, state="readonly", **self.tab_comboboxmenu_style)
+        
+        self.stage_combobox.pack(side=tk.BOTTOM)
+        self.strategy_combobox.pack(side=tk.BOTTOM)
+
+        customtkinter.CTkLabel(frame1_2_top_2, text="Stage Type").pack(side=tk.BOTTOM, anchor=tk.E)
+        customtkinter.CTkLabel(frame1_2_top_2, text="Move Strategy").pack(side=tk.BOTTOM, anchor=tk.E)
+
+    def set_stage_var(self, choice):
+        execution_variables.current_stage = [k for k, v in constants.move_stages.items() if v == choice][0]
+        execution_variables.has_modifications = True
+
+    def set_strategy_var(self, choice):
+        execution_variables.current_strategy = [k for k, v in constants.move_strategy.items() if v == choice][0]
+        execution_variables.has_modifications = True
 
     def create_tab_2(self):
         frame2_1 = customtkinter.CTkFrame(self.tab2, fg_color="transparent")
@@ -246,7 +292,6 @@ class ImageSelectorApp():
 
 
     def create_right_app_screen(self):
-        self.selected_images = []
         self.scrollable_frame = customtkinter.CTkScrollableFrame(self.appview, width=200, height=200, orientation="horizontal")
         self.scrollable_frame.pack(side=tk.TOP, fill=tk.X)
 
@@ -300,17 +345,28 @@ class ImageSelectorApp():
         except:
             pass
 
+    def set_mega_list(self):
+        self.mega_list = []
+        folder_path = constants.IMAGES_PATH
+        image_files = [f for f in os.listdir(folder_path) if f.lower().endswith((".png", ".jpg", ".jpeg", ".gif")) and "mega" in f.lower()]
+        for image_file in image_files:
+            if image_file.startswith("Mega_"):
+             self.mega_list.append(image_file.split("Mega_")[1])
+
+       
+
     def update_image_list(self, *args):
         search_term = self.search_var.get().lower()
         search_term = search_term.replace(" ", "_")
         self.image_listbox.delete(0, tk.END)
 
-        folder_path = constants.IMAGES_PATH  # Change this to the path of your folder
+        folder_path = constants.IMAGES_PATH
         image_files = [f for f in os.listdir(folder_path) if f.lower().endswith((".png", ".jpg", ".jpeg", ".gif")) and search_term in f.lower()]
         image_files = sorted(image_files, key=lambda word: (word[0] != '_', word))
 
         for image_file in image_files:
-            self.image_listbox.insert(tk.END, image_file)
+            if not image_file.startswith("Mega"):
+                self.image_listbox.insert(tk.END, image_file)
 
         self.image_listbox.bind("<<ListboxSelect>>", self.update_preview_image)
         self.image_listbox.bind("<Double-Button-1>", self.select_image)
@@ -321,19 +377,21 @@ class ImageSelectorApp():
             selected_file = self.image_listbox.get(selected_index)
             self.insert_image_widget(selected_file)
     
-    def insert_image_widget(self, selected_file, forced_shortcut=None, disabled=False, skip_barrier=False):
+    def insert_image_widget(self, selected_file, disabled=False, skip_barrier=False):
         image_path = os.path.join(constants.IMAGES_PATH, selected_file)  # Change this to the path of your folder
 
-        if any([value for value in self.selected_images if value[1] == selected_file]):
+        if any([value for value in self.get_selected_images_widgets_list() if value[0].master.name == selected_file]):
             return
 
+        execution_variables.has_modifications = True
+
+        
         # Display in the selected images panel
         selected_image_frame = customtkinter.CTkFrame(self.scrollable_frame)
         selected_image_frame.pack(fill=tk.Y, side=tk.RIGHT, padx=5, anchor=tk.CENTER)
         selected_image_frame.original_fg_color = selected_image_frame._fg_color
-        
-        self.selected_images.append((image_path, selected_file))
-        
+        selected_image_frame.name = selected_file
+
         # Create a thumbnail for preview
         image = Image.open(image_path)
         image.thumbnail((50,50))
@@ -342,36 +400,48 @@ class ImageSelectorApp():
         selected_image_label = customtkinter.CTkLabel(selected_image_frame, image=photo, text=selected_file, compound=tk.TOP)
         selected_image_label.pack()
         
-
         self.insert_extra_images_tooltip(image_path, selected_image_label)
         
-        options = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'del', 'a', 'b', 'c', 'd', 'e','f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o',
-                    'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z']
-        combobox = customtkinter.CTkComboBox(selected_image_frame, values=options, width=80)
-        if forced_shortcut:
-            combobox.set(forced_shortcut)
-        elif Path(image_path).stem == "_Empty":
-            combobox.set("del")
-        else:
-            combobox.set(str(len(self.selected_images)))
-        combobox.pack(pady=5)
+        remove_button = customtkinter.CTkButton(selected_image_frame, text="Remove", width=80, command=lambda: self.remove_selected_image(selected_image_frame, image_path))
+        remove_button.pack(pady=5)
 
-        disable_button = customtkinter.CTkButton(selected_image_frame, text="Remove", width=80, command=lambda: self.remove_selected_image(selected_image_frame, image_path))
-        disable_button.pack(pady=5)
-
-        checkbox_1 = customtkinter.CTkCheckBox(selected_image_frame, text="Disable", checkbox_width=12, checkbox_height=12, corner_radius=0, onvalue=True, offvalue=False, command=lambda: self.transparency_set(checkbox_1, selected_image_frame))
-        checkbox_1.pack(padx=(25, 0))
+        checkbox_disable = customtkinter.CTkCheckBox(selected_image_frame, text="Disable", checkbox_width=12, checkbox_height=12, corner_radius=0, onvalue=True, offvalue=False, command=lambda: self.transparency_set(checkbox_disable, selected_image_frame))
+        checkbox_disable.pack(padx=(25, 0))
         if disabled:
-            checkbox_1.toggle()
+            checkbox_disable.toggle()
+
+        checkbox_stage = customtkinter.CTkCheckBox(selected_image_frame, text="Stage Add", checkbox_width=12, checkbox_height=12, corner_radius=0, onvalue=True, offvalue=False)
+        checkbox_stage.pack(padx=(25, 0))
+        
+  
+        if selected_file in self.mega_list:
+            checkbox_mega = customtkinter.CTkCheckBox(selected_image_frame, text="Mega", checkbox_width=12, checkbox_height=12, corner_radius=0, onvalue=True, offvalue=False, command=lambda: self.megaed_set(checkbox_mega, selected_image_frame))
+            checkbox_mega.pack(padx=(25, 0))
+            selected_image_frame.megaed = False
+            selected_image_frame.checkbox_mega = checkbox_mega
+
 
         if self.has_barrier_var.get() and not skip_barrier:
             self.reveal_or_hide_barrier_img()
 
-    def transparency_set(self, checkbox_1, selected_image_frame):
-        if checkbox_1.get():
+    def transparency_set(self, checkbox, selected_image_frame):
+        if checkbox.get():
             selected_image_frame.configure(fg_color="gray")
         else:
             selected_image_frame.configure(fg_color=selected_image_frame.original_fg_color)
+
+    def megaed_set(self, checkbox, selected_image_frame):
+        for widget in self.get_selected_images_widgets_list():
+            if widget[0].master.name.startswith("Mega_"):
+                widget[0].master.destroy()
+                continue
+            if hasattr(widget[0].master, "megaed") and widget[0].master.name != selected_image_frame.name:
+                widget[0].master.checkbox_mega.deselect()
+        if checkbox.get():
+            self.insert_image_widget(f"Mega_{selected_image_frame.name}")
+        return
+
+
 
     def insert_extra_images_tooltip(self, image_path, selected_image_label):
         extra_image_list = []
@@ -391,12 +461,10 @@ class ImageSelectorApp():
     def destroy_selected_pokemons(self):
         for widget in self.scrollable_frame.winfo_children():
             widget.destroy()
-        self.selected_images = []
         
     def remove_selected_image(self, frame, image_path):
         frame.destroy()
         # Remove the image from the selected images list
-        self.selected_images = [(path, name) for path, name in self.selected_images if path != image_path]
 
     def open_create_register_screen(self, folder):
         self.board_image_selector = BoardIconSelector(root=self, folder=folder)
@@ -420,12 +488,22 @@ class ImageSelectorApp():
         global last_team_to_execute
         values_to_execute = []
         for image_widgets in self.get_selected_images_widgets_list():
-            values_to_execute.append((Path(constants.IMAGES_PATH, image_widgets[0].cget("text")), image_widgets[1].get(), image_widgets[3].get()))
+            #name, disabled, stage_added
+            new_value = self.get_execution_values(image_widgets)
+            if new_value:
+                values_to_execute.append(new_value)
         if last_team_to_execute != values_to_execute:
             last_team_to_execute = values_to_execute
             with open(LAST_TEAM_PKL, 'wb') as file:
-                pickle.dump(values_to_execute, file)
+                pickle.dump([values_to_execute, execution_variables.current_stage, execution_variables.current_strategy], file)
         return match_icons.start(values_to_execute, self.has_barrier_var.get(), source=source)
+
+    def get_execution_values(self, image_widgets):
+        try:
+            return (Path(constants.IMAGES_PATH, image_widgets[0].cget("text")), image_widgets[2].get(), image_widgets[3].get())
+        except:
+            print(f"Error on widget: {image_widgets}")
+            return None
 
     def show_click_popup(self, click_counter):
         self.popup = tk.Toplevel(self.master)
@@ -457,10 +535,10 @@ class ImageSelectorApp():
                 match_icons.shuffle_move_first_square_position = (x, y)
                 config_utils.update_config("shuffle_move_first_square_position", (x ,y))
                 print(f"recorded click at - {match_icons.shuffle_move_first_square_position}")
-            elif self.click_counter == 4:
-                match_icons.mouse_after_shuffle_position = (x, y)
-                config_utils.update_config("mouse_after_shuffle_position", (x ,y))
-                print(f"recorded click at - {match_icons.mouse_after_shuffle_position}")
+            # elif self.click_counter == 4:
+            #     match_icons.mouse_after_shuffle_position = (x, y)
+            #     config_utils.update_config("mouse_after_shuffle_position", (x ,y))
+            #     print(f"recorded click at - {match_icons.mouse_after_shuffle_position}")
             self.mouse_listener.stop()
             self.popup.destroy()
 
@@ -501,8 +579,10 @@ class ImageSelectorApp():
         has_barrier = self.has_barrier_var.get()
         config_utils.update_config("has_barrier", has_barrier)
         if not has_barrier:
-            
             for image_widgets in self.get_selected_images_widgets_list():
+                if image_widgets[0].master.name in ["_Empty.png", "Air.png"]:
+                    image_widgets[0].master.destroy()
+                    continue
                 label = image_widgets[0]
                 image = Image.open(Path(constants.IMAGES_PATH, label.cget("text")))
                 image.thumbnail((50, 50))
@@ -540,9 +620,13 @@ class ImageSelectorApp():
         try:
             self.destroy_selected_pokemons()
             with open(LAST_TEAM_PKL, 'rb') as file:
-                loaded_variable = pickle.load(file)
-            for pokemon, shortcut, disabled in loaded_variable:
-                self.insert_image_widget(pokemon.name, shortcut, disabled, skip_barrier=True)
+                loaded_variable, stage, mode = pickle.load(file)
+            execution_variables.current_stage = stage
+            execution_variables.current_strategy = mode
+            self.stage_combobox.set(execution_variables.current_stage)
+            self.strategy_combobox.set(execution_variables.current_strategy)
+            for pokemon, disabled, _ in loaded_variable:
+                self.insert_image_widget(pokemon.name, disabled, skip_barrier=True)
             if self.has_barrier_var.get():
                 self.reveal_or_hide_barrier_img()
         except Exception as ex:
