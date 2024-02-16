@@ -5,8 +5,8 @@ from src import constants, custom_utils
 from pathlib import Path
 from src.execution_variables import execution_variables
 exception_list = ["Empty", "Coin", "Metal", "Wood"]
-custom_order = set(["SP_084", "NORMAL", "FIRE", "WATER", "GRASS", "ELECTRIC", "ICE", "FIGHTING", "POISON", "GROUND", "FLYING", "PSYCHIC", "BUG", "ROCK", "GHOST", "DRAGON", "DARK", "STEEL", "FAIRY", "NONE"])
-fixed_list = ["SP_084", "NORMAL", "FIRE", "WATER", "GRASS", "ELECTRIC", "ICE", "FIGHTING", "POISON", "GROUND", "FLYING", "PSYCHIC", "BUG", "ROCK", "GHOST", "DRAGON", "DARK", "STEEL", "FAIRY", "NONE", "MEOWTH COIN MANIA"]
+stages_fixed_list = ['BUG', 'DARK', 'DRAGON', 'ELECTRIC', 'FAIRY', 'FIGHTING', 'FIRE', 'FLYING', 'GHOST', 'GRASS', 'GROUND', 'ICE', 'MEOWTH COIN MANIA', 'NONE', 'NORMAL', 'POISON', 'PSYCHIC', 'ROCK', 'STEEL', 'WATER', 'SP_084', 'MEOWTH COIN MANIA']
+stages_set = set(stages_fixed_list)
 
 class TeamData():
     
@@ -37,7 +37,7 @@ class TeamLoader(tk.Toplevel):
             if not parts[0] == "TEAM":
                 continue
             team_name = parts[1]
-            if team_name not in fixed_list:
+            if team_name not in stages_fixed_list:
                 continue
             icons = parts[2]
             for item in exception_list:
@@ -53,7 +53,7 @@ class TeamLoader(tk.Toplevel):
             if team_name == "SP_084":
                 self.teams.append(TeamData("MEOWTH COIN MANIA", icons))
             
-        self.teams.sort(key=lambda x: fixed_list.index(x.stage))
+        self.teams.sort(key=lambda x: stages_fixed_list.index(x.stage))
 
         # self.teams = sorted(self.teams, key=custom_sort)
 
@@ -80,7 +80,6 @@ class TeamLoader(tk.Toplevel):
         # Bind double-click event to print the third element of the selected tuple
         # self.listbox.bind("<<ListboxSelect>>", self.preview_team)
         self.listbox.bind("<Double-Button-1>", self.on_double_click)
-
         # Pack the listbox into the window
         self.listbox.grid(row=1, column=1, sticky='ns')
         self.rowconfigure(1, weight=1)
@@ -92,24 +91,15 @@ class TeamLoader(tk.Toplevel):
     def configure_initial_geometry(self):
         self.update()
         screen_width = self.winfo_screenwidth()
-        screen_height = self.winfo_screenheight() - custom_utils.get_taskbar_size()
+        screen_height = self.winfo_screenheight() - ( 2 * custom_utils.get_taskbar_size())
 
-        width = int(screen_width / 2)
-        height = int(screen_height / 2)
-
-        # Calculate window position at the bottom-right corner
-        x = screen_width - width
-        y = screen_height - height
+        x = int(screen_width / 2)
+        y = 0
 
         app_width = self.winfo_width()
-        app_height = self.winfo_height()
-
+        
         # Set window geometry
-        self.geometry(f"{app_width}x{height}+{x}+{y}")
-        # self.update()
-        # if self.winfo_width() != width:
-        #     scale_factor = self.winfo_width() / width
-        #     self.geometry(f"{int(width*scale_factor)}x{int(height*scale_factor)}+{x}+{y}")
+        self.geometry(f"{app_width}x{screen_height}+{x}+{y}")
 
 
     def preview_team(self, event):

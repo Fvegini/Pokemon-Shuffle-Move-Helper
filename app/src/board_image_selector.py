@@ -23,7 +23,7 @@ class BoardIconSelector(tk.Toplevel):
         row_index = 0
         col_index = 0
 
-        icons_list = match_icons.make_cell_list(force_last_image=False)
+        icons_list = match_icons.make_cell_list()
         for image in icons_list:
             tk_image = customtkinter.CTkImage(image, size=image.size)
             self.image_widgets.append(tk_image)

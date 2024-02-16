@@ -4,9 +4,9 @@ __pycache__
 *test
 to_remove
 last_board.png
-last_team.pkl
+*.pkl
 custom_tk
-config.ini
+*.ini
 build
 dist
 main.exe

@@ -26,7 +26,7 @@ def loadNewBoard():
         s.sendall(b'loadNewBoard\n')
 
         result = s.recv(1024).decode('utf-8')
-        print(result)
+        return result
 
 def ping_shuffle_move():
     # Connect to the Java application

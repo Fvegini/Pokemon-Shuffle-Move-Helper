@@ -132,3 +132,26 @@ def sort_by_class_attribute(obj_list, attribute_name):
     except AttributeError:
         print(f"Attribute '{attribute_name}' not found in the class.")
         return obj_list
+
+def concatenate_cv2_images(image_list, grid_size=(6, 6), spacing=10):
+    # Get image dimensions
+    image_height, image_width, _ = image_list[0].shape
+
+    # Calculate the size of the final image
+    grid_width = grid_size[1] * image_width + (grid_size[1] - 1) * spacing
+    grid_height = grid_size[0] * image_height + (grid_size[0] - 1) * spacing
+
+    # Create a blank white image as the background
+    result_image = np.ones((grid_height, grid_width, 3), dtype=np.uint8) * 255
+
+    # Paste each image into the result image
+    for i in range(grid_size[0]):
+        for j in range(grid_size[1]):
+            if not image_list:
+                break
+            current_image = image_list.pop(0)
+            x_coordinate = j * (image_width + spacing)
+            y_coordinate = i * (image_height + spacing)
+            result_image[y_coordinate:y_coordinate + image_height, x_coordinate:x_coordinate + image_width, :] = current_image
+
+    return result_image

@@ -12,8 +12,9 @@ import time
 from src.embed import Embedder
 from src import constants, custom_utils, config_utils
 from src.config_utils import config_values
-from src import get_window, socket_utils
+from src import get_window, socket_utils, shuffle_config_files
 from src.execution_variables import execution_variables
+from src.classes import Pokemon
 embedder = Embedder()
 downscale_res = (128, 128)
 shuffle_move_first_square_position = config_values.get("shuffle_move_first_square_position")
@@ -27,9 +28,8 @@ fake_barrier_active = False
 custom_board_image = None
 last_image = None
 last_board_commands = []
-CROW = "false,false,false,false,false,false"
-KEYS_LIST = ','.join(['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e','f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o',
-                    'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z'])
+
+
 
 class CustomImage():
     
@@ -44,9 +44,10 @@ class Icon():
     barrier_type: str
     original_path: Path
     images_list: List[CustomImage]
-    shortcut: List[str]
 
-    def __init__(self, path, shortcut, barrier):
+    def __init__(self, path, barrier):
+        if isinstance(path, str):
+            path = Path(path)
         if path.stem == "_Fog":
             self.name = "Pikachu_a"
         elif path.stem == "_Empty":
@@ -58,10 +59,7 @@ class Icon():
         self.barrier = barrier
         self.barrier_type = None
         self.original_path = path
-        if not self.barrier:
-            self.shortcut = [shortcut]
-        else:
-            self.shortcut = [shortcut, "F"]
+        if self.barrier:
             self.name = f"{constants.BARRIER_PREFIX}{self.name}"
         self.populate_images()
         
@@ -92,7 +90,6 @@ class Match():
     def __init__(self, board_icon, embed, icon: Icon):
         self.name = icon.name
         self.board_icon = board_icon
-        self.shortcut = icon.shortcut
         cosine_tuples_list = [(embedder.cosine_similarity(embed, icon_image.embed), icon_image.image) for icon_image in icon.images_list]
         if len(cosine_tuples_list) > 0:
             self.cosine_similarity, self.match_icon = max(cosine_tuples_list, key=lambda x: x[0])
@@ -106,14 +103,14 @@ class Match():
         custom_utils.show_list_images([self.board_icon, self.match_icon])
 
 
-def load_icon_classes(values_to_execute, has_barriers):
+def load_icon_classes(values_to_execute: list[Pokemon], has_barriers):
     icons_list = []
-    for image_path, shortcut, disabled in values_to_execute:
-        if disabled:
+    for pokemon in values_to_execute:
+        if pokemon.disabled:
             continue
-        icons_list.append(Icon(image_path, shortcut, False))
+        icons_list.append(Icon(pokemon.name, False))
         if has_barriers:
-            icons_list.append(Icon(image_path, shortcut, True))
+            icons_list.append(Icon(pokemon.name, True))
     return icons_list
 
 
@@ -222,29 +219,23 @@ def predict(original_image, icons_list, has_barriers) -> Match:
     return compare_with_list(np_img, icons_list, has_barriers)
     
 
-def capture_board_screensot(force_last_image):
-    global board_top_left, board_bottom_right, custom_board_image
-    print_screen_mode = config_utils.config_values.get("board_capture_var")
-    if force_last_image:
-        img = Image.open(constants.LAST_BOARD_IMAGE_PATH).convert('RGB')
-    elif print_screen_mode:
-        x0 = board_top_left[0]
-        x1 = board_bottom_right[0] - board_top_left[0]
-        y0 = board_top_left[1]
-        y1 = board_bottom_right[1] - board_top_left[1]
-        img = pyautogui.screenshot(region=(x0, y0, x1, y1))
-        img.save(constants.LAST_BOARD_IMAGE_PATH)
-    elif os.path.exists(config_utils.config_values.get("board_image_path")):
-        shutil.move(config_utils.config_values.get("board_image_path"), constants.LAST_BOARD_IMAGE_PATH)
-        img = Image.open(constants.LAST_BOARD_IMAGE_PATH)
-        img =  img.crop((10,600,740,1320)).convert('RGB')
-        img.save(constants.LAST_BOARD_IMAGE_PATH)
-    else:
-        img = Image.open(constants.LAST_BOARD_IMAGE_PATH).convert('RGB')
+def capture_board_screensot():
+    global board_top_left, board_bottom_right
+    x0 = board_top_left[0]
+    x1 = board_bottom_right[0] - board_top_left[0]
+    y0 = board_top_left[1]
+    y1 = board_bottom_right[1] - board_top_left[1]
+    img = pyautogui.screenshot(region=(x0, y0, x1, y1))
+    img.save(constants.LAST_BOARD_IMAGE_PATH)
     return img
 
-def make_cell_list(force_last_image=False):
-    img = capture_board_screensot(force_last_image)
+def make_cell_list():
+    img = capture_board_screensot()
+    return make_cell_list_with_img(img)
+
+def make_cell_list_with_img(img):
+    if isinstance(img, np.ndarray):
+        img = Image.fromarray(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
     cell_list = []
     cell_size = (img.size[0]/6, img.size[1]/6)
     for y in range(0, 6):
@@ -252,177 +243,76 @@ def make_cell_list(force_last_image=False):
             cell_box = (x*cell_size[0], y*cell_size[1], (x+1)*cell_size[0], (y+1)*cell_size[1])
             cell_list.append(img.crop(cell_box))
     return cell_list
-            
-def start(request_values, has_barriers, force_last_image=False, source=None):
-    global last_image, last_board_commands
-    if source == "loop" and not has_airplay_on_screen():
-        print("airplay not on screen, ignoring")
-        return 2000
-    icons_list = load_icon_classes(request_values, has_barriers)
-    match_list: List[Match] = []
-    cell_list = make_cell_list(force_last_image)
-    predict(cell_list[17], icons_list, has_barriers)
-    for idx, cell in enumerate(cell_list):
-        result = predict(cell, icons_list, has_barriers)
-        match_list.append(result)
-    
-    img1 = concatenate_cv2_images([match.board_icon for match in match_list])
-    img2 = concatenate_cv2_images([match.match_icon for match in match_list])
-    last_image = custom_utils.concatenate_list_images([img1, img2])
-    
-    extra_supports_list = [pokemon[0].name for pokemon in request_values if pokemon[2]]
-    
-    commands_list = list(chain(*[match.shortcut for match in match_list]))
-    if commands_list != last_board_commands or source != "loop":
-        create_board_files([match.name for match in match_list], [icon.name for icon in icons_list], extra_supports_list)
-        last_board_commands = commands_list
-        execute_commands(commands_list, source)
-    return 0
 
-def create_board_files(sequence_names_list, original_complete_names_list, extra_supports_list):
-    names_list = []
-    frozen_list = []
-    extra_list = []
-    mega_activated = "0"
-    mega_name = "-"
+def make_cell_list_with_cv2_img(img, red=None, blue=None):
+    height, width = img.shape[:2]
+
+    new_height = height - (height % 6)
+    new_width = width - (width % 6)
+
+    # Resize the image to new dimensions
+    img = cv2.resize(img, (new_width, new_height))
+    height, width = img.shape[:2]
+    # Check if the dimensions are divisible by 6
+    if height % 6 != 0 or width % 6 != 0:
+        raise ValueError("Image dimensions are not divisible by 6")
+
+    # Initialize an empty list to store the smaller images
+    smaller_images = []
+
+    square_size = min(height, width) // int(36 ** 0.5)
+    # Iterate through the image and split it into 6x6 smaller images
+    for y in range(0, height, square_size):
+        for x in range(0, width, square_size):
+            # Extract the square region from the image
+            square = img[y:y+square_size, x:x+square_size]
+            # Append the square to the list
 
 
-    for name in sequence_names_list:
-        if "Barrier_" in name:
-            name = name.split("Barrier_")[1]
-            frozen_list.append("true")
-        else:
-            frozen_list.append("false")
-        if "Mega_" in name:
-            new_name = name.split("Mega_")[1]
-            names_list.append(new_name)
-            mega_activated = "99"
-            mega_name = new_name
-        else:
-            names_list.append(name)
+             # Add position text on top of the square with a black background
+            square_with_text = square.copy()
+            text = f"{y//square_size+1},{x//square_size+1}"
+            # font_scale = min(square_size, 25) / 25  # Adjust font size based on square size
+            # text_thickness = max(1, int(font_scale))  # Adjust text thickness based on font size
+            # text_size, _ = cv2.getTextSize(text, cv2.FONT_HERSHEY_SIMPLEX, font_scale, text_thickness)
+            # text_x = (square_size - text_size[0]) // 2
+            # text_y = (square_size + text_size[1]) // 2
+            # bg_rect_size = (text_size[0] + 6, text_size[1] + 6)  # Fixed size for background rectangle
+            # bg_rect_x = (square_size - bg_rect_size[0]) // 2
+            # bg_rect_y = (square_size - bg_rect_size[1]) // 2
+            # cv2.rectangle(square_with_text, (bg_rect_x, bg_rect_y), (bg_rect_x + bg_rect_size[0], bg_rect_y + bg_rect_size[1]), (0, 0, 0), cv2.FILLED)
+            # cv2.putText(square_with_text, text, (text_x, text_y), cv2.FONT_HERSHEY_SIMPLEX, font_scale, (255, 255, 255), text_thickness)
 
-    names_list, frozen_list, mega_name = process_names_list(sequence_names_list)
-    complete_names_list, _, forced_mega_name = process_names_list(original_complete_names_list)
-    if mega_name == "-":
-        mega_name = forced_mega_name
-    else:
-        mega_activated = "99"
+            font=cv2.FONT_HERSHEY_SIMPLEX
+            pos=(0, 0)
+            font_scale=1
+            font_thickness=2
+            text_color=(0, 255, 0)
+            text_color_bg=(0, 0, 0)
 
-    update_board_file(names_list, frozen_list, mega_activated)
-    if execution_variables.has_modifications:
-        update_teams_file(complete_names_list, mega_name, extra_supports_list)
-        update_gradingModes_file()
-        execution_variables.has_modifications = False
-    return
+            text_size, _ = cv2.getTextSize(text, font, font_scale, font_thickness)
+            text_w, text_h = text_size
+            cv2.rectangle(square_with_text, pos, (0 + text_w, 0 + text_h), text_color_bg, -1)
+            cv2.putText(square_with_text, text, (0, 0 + text_h + font_scale - 1), font, font_scale, text_color, font_thickness)
 
-def process_names_list(original_names_list):
-    names_list = []
-    frozen_list = []
-    mega_name = "-"
+            # cv2.imshow("",square_with_text)
 
-    for name in original_names_list:
-        if "Barrier_" in name:
-            name = name.split("Barrier_")[1]
-            frozen_list.append("true")
-        else:
-            frozen_list.append("false")
-        if "Mega_" in name:
-            new_name = name.split("Mega_")[1]
-            names_list.append(new_name)
-            mega_name = new_name
-        else:
-            names_list.append(name)    
-    return names_list, frozen_list, mega_name
+            if text == red:
+                red_transparent_layer = np.zeros((square_size, square_size, 3), dtype=np.uint8)
+                red_transparent_layer[:, :] = (0, 0, 255)  # Red color
+                overlay = cv2.addWeighted(square_with_text, 0.5, red_transparent_layer, 0.5, 0)
+                smaller_images.append(overlay)
+            elif text == blue:
+                blue_transparent_layer = np.zeros((square_size, square_size, 3), dtype=np.uint8)
+                blue_transparent_layer[:, :] = (255, 0, 0)  # Blue color
+                overlay = cv2.addWeighted(square_with_text, 0.5, blue_transparent_layer, 0.5, 0)
+                smaller_images.append(overlay)
 
 
-def update_board_file(names_list, frozen_list, mega_activated):
-    board_file_content = f"""STAGE {execution_variables.current_stage}
-MEGA_PROGRESS {mega_activated}
-STATUS NONE
-STATUS_DURATION 0
-ROW_1 {",".join(names_list[0:6])}
-FROW_1 {",".join(frozen_list[0:6])}
-CROW_1 {CROW}
-ROW_2 {",".join(names_list[6:12])}
-FROW_2 {",".join(frozen_list[6:12])}
-CROW_2 {CROW}
-ROW_3 {",".join(names_list[12:18])}
-FROW_3 {",".join(frozen_list[12:18])}
-CROW_3 {CROW}
-ROW_4 {",".join(names_list[18:24])}
-FROW_4 {",".join(frozen_list[18:24])}
-CROW_4 {CROW}
-ROW_5 {",".join(names_list[24:30])}
-FROW_5 {",".join(frozen_list[24:30])}
-CROW_5 {CROW}
-ROW_6 {",".join(names_list[30:36])}
-FROW_6 {",".join(frozen_list[30:36])}
-CROW_6 {CROW}
-"""
-    with open(Path.joinpath(Path.home(), "Shuffle-Move", "config", "boards", "board.txt"), 'w') as file:
-        file.write(board_file_content)
-
-def update_teams_file(names_list, mega_name, extra_supports_list):
-    file_path = Path.joinpath(Path.home(), "Shuffle-Move", "config", "teamsData.txt")
-    
-    prefix_to_replace = f"TEAM {execution_variables.current_stage}"
-    new_line = f"TEAM {execution_variables.current_stage} {','.join(list(set(names_list)))} {KEYS_LIST} {mega_name} {','.join(list(set(extra_supports_list)))}\n"
-    with open(file_path, 'r') as file:
-        lines = file.readlines()
-
-    # Find the line with the specified prefix
-    for i, line in enumerate(lines):
-        if line.startswith(prefix_to_replace):
-            # Replace the line
-            lines[i] = new_line
-    # Write the modified content back to the file
-    with open(file_path, 'w') as file:
-        file.writelines(lines)
-        
-    return
-
-def update_gradingModes_file():
-    file_path = Path.joinpath(Path.home(), "Shuffle-Move", "config", "gradingModes.txt")
-    
-    prefix_to_replace = f"STRING CURRENT_MODE"
-    new_line = f"STRING CURRENT_MODE {execution_variables.current_strategy}\n"
-    with open(file_path, 'r') as file:
-        lines = file.readlines()
-
-    # Find the line with the specified prefix
-    for i, line in enumerate(lines):
-        if line.startswith(prefix_to_replace):
-            # Replace the line
-            lines[i] = new_line
-    # Write the modified content back to the file
-    with open(file_path, 'w') as file:
-        file.writelines(lines)
-        
-    return
+            smaller_images.append(square_with_text)
 
 
-def concatenate_cv2_images(image_list, grid_size=(6, 6), spacing=10):
-    # Get image dimensions
-    image_height, image_width, _ = image_list[0].shape
-
-    # Calculate the size of the final image
-    grid_width = grid_size[1] * image_width + (grid_size[1] - 1) * spacing
-    grid_height = grid_size[0] * image_height + (grid_size[0] - 1) * spacing
-
-    # Create a blank white image as the background
-    result_image = np.ones((grid_height, grid_width, 3), dtype=np.uint8) * 255
-
-    # Paste each image into the result image
-    for i in range(grid_size[0]):
-        for j in range(grid_size[1]):
-            if not image_list:
-                break
-            current_image = image_list.pop(0)
-            x_coordinate = j * (image_width + spacing)
-            y_coordinate = i * (image_height + spacing)
-            result_image[y_coordinate:y_coordinate + image_height, x_coordinate:x_coordinate + image_width, :] = current_image
-
-    return result_image
+    return smaller_images
 
 def concatenate_PIL_images(image_list, grid_size=(6, 6), spacing=10):
     # Calculate the size of the final image
@@ -458,12 +348,11 @@ def has_airplay_on_screen():
 
     return has_airplay
 
-def execute_commands(command_sequence, source):
+def execute_commands(command_sequence, source=None):
     global shuffle_move_first_square_position
 
     if execution_variables.socket_mode:
-        socket_utils.loadNewBoard()
-        return
+        return socket_utils.loadNewBoard()
     focused_name = get_window.get_focused_window_name()
     behind_name = get_window.get_window_name_at_coordinate(shuffle_move_first_square_position[0], y=shuffle_move_first_square_position[1])
     move_is_focused = (shuffle_move_name in focused_name.lower())
@@ -481,11 +370,49 @@ def execute_commands(command_sequence, source):
         pyautogui.click(shuffle_move_first_square_position[0], y=shuffle_move_first_square_position[1])
         time.sleep(0.1)
     pyautogui.hotkey('ctrl', 'l')
-    # if source != "loop":
-        # pyautogui.moveTo(x=mouse_after_shuffle_position[0], y=mouse_after_shuffle_position[1])
 
 
-# if __name__ == "__main__":
-#     custom_board_image = test_scenarios.get("1").get("board_image")
-#     values = test_scenarios.get("1").get("values")
-#     start(*values, show_debug=True)
+def start_from_helper(request_values: list[Pokemon], has_barriers, root=None, source=None):
+    global last_image, last_board_commands
+    if source == "loop" and not has_airplay_on_screen():
+        print("airplay not on screen, ignoring")
+        if root:
+            root.info_message.configure(text="Loop Mode: Airplay not on screen, ignoring")
+        return 2000
+    icons_list = load_icon_classes(request_values, has_barriers)
+    match_list: List[Match] = []
+    cell_list = make_cell_list()
+    for idx, cell in enumerate(cell_list):
+        result = predict(cell, icons_list, has_barriers)
+        match_list.append(result)
+    
+    # img1 = concatenate_cv2_images([match.board_icon for match in match_list])
+    # img2 = concatenate_cv2_images([match.match_icon for match in match_list])
+    # last_image = custom_utils.concatenate_list_images([img1, img2])
+
+    extra_supports_list = [pokemon[0].name for pokemon in request_values if pokemon.stage_added]
+    sequence_names_list = [match.name for match in match_list]
+    original_complete_names_list = [icon.name for icon in icons_list]
+    commands_list = [match.name for match in match_list]
+    if commands_list != last_board_commands or source != "loop":
+        shuffle_config_files.create_board_files(sequence_names_list, original_complete_names_list, extra_supports_list, source)
+        last_board_commands = commands_list
+        result = execute_commands(commands_list, source)
+    else:
+        if root:
+            root.info_message.configure(text="Loop Mode: Same commands found")
+    return 0
+
+def start_from_bot(request_values, has_barriers, image, source="bot"):
+    icons_list = load_icon_classes(request_values, has_barriers)
+    match_list: List[Match] = []
+    cell_list = make_cell_list_with_img(image)
+    for cell in cell_list:
+        result = predict(cell, icons_list, has_barriers)
+        match_list.append(result)
+    extra_supports_list = [pokemon[0].name for pokemon in request_values if pokemon.stage_added]
+    sequence_names_list = [match.name for match in match_list]
+    original_complete_names_list = [icon.name for icon in icons_list]
+    shuffle_config_files.create_board_files(sequence_names_list, original_complete_names_list, extra_supports_list, source, stage="NONE")
+    result = execute_commands(sequence_names_list)
+    return result

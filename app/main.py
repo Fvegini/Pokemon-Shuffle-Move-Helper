@@ -4,15 +4,15 @@ from tkinter import filedialog
 import customtkinter
 from PIL import Image
 import keyboard
-from src import match_icons
+from src import match_icons, shuffle_config_files
 from pathlib import Path
-from pynput import mouse
 from src.board_image_selector import BoardIconSelector, AppIconSelector
-from src import constants, custom_utils, load_from_shuffle, config_utils
+from src import constants, custom_utils, load_from_shuffle, config_utils, mouse_utils
 from src.execution_variables import execution_variables
 import pickle
 import warnings
 from CTkToolTip import CTkToolTip
+from src.classes import Pokemon
 warnings.filterwarnings("ignore", category=UserWarning, message="CTkButton Warning: Given image is not CTkImage but*")
 
 
@@ -37,6 +37,7 @@ class ImageSelectorApp():
 
         self.create_left_app_screen()
         self.create_right_app_screen()
+        self.create_bottom_message()
         
         self.update_image_list()
         self.set_mega_list()
@@ -88,18 +89,18 @@ class ImageSelectorApp():
 
         icon = self.get_icon("mouse")
 
-        btn1_1_1 = customtkinter.CTkButton(frame1_1_top, text="Top Left", command=lambda: self.show_click_popup(click_counter= 1), image=icon, **self.tab_button_style)
-        btn1_1_2 = customtkinter.CTkButton(frame1_1_top, text="Bottom Right", command=lambda: self.show_click_popup(click_counter= 2), image=icon, **self.tab_button_style)
-        btn1_1_3 = customtkinter.CTkButton(frame1_1_top, text="First Square", command=lambda: self.show_click_popup(click_counter= 3), image=icon, **self.tab_button_style)
+        # btn1_1_1 = customtkinter.CTkButton(frame1_1_top, text="Top Left", command=lambda: self.show_click_popup(click_counter= 1), image=icon, **self.tab_button_style)
+        # btn1_1_2 = customtkinter.CTkButton(frame1_1_top, text="Bottom Right", command=lambda: self.show_click_popup(click_counter= 2), image=icon, **self.tab_button_style)
+        btn1_1_3 = customtkinter.CTkButton(frame1_1_top, text="Board Position", command=lambda: self.show_board_position_selector_app(), image=icon, **self.tab_button_style)
         # btn1_1_4 = customtkinter.CTkButton(frame1_1_top, text="Return Position", command=lambda: self.show_click_popup(click_counter= 4), image=icon, **self.tab_button_style)
 
-        CTkToolTip(btn1_1_1, delay=0.5, message="Configure Board Top Left")
-        CTkToolTip(btn1_1_2, delay=0.5, message="Configure Board Bottom Right")
+        # CTkToolTip(btn1_1_1, delay=0.5, message="Configure Board Top Left")
+        # CTkToolTip(btn1_1_2, delay=0.5, message="Configure Board Bottom Right")
         CTkToolTip(btn1_1_3, delay=0.5, message="Configure Shuffle Move First Square")
         # CTkToolTip(btn1_1_4, delay=0.5, message="Configure Mouse Return Position")
 
-        btn1_1_1.pack(side=tk.LEFT)
-        btn1_1_2.pack(side=tk.LEFT)
+        # btn1_1_1.pack(side=tk.LEFT)
+        # btn1_1_2.pack(side=tk.LEFT)
         btn1_1_3.pack(side=tk.LEFT)
         # btn1_1_4.pack(side=tk.LEFT)
 
@@ -119,13 +120,13 @@ class ImageSelectorApp():
         frame1_2_top_2.pack(side=tk.LEFT)
         
         
-        stage_combobox_var = customtkinter.StringVar(value="NORMAL")
+        self.stage_combobox_var = customtkinter.StringVar(value="NORMAL")
         self.stage_combobox = customtkinter.CTkComboBox(frame1_2_top_1, values=constants.move_stages.values(),
-                                     command=self.set_stage_var, variable=stage_combobox_var, state="readonly", **self.tab_comboboxmenu_style)
+                                     command=self.set_stage_var, variable=self.stage_combobox_var, state="readonly", **self.tab_comboboxmenu_style)
         
-        strategy_combobox_var = customtkinter.StringVar(value="Total Blocks")
+        self.strategy_combobox_var = customtkinter.StringVar(value="Total Blocks")
         self.strategy_combobox = customtkinter.CTkComboBox(frame1_2_top_1, values=constants.move_strategy.values(),
-                                     command=self.set_strategy_var, variable=strategy_combobox_var, state="readonly", **self.tab_comboboxmenu_style)
+                                     command=self.set_strategy_var, variable=self.strategy_combobox_var, state="readonly", **self.tab_comboboxmenu_style)
         
         self.stage_combobox.pack(side=tk.BOTTOM)
         self.strategy_combobox.pack(side=tk.BOTTOM)
@@ -205,20 +206,12 @@ class ImageSelectorApp():
         customtkinter.CTkLabel(frame3_1_bottom, text="Board Capture Mode", bg_color="transparent").pack(side=tk.BOTTOM)
         
         
-        frame3_1_top_1 = customtkinter.CTkFrame(frame3_1_top, fg_color="transparent")
-        frame3_1_top_2 = customtkinter.CTkFrame(frame3_1_top, fg_color="transparent")
-        frame3_1_top_1.pack(side=tk.LEFT)
-        frame3_1_top_2.pack(side=tk.LEFT)
-        
-        self.board_capture_var = tk.BooleanVar(value=config_utils.config_values.get("board_capture_var")) 
         self.has_barrier_var = tk.BooleanVar(value=config_utils.config_values.get("has_barrier")) 
         self.control_loop_var = tk.BooleanVar(value=False)
 
-        customtkinter.CTkSwitch(frame3_1_top_1, text="Print Screen Mode", variable=self.board_capture_var, onvalue=True, offvalue=False, command=self.update_board_capture_mode).pack(side=tk.TOP, anchor=tk.W, padx=5)
-        customtkinter.CTkSwitch(frame3_1_top_1, text="Image File Mode", variable=self.board_capture_var, onvalue=False, offvalue=True, command=self.update_board_capture_mode).pack(side=tk.TOP, anchor=tk.W, padx=5)
        
-        self.control_loop_switch = customtkinter.CTkSwitch(frame3_1_top_2, text="Capture Loop", variable=self.control_loop_var, onvalue=True, offvalue=False, command=lambda: self.control_loop_function())
-        self.has_barrier_switch = customtkinter.CTkSwitch(frame3_1_top_2, text="Has Barriers", variable=self.has_barrier_var, command=self.reveal_or_hide_barrier_img)
+        self.control_loop_switch = customtkinter.CTkSwitch(frame3_1_top, text="Capture Loop", variable=self.control_loop_var, onvalue=True, offvalue=False, command=lambda: self.control_loop_function())
+        self.has_barrier_switch = customtkinter.CTkSwitch(frame3_1_top, text="Has Barriers", variable=self.has_barrier_var, command=self.reveal_or_hide_barrier_img)
         self.control_loop_switch.pack(side=tk.TOP, anchor=tk.W, padx=5)
         self.has_barrier_switch.pack(side=tk.TOP, anchor=tk.W, padx=5)
         
@@ -235,14 +228,14 @@ class ImageSelectorApp():
         customtkinter.CTkLabel(frame3_2_bottom, text="").pack(side=tk.BOTTOM)
 
         btn3_2_1 = customtkinter.CTkButton(frame3_2_top, text="Execute", command=lambda: self.start_board_analysis(source="button"), image=self.get_icon("play-circle"), **self.tab_button_style)
-        CTkToolTip(btn3_2_1, delay=0.5, message="Execute (F3)")
+        CTkToolTip(btn3_2_1, delay=0.5, message="Execute (F2)")
         btn3_2_1.pack(side=tk.LEFT)
         keyboard.add_hotkey('f2', lambda: self.start_board_analysis(source="shortcut"))
         
         btn2_1_1 = customtkinter.CTkButton(frame3_2_top, text="Load Team", command=self.load_team, image=self.get_icon("cloud-download-alt"), **self.tab_button_style)
         CTkToolTip(btn2_1_1, delay=0.5, message="Load Team From Shuffle Move Config File")
         btn2_1_1.pack(side=tk.LEFT, padx=5)
-        customtkinter.CTkButton(frame3_2_top, text="View Last Board", command=self.show_last_move, image=self.get_icon("search"), **self.tab_button_style).pack(side=tk.LEFT)
+        customtkinter.CTkButton(frame3_2_top, text="Current Board", command=self.show_current_board, image=self.get_icon("search"), **self.tab_button_style).pack(side=tk.LEFT)
 
         frame3_3 = customtkinter.CTkFrame(self.tab3, fg_color="transparent")
         frame3_3_top = customtkinter.CTkFrame(frame3_3, fg_color="transparent")
@@ -251,13 +244,39 @@ class ImageSelectorApp():
         frame3_3_top.pack(side=tk.TOP)
         frame3_3_bottom.pack(side=tk.BOTTOM)
         tk.ttk.Separator(self.tab3, orient='vertical').pack(side=tk.LEFT, fill='y', anchor=tk.W)
+        customtkinter.CTkLabel(frame3_3_bottom, text="Register Icons").pack(side=tk.BOTTOM)
+        btn3_3_1 = customtkinter.CTkButton(frame3_3_top, text="Register Barrier", command=lambda: self.open_create_register_screen(folder="barrier"), image=self.get_icon("plus"), **self.tab_button_style)
+        CTkToolTip(btn3_3_1, delay=0.5, message="Create or Substitute the Barrier Icon")
+        btn3_3_1.pack(side=tk.LEFT, padx=5)
+        btn3_3_2 = customtkinter.CTkButton(frame3_3_top, text="Register Extra", command=lambda: self.open_create_register_screen(folder="extra"), image=self.get_icon("plus"), **self.tab_button_style)
+        CTkToolTip(btn3_3_2, delay=0.5, message="Insert a new Extra Icon")
+        btn3_3_2.pack(side=tk.LEFT, padx=5)
 
-        customtkinter.CTkLabel(frame3_3_bottom, text="").pack(side=tk.BOTTOM)
-        self.update_search_dir_button = customtkinter.CTkButton(frame3_3_top, text="Update Search Directory", command=self.update_search_dir, image=self.get_icon("folder-open"), **self.tab_button_style)
-        CTkToolTip(self.update_search_dir_button, delay=0.5, message="Execute (F3)")
-        self.update_search_dir_button.pack(side=tk.TOP)
 
-        self.update_board_capture_mode()
+        frame3_4 = customtkinter.CTkFrame(self.tab3, fg_color="transparent")
+        frame3_4_top = customtkinter.CTkFrame(frame3_4, fg_color="transparent")
+        frame3_4_bottom = customtkinter.CTkFrame(frame3_4, fg_color="transparent")
+        frame3_4.pack(side=tk.LEFT, expand=False, fill=tk.Y, anchor=tk.W)
+        frame3_4_top.pack(side=tk.TOP)
+        frame3_4_bottom.pack(side=tk.BOTTOM)
+        tk.ttk.Separator(self.tab1, orient='vertical').pack(side=tk.LEFT, fill='y', anchor=tk.W)
+        
+        customtkinter.CTkLabel(frame3_4_bottom, text="Execution").pack(side=tk.BOTTOM, anchor=tk.S)
+        
+        frame3_4_top_1 = customtkinter.CTkFrame(frame3_4_top, fg_color="transparent")
+        frame3_4_top_2 = customtkinter.CTkFrame(frame3_4_top, fg_color="transparent")
+        frame3_4_top_1.pack(side=tk.LEFT)
+        frame3_4_top_2.pack(side=tk.LEFT)
+        
+        
+        customtkinter.CTkComboBox(frame3_4_top_1, values=constants.move_stages.values(),
+                                     command=self.set_stage_var, variable=self.stage_combobox_var, state="readonly", **self.tab_comboboxmenu_style).pack(side=tk.BOTTOM)
+        
+        customtkinter.CTkComboBox(frame3_4_top_1, values=constants.move_strategy.values(),
+                                     command=self.set_strategy_var, variable=self.strategy_combobox_var, state="readonly", **self.tab_comboboxmenu_style).pack(side=tk.BOTTOM)
+        
+        customtkinter.CTkLabel(frame3_4_top_2, text="Stage Type").pack(side=tk.BOTTOM, anchor=tk.E)
+        customtkinter.CTkLabel(frame3_4_top_2, text="Move Strategy").pack(side=tk.BOTTOM, anchor=tk.E)
 
     def create_left_app_screen(self):
 
@@ -290,6 +309,9 @@ class ImageSelectorApp():
         self.image_preview = customtkinter.CTkLabel(self.images_frame, text="")
         self.image_preview.grid(row=1, column=3, padx=5, pady=5, sticky='w')
 
+    def create_bottom_message(self):
+        self.info_message = customtkinter.CTkLabel(self.appview, text="App Open")
+        self.info_message.pack(side=tk.BOTTOM, fill=tk.X)
 
     def create_right_app_screen(self):
         self.scrollable_frame = customtkinter.CTkScrollableFrame(self.appview, width=200, height=200, orientation="horizontal")
@@ -378,14 +400,19 @@ class ImageSelectorApp():
             self.insert_image_widget(selected_file)
     
     def insert_image_widget(self, selected_file, disabled=False, skip_barrier=False):
-        image_path = os.path.join(constants.IMAGES_PATH, selected_file)  # Change this to the path of your folder
+        image_path = Path(constants.IMAGES_PATH, selected_file)  # Change this to the path of your folder
+        if not image_path.suffix:
+            image_path = image_path.with_suffix('.png')
+            selected_file = selected_file + ".png"
+
+        if not image_path.exists():
+            return
 
         if any([value for value in self.get_selected_images_widgets_list() if value[0].master.name == selected_file]):
             return
 
         execution_variables.has_modifications = True
 
-        
         # Display in the selected images panel
         selected_image_frame = customtkinter.CTkFrame(self.scrollable_frame)
         selected_image_frame.pack(fill=tk.Y, side=tk.RIGHT, padx=5, anchor=tk.CENTER)
@@ -405,17 +432,19 @@ class ImageSelectorApp():
         remove_button = customtkinter.CTkButton(selected_image_frame, text="Remove", width=80, command=lambda: self.remove_selected_image(selected_image_frame, image_path))
         remove_button.pack(pady=5)
 
-        checkbox_disable = customtkinter.CTkCheckBox(selected_image_frame, text="Disable", checkbox_width=12, checkbox_height=12, corner_radius=0, onvalue=True, offvalue=False, command=lambda: self.transparency_set(checkbox_disable, selected_image_frame))
+        checkbox_disable = customtkinter.CTkCheckBox(selected_image_frame, text="Disable", checkbox_width=12, checkbox_height=12, corner_radius=0, onvalue=True, offvalue=False, command=lambda: self.checkbox_disable_clicked(checkbox_disable, selected_image_frame))
         checkbox_disable.pack(padx=(25, 0))
+
+        checkbox_stage = customtkinter.CTkCheckBox(selected_image_frame, text="Stage Add", checkbox_width=12, checkbox_height=12, corner_radius=0, onvalue=True, offvalue=False, command=lambda: self.checkbox_stage_add_clicked(checkbox_disable, selected_image_frame))
+        checkbox_stage.pack(padx=(25, 0))
+
+        selected_image_frame.pokemon = Pokemon(selected_image_frame.name, checkbox_disable.get(), checkbox_stage.get())
+
         if disabled:
             checkbox_disable.toggle()
-
-        checkbox_stage = customtkinter.CTkCheckBox(selected_image_frame, text="Stage Add", checkbox_width=12, checkbox_height=12, corner_radius=0, onvalue=True, offvalue=False)
-        checkbox_stage.pack(padx=(25, 0))
-        
-  
+          
         if selected_file in self.mega_list:
-            checkbox_mega = customtkinter.CTkCheckBox(selected_image_frame, text="Mega", checkbox_width=12, checkbox_height=12, corner_radius=0, onvalue=True, offvalue=False, command=lambda: self.megaed_set(checkbox_mega, selected_image_frame))
+            checkbox_mega = customtkinter.CTkCheckBox(selected_image_frame, text="Mega", checkbox_width=12, checkbox_height=12, corner_radius=0, onvalue=True, offvalue=False, command=lambda: self.checkbox_mega_click(checkbox_mega, selected_image_frame))
             checkbox_mega.pack(padx=(25, 0))
             selected_image_frame.megaed = False
             selected_image_frame.checkbox_mega = checkbox_mega
@@ -423,14 +452,24 @@ class ImageSelectorApp():
 
         if self.has_barrier_var.get() and not skip_barrier:
             self.reveal_or_hide_barrier_img()
+            
+        
 
-    def transparency_set(self, checkbox, selected_image_frame):
+    def checkbox_disable_clicked(self, checkbox, selected_image_frame):
         if checkbox.get():
             selected_image_frame.configure(fg_color="gray")
+            selected_image_frame.pokemon.disabled = True
         else:
             selected_image_frame.configure(fg_color=selected_image_frame.original_fg_color)
+            selected_image_frame.pokemon.disabled = False
 
-    def megaed_set(self, checkbox, selected_image_frame):
+    def checkbox_stage_add_clicked(self, checkbox, selected_image_frame):
+        if checkbox.get():
+            selected_image_frame.pokemon.stage_added = True
+        else:
+            selected_image_frame.pokemon.stage_added = False
+
+    def checkbox_mega_click(self, checkbox, selected_image_frame):
         for widget in self.get_selected_images_widgets_list():
             if widget[0].master.name.startswith("Mega_"):
                 widget[0].master.destroy()
@@ -486,17 +525,12 @@ class ImageSelectorApp():
 
     def start_board_analysis(self, source=None):
         global last_team_to_execute
-        values_to_execute = []
+        pokemons_list = []
         for image_widgets in self.get_selected_images_widgets_list():
-            #name, disabled, stage_added
-            new_value = self.get_execution_values(image_widgets)
-            if new_value:
-                values_to_execute.append(new_value)
-        if last_team_to_execute != values_to_execute:
-            last_team_to_execute = values_to_execute
-            with open(LAST_TEAM_PKL, 'wb') as file:
-                pickle.dump([values_to_execute, execution_variables.current_stage, execution_variables.current_strategy], file)
-        return match_icons.start(values_to_execute, self.has_barrier_var.get(), source=source)
+            if hasattr(image_widgets[0].master, "pokemon"):
+                pokemon = image_widgets[0].master.pokemon
+                pokemons_list.append(pokemon)
+        return match_icons.start_from_helper(pokemons_list, self.has_barrier_var.get(), root=self, source=source)
 
     def get_execution_values(self, image_widgets):
         try:
@@ -505,69 +539,16 @@ class ImageSelectorApp():
             print(f"Error on widget: {image_widgets}")
             return None
 
-    def show_click_popup(self, click_counter):
-        self.popup = tk.Toplevel(self.master)
-        self.popup.title("Click Recorder")
-        self.click_counter = click_counter
-        if self.click_counter == 1:
-            label = tk.Label(self.popup, text="Click on the top left corner of the board")
-        elif self.click_counter == 2:
-            label = tk.Label(self.popup, text="Click on the lower right corner of the board")
-        elif self.click_counter == 3:
-            label = tk.Label(self.popup, text="Click on the first cell of Shuffle Move")
-        elif self.click_counter == 4:
-            label = tk.Label(self.popup, text="Click on the Execute button from the Shuffle Helper")
-        label.pack(pady=10)
-        self.mouse_listener = mouse.Listener(on_click=self.record_click)
-        self.mouse_listener.start()
-
-    def record_click(self, x, y, button, pressed):
-        if pressed:
-            if self.click_counter == 1:
-                match_icons.board_top_left = (x ,y)
-                config_utils.update_config("board_top_left", (x ,y))
-                print(f"recorded click at - {match_icons.board_top_left}")
-            elif self.click_counter == 2:
-                match_icons.board_bottom_right = (x, y)
-                config_utils.update_config("board_bottom_right", (x ,y))
-                print(f"recorded click at - {match_icons.board_bottom_right}")
-            elif self.click_counter == 3:
-                match_icons.shuffle_move_first_square_position = (x, y)
-                config_utils.update_config("shuffle_move_first_square_position", (x ,y))
-                print(f"recorded click at - {match_icons.shuffle_move_first_square_position}")
-            # elif self.click_counter == 4:
-            #     match_icons.mouse_after_shuffle_position = (x, y)
-            #     config_utils.update_config("mouse_after_shuffle_position", (x ,y))
-            #     print(f"recorded click at - {match_icons.mouse_after_shuffle_position}")
-            self.mouse_listener.stop()
-            self.popup.destroy()
+    def show_board_position_selector_app(self):
+        mouse_utils.BoardPositionSelectorApp(master=self.master)
 
     def control_loop_function(self):
         extra_delay = 0
         if not self.control_loop_var.get():
             return
         else:
-            if not self.board_capture_var.get():
-                if config_utils.config_values.get("board_image_path") and os.path.exists(config_utils.config_values.get("board_image_path")):
-                    extra_delay = self.start_board_analysis(source="loop")
-            else:
-                extra_delay = self.start_board_analysis(source="loop")
-            self.check_job = self.master.after(200 + extra_delay, self.control_loop_function)  # Schedule next check after 2000 milliseconds (2 seconds)
-
-    def update_search_dir(self):
-        file_path = filedialog.askopenfilename()
-        if file_path:
-            config_utils.update_config("board_image_path", file_path)
-            return
-
-    def update_board_capture_mode(self):
-        value = self.board_capture_var.get()
-        self.control_loop_var.set(False)
-        config_utils.update_config("board_capture_var", self.board_capture_var.get())
-        if not value:
-            self.update_search_dir_button.configure(state=tk.NORMAL)  # Enable the button
-        else:
-            self.update_search_dir_button.configure(state=tk.DISABLED)  # Disable the button
+            extra_delay = self.start_board_analysis(source="loop")
+            self.check_job = self.master.after(200 + extra_delay, self.control_loop_function)
 
     def get_icon(self, icon_name):
         if customtkinter.get_appearance_mode() == "Dark":
@@ -607,10 +588,11 @@ class ImageSelectorApp():
                 label.configure(image=photo)
                 label.photo = photo
 
-    def show_last_move(self):
+    def show_current_board(self):
         image_frame = tk.Toplevel(self.master)
         image_frame.title("Image Frame")
-        image = Image.fromarray(match_icons.last_image)
+        image = match_icons.concatenate_PIL_images(match_icons.make_cell_list())
+        # image = match_icons.capture_board_screensot(False)
         photo = customtkinter.CTkImage(image, size=image.size)
         label = customtkinter.CTkLabel(image_frame, image=photo)
         label.image = photo
@@ -619,16 +601,19 @@ class ImageSelectorApp():
     def load_last_team(self):
         try:
             self.destroy_selected_pokemons()
-            with open(LAST_TEAM_PKL, 'rb') as file:
-                loaded_variable, stage, mode = pickle.load(file)
-            execution_variables.current_stage = stage
-            execution_variables.current_strategy = mode
+
+            current_team, stage_name = shuffle_config_files.get_current_stage_and_team()
+
+            execution_variables.current_stage = stage_name
+            execution_variables.current_strategy = "Total Score"
             self.stage_combobox.set(execution_variables.current_stage)
             self.strategy_combobox.set(execution_variables.current_strategy)
-            for pokemon, disabled, _ in loaded_variable:
-                self.insert_image_widget(pokemon.name, disabled, skip_barrier=True)
-            if self.has_barrier_var.get():
-                self.reveal_or_hide_barrier_img()
+            for pokemon in current_team:
+                if pokemon.name in load_from_shuffle.exception_list:
+                    pokemon.name = f"_{pokemon.name}"
+                self.insert_image_widget(pokemon.name, skip_barrier=True)
+            # if self.has_barrier_var.get():
+            #     self.reveal_or_hide_barrier_img()
         except Exception as ex:
             print(ex)
             pass
@@ -643,14 +628,12 @@ class ImageSelectorApp():
             print("Updating to Ultra Wide Positions")
             match_icons.board_top_left = (364, 488)
             match_icons.board_bottom_right = (914, 1031)
-            match_icons.shuffle_move_first_square_position = (1496, 96)
-            match_icons.mouse_after_shuffle_position = (2039, 443)
         elif screen_width == 1920:
             print("Updating to Full HD Positions")
-            match_icons.board_top_left = (214, 488)
-            match_icons.board_bottom_right = (741, 1010)
-            match_icons.shuffle_move_first_square_position = (1045, 133)
-            match_icons.mouse_after_shuffle_position = (1607, 487)
+            # match_icons.board_top_left = (214, 488)
+            # match_icons.board_bottom_right = (741, 1010)
+            match_icons.board_top_left = (208, 484)
+            match_icons.board_bottom_right = (756, 1036)
         else:
             return
 
