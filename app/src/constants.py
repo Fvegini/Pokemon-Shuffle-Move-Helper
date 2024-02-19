@@ -7,7 +7,9 @@ IMAGES_PATH = r"assets\icons_processed"
 BARRIER_TYPE_REAL = "Real"
 BARRIER_TYPE_FAKE = "Fake"
 
-
+GRADING_TOTAL_SCORE = "grading.score"
+GRADING_MEGA_PROGRESS = "grading.megaprogress"
+GRADING_WEEKEND_MEOWTH = "WeekendMeowth"
 
 move_strategy = {
     "grading.score": "Total Score",

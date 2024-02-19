@@ -129,9 +129,9 @@ class TeamLoader(tk.Toplevel):
             if execution_variables.current_stage == "SP_084":
                 execution_variables.current_stage = "MEOWTH COIN MANIA"
             if execution_variables.current_stage == "MEOWTH COIN MANIA":
-                execution_variables.current_strategy = "WeekendMeowth"
+                execution_variables.current_strategy = constants.move_strategy.get(constants.GRADING_WEEKEND_MEOWTH)
             else:
-                execution_variables.current_strategy = "Total Score"
+                execution_variables.current_strategy = constants.move_strategy.get(constants.GRADING_TOTAL_SCORE)
             execution_variables.has_modifications = True
             selected_team: TeamData = self.teams[selected_index[0]]
             print("Selected Team:", selected_team.icons)

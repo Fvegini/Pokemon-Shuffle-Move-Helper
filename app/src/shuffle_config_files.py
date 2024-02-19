@@ -1,4 +1,5 @@
 from pathlib import Path
+from src import constants
 from src.discord import pokemon_names
 from src.execution_variables import execution_variables
 from src.classes import Pokemon
@@ -7,6 +8,8 @@ import re
 CROW = "false,false,false,false,false,false"
 KEYS_LIST = ','.join(['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e','f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o',
                     'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z'])
+MEGA_NOT_ACTIVATED = "0"
+MEGA_ACTIVATED = "99"
 
 pattern = re.compile(r'^\d+(,\d+){2,}')
 board_path = Path.joinpath(Path.home(), "Shuffle-Move", "config", "boards", "board.txt")
@@ -77,7 +80,7 @@ def get_team_from_teams_data_line(line, expand_megas):
 def create_board_files(sequence_names_list, original_complete_names_list, extra_supports_list, source=None, stage=None):
     names_list = []
     frozen_list = []
-    mega_activated = "0"
+    mega_activated = MEGA_NOT_ACTIVATED
     mega_name = "-"
 
 
@@ -90,7 +93,7 @@ def create_board_files(sequence_names_list, original_complete_names_list, extra_
         if "Mega_" in name:
             new_name = name.split("Mega_")[1]
             names_list.append(new_name)
-            mega_activated = "99"
+            mega_activated = MEGA_ACTIVATED
             mega_name = new_name
         else:
             names_list.append(name)
@@ -100,13 +103,15 @@ def create_board_files(sequence_names_list, original_complete_names_list, extra_
     if mega_name == "-":
         mega_name = forced_mega_name
     else:
-        mega_activated = "99"
+        mega_activated = MEGA_ACTIVATED
 
     update_board_file(names_list, frozen_list, mega_activated, stage)
     if execution_variables.has_modifications or source == "bot":
         update_teams_file(complete_names_list, mega_name, extra_supports_list, stage)
-        update_gradingModes_file(source)
+        update_gradingModes_file(source, mega_activated)
         execution_variables.has_modifications = False
+    elif execution_variables.current_strategy == constants.GRADING_MEGA_PROGRESS:
+        update_gradingModes_file(source, mega_activated)
     return
 
 def process_names_list(original_names_list):
@@ -179,23 +184,26 @@ def update_teams_file_with_move_string(move_string, stage_name):
         file.writelines(lines)
     return   
 
-def update_gradingModes_file(source):
+def update_gradingModes_file(source, mega_activated):
     if source == "bot":
-        strategy = "grading.score"
+        strategy = constants.GRADING_TOTAL_SCORE
     else:
         strategy = execution_variables.current_strategy
+    if strategy == constants.GRADING_MEGA_PROGRESS and mega_activated == MEGA_ACTIVATED:
+        strategy = constants.GRADING_TOTAL_SCORE
     prefix_to_replace = f"STRING CURRENT_MODE"
     new_line = f"STRING CURRENT_MODE {strategy}\n"
+    has_modifications = False
     with open(grading_modes_path, 'r') as file:
         lines = file.readlines()
 
-    # Find the line with the specified prefix
     for i, line in enumerate(lines):
         if line.startswith(prefix_to_replace):
-            # Replace the line
-            lines[i] = new_line
-    # Write the modified content back to the file
-    with open(grading_modes_path, 'w') as file:
-        file.writelines(lines)
+            if lines[i] != new_line:
+                lines[i] = new_line
+                has_modifications = True
+    if has_modifications:
+        with open(grading_modes_path, 'w') as file:
+            file.writelines(lines)
         
     return

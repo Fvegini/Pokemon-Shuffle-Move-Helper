@@ -5,8 +5,8 @@ def create_default_config():
     config['SETTINGS'] = {
     "shuffle_move_first_square_position": "(1500, 90)",
     "mouse_after_shuffle_position": "(1420, 560)",
-    "board_top_left": "(11, 466)",
-    "board_bottom_right": "(573, 1027)",
+    "board_top_left": "(210, 484)",
+    "board_bottom_right": "(752, 1030)",
     "has_barrier": False,
     "board_image_path": r"D:\Dropbox\Envio da câmera\Imagem.png",
     "airplay_app_name": ["air screen", "EasyCast"],

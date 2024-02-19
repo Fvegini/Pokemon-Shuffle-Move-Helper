@@ -5,7 +5,7 @@ from pathlib import Path
 import os
 from src import constants, custom_utils
 import customtkinter
-
+import cv2
 class BoardIconSelector(tk.Toplevel):
      
     def __init__(self, master = None, root = None, folder = ""):
@@ -25,6 +25,7 @@ class BoardIconSelector(tk.Toplevel):
 
         icons_list = match_icons.make_cell_list()
         for image in icons_list:
+            image = Image.fromarray(cv2.cvtColor(image, cv2.COLOR_RGB2BGR))
             tk_image = customtkinter.CTkImage(image, size=image.size)
             self.image_widgets.append(tk_image)
 

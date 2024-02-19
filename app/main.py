@@ -1,6 +1,5 @@
 import os
 import tkinter as tk
-from tkinter import filedialog
 import customtkinter
 from PIL import Image
 import keyboard
@@ -9,10 +8,10 @@ from pathlib import Path
 from src.board_image_selector import BoardIconSelector, AppIconSelector
 from src import constants, custom_utils, load_from_shuffle, config_utils, mouse_utils
 from src.execution_variables import execution_variables
-import pickle
 import warnings
 from CTkToolTip import CTkToolTip
 from src.classes import Pokemon
+import cv2
 warnings.filterwarnings("ignore", category=UserWarning, message="CTkButton Warning: Given image is not CTkImage but*")
 
 
@@ -591,8 +590,8 @@ class ImageSelectorApp():
     def show_current_board(self):
         image_frame = tk.Toplevel(self.master)
         image_frame.title("Image Frame")
-        image = match_icons.concatenate_PIL_images(match_icons.make_cell_list()) #####
-        # image = match_icons.capture_board_screensot(False)
+        image = custom_utils.concatenate_cv2_images(match_icons.make_cell_list())
+        image = Image.fromarray(cv2.cvtColor(image, cv2.COLOR_RGB2BGR))
         photo = customtkinter.CTkImage(image, size=image.size)
         label = customtkinter.CTkLabel(image_frame, image=photo)
         label.image = photo
@@ -605,9 +604,9 @@ class ImageSelectorApp():
             current_team, stage_name = shuffle_config_files.get_current_stage_and_team()
 
             execution_variables.current_stage = stage_name
-            execution_variables.current_strategy = "Total Score"
-            self.stage_combobox.set(execution_variables.current_stage)
-            self.strategy_combobox.set(execution_variables.current_strategy)
+            execution_variables.current_strategy = constants.GRADING_TOTAL_SCORE
+            self.stage_combobox.set(constants.move_stages.get(execution_variables.current_stage))
+            self.strategy_combobox.set(constants.move_strategy.get(execution_variables.current_strategy))
             for pokemon in current_team:
                 if pokemon.name in load_from_shuffle.exception_list:
                     pokemon.name = f"_{pokemon.name}"
@@ -632,8 +631,8 @@ class ImageSelectorApp():
             print("Updating to Full HD Positions")
             # match_icons.board_top_left = (214, 488)
             # match_icons.board_bottom_right = (741, 1010)
-            match_icons.board_top_left = (208, 484)
-            match_icons.board_bottom_right = (756, 1036)
+            match_icons.board_top_left = (210, 484)
+            match_icons.board_bottom_right = (752, 1030)
         else:
             return
 
