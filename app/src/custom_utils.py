@@ -1,20 +1,12 @@
 from pathlib import Path
 import cv2
 import numpy as np
-from PIL import Image
-
 
 def find_matching_files(directory, prefix, suffix):
-    # Create a Path object for the directory
     directory_path = Path(directory)
-
-    # Construct the search pattern
     search_pattern1 = f"{prefix}_*[0-9]{suffix}"
     search_pattern2 = f"{prefix}{suffix}"
-
-    # Use glob to find matching files
     matching_files = list(directory_path.glob(search_pattern1)) + list(directory_path.glob(search_pattern2))
-
     return matching_files
 
 def resize_cv2_image(image, target_size):
@@ -26,47 +18,9 @@ def resize_cv2_image(image, target_size):
 def open_and_resize_np_image(image_path, image_size):
     if type(image_path) == str:
         image_path = Path(image_path)
-    np_img = np.array(Image.open(image_path.as_posix()).convert('RGB'))
-    np_img = resize_cv2_image(np_img,image_size)
+    np_img = cv2.imread(image_path.as_posix())
+    np_img = resize_cv2_image(np_img, image_size)
     return np_img
-
-def merge_pil_images(image1, image2):
-    # Get the width and height of each image
-    width1, height1 = image1.size
-    width2, height2 = image2.size
-
-    # Calculate the width and height of the new image
-    new_width = width1 + width2
-    new_height = max(height1, height2)
-
-    # Create a new image with the calculated size
-    merged_image = Image.new("RGB", (new_width, new_height))
-
-    # Paste the first image on the left
-    merged_image.paste(image1, (0, 0))
-
-    # Paste the second image on the right
-    merged_image.paste(image2, (width1, 0))
-
-    # Save the merged image
-    return merged_image
-
-def merge_pil_images_list(image_list):
-    # Get the total width and maximum height
-    total_width = sum(img.width for img in image_list)
-    max_height = max(img.height for img in image_list)
-
-    # Create a new blank image with the calculated dimensions
-    merged_image = Image.new("RGB", (total_width, max_height))
-
-    # Paste each image horizontally
-    current_x = 0
-    for img in image_list:
-        merged_image.paste(img, (current_x, 0))
-        current_x += img.width
-
-    return merged_image
-
 
 def get_taskbar_size():
     try:
@@ -88,7 +42,7 @@ def get_taskbar_size():
     
 def show_list_images(images):
     concatenated_image = concatenate_list_images(images)
-    show_cv2_img(concatenated_image)
+    show_img(concatenated_image)
 
 def concatenate_list_images(images, blank_space=40):
     max_height = max(image.shape[0] for image in images)
@@ -106,12 +60,9 @@ def concatenate_list_images(images, blank_space=40):
     # Concatenate all images side by side
     return np.concatenate(new_images, axis=1)
 
-def show_cv2_img(cv2_img, shift_colors=False):
-    if shift_colors:
-        Image.fromarray(cv2.cvtColor(cv2_img, cv2.COLOR_BGR2RGB)).show()
-    else:
-        Image.fromarray(cv2_img).show()
-
+def show_img(cv2_img):
+    cv2.imshow("", cv2_img)
+    
 def create_blank_square(height, width):
     return np.ones((height, width, 3), dtype=np.uint8) * 255
 
@@ -124,10 +75,10 @@ def insert_in_middle(lst, new_value):
     return new_list
 
 
-def sort_by_class_attribute(obj_list, attribute_name):
+def sort_by_class_attribute(obj_list, attribute_name, reverse=False):
     try:
         # Use the getattr function to dynamically get the attribute value
-        sorted_list = sorted(obj_list, key=lambda x: getattr(x, attribute_name))
+        sorted_list = sorted(obj_list, key=lambda x: getattr(x, attribute_name), reverse=reverse)
         return sorted_list
     except AttributeError:
         print(f"Attribute '{attribute_name}' not found in the class.")
@@ -155,3 +106,61 @@ def concatenate_cv2_images(image_list, grid_size=(6, 6), spacing=10):
             result_image[y_coordinate:y_coordinate + image_height, x_coordinate:x_coordinate + image_width, :] = current_image
 
     return result_image
+
+
+def make_cell_list_from_img(img, with_text=False, red=None, blue=None):
+    height, width = img.shape[:2]
+
+    new_height = height - (height % 6)
+    new_width = width - (width % 6)
+
+    lower_size = min(new_height, new_width)
+
+    # Resize the image to new dimensions
+    img = cv2.resize(img, (lower_size, lower_size))
+    height, width = img.shape[:2]
+    # Check if the dimensions are divisible by 6
+    if height % 6 != 0 or width % 6 != 0:
+        raise ValueError("Image dimensions are not divisible by 6")
+
+    # Initialize an empty list to store the smaller images
+    smaller_images = []
+
+    square_size = min(height, width) // int(36 ** 0.5)
+    # Iterate through the image and split it into 6x6 smaller images
+    for y in range(0, height, square_size):
+        for x in range(0, width, square_size):
+            # Extract the square region from the image
+            square = img[y:y+square_size, x:x+square_size]
+            # Append the square to the list
+
+            if not with_text:
+                smaller_images.append(square)
+            else:
+                square_with_text = square.copy()
+                text = f"{y//square_size+1},{x//square_size+1}"
+                font=cv2.FONT_HERSHEY_SIMPLEX
+                pos=(0, 0)
+                font_scale=1
+                font_thickness=2
+                text_color=(0, 255, 0)
+                text_color_bg=(0, 0, 0)
+                text_size, _ = cv2.getTextSize(text, font, font_scale, font_thickness)
+                text_w, text_h = text_size
+                cv2.rectangle(square_with_text, pos, (0 + text_w, 0 + text_h), text_color_bg, -1)
+                cv2.putText(square_with_text, text, (0, 0 + text_h + font_scale - 1), font, font_scale, text_color, font_thickness)
+                if text == red:
+                    red_transparent_layer = np.zeros((square_size, square_size, 3), dtype=np.uint8)
+                    red_transparent_layer[:, :] = (0, 0, 255)  # Red color
+                    overlay = cv2.addWeighted(square_with_text, 0.5, red_transparent_layer, 0.5, 0)
+                    smaller_images.append(overlay)
+                elif text == blue:
+                    blue_transparent_layer = np.zeros((square_size, square_size, 3), dtype=np.uint8)
+                    blue_transparent_layer[:, :] = (255, 0, 0)  # Blue color
+                    overlay = cv2.addWeighted(square_with_text, 0.5, blue_transparent_layer, 0.5, 0)
+                    smaller_images.append(overlay)
+                else:
+                    smaller_images.append(square_with_text)
+
+
+    return smaller_images

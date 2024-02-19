@@ -6,15 +6,19 @@ import os
 # from image_similarity_measures.quality_metrics import rmse, ssim
 import pyautogui
 import numpy as np
-from PIL import Image
+# from PIL import Image
 from pathlib import Path
 import time
+from src.custom_utils import make_cell_list_from_img
 from src.embed import Embedder
 from src import constants, custom_utils, config_utils
 from src.config_utils import config_values
 from src import get_window, socket_utils, shuffle_config_files
 from src.execution_variables import execution_variables
 from src.classes import Pokemon
+import statistics
+
+
 embedder = Embedder()
 downscale_res = (128, 128)
 shuffle_move_first_square_position = config_values.get("shuffle_move_first_square_position")
@@ -76,6 +80,8 @@ class Icon():
         matching_files = []
         for directory in directories:
             matching_files.extend(custom_utils.find_matching_files(directory, self.original_path.stem, ".*"))
+            if len(matching_files) == 0:
+                matching_files.extend(custom_utils.find_matching_files(directory, f"_{self.original_path.stem}", ".*"))
         for image_path in matching_files:
             image = custom_utils.open_and_resize_np_image(image_path, downscale_res)
             self.images_list.append(CustomImage(image))
@@ -214,9 +220,8 @@ def calculate_percentage_difference(num1, num2):
     return percentage_difference
 
 def predict(original_image, icons_list, has_barriers) -> Match:
-    img = original_image.resize(downscale_res, Image.BILINEAR)
-    np_img = np.array(img)
-    return compare_with_list(np_img, icons_list, has_barriers)
+    resized = cv2.resize(original_image, downscale_res)
+    return compare_with_list(resized, icons_list, has_barriers)
     
 
 def capture_board_screensot():
@@ -227,113 +232,32 @@ def capture_board_screensot():
     y1 = board_bottom_right[1] - board_top_left[1]
     img = pyautogui.screenshot(region=(x0, y0, x1, y1))
     img.save(constants.LAST_BOARD_IMAGE_PATH)
-    return img
+    return cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
 
 def make_cell_list():
     img = capture_board_screensot()
-    return make_cell_list_with_img(img)
+    return make_cell_list_from_img(img)
 
-def make_cell_list_with_img(img):
-    if isinstance(img, np.ndarray):
-        img = Image.fromarray(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
-    cell_list = []
-    cell_size = (img.size[0]/6, img.size[1]/6)
-    for y in range(0, 6):
-        for x in range(0, 6):
-            cell_box = (x*cell_size[0], y*cell_size[1], (x+1)*cell_size[0], (y+1)*cell_size[1])
-            cell_list.append(img.crop(cell_box))
-    return cell_list
+# def concatenate_PIL_images(image_list, grid_size=(6, 6), spacing=10):
+#     # Calculate the size of the final image
+#     image_width, image_height = image_list[0].size
+#     grid_width = grid_size[1] * image_width + (grid_size[1] - 1) * spacing
+#     grid_height = grid_size[0] * image_height + (grid_size[0] - 1) * spacing
 
-def make_cell_list_with_cv2_img(img, red=None, blue=None):
-    height, width = img.shape[:2]
+#     # Create a blank white image as the background
+#     result_image = Image.new('RGB', (grid_width, grid_height), (255, 255, 255))
 
-    new_height = height - (height % 6)
-    new_width = width - (width % 6)
+#     # Paste each image into the result image
+#     for i in range(grid_size[0]):
+#         for j in range(grid_size[1]):
+#             if not image_list:
+#                 break
+#             current_image = image_list.pop(0)
+#             x_coordinate = j * (image_width + spacing)
+#             y_coordinate = i * (image_height + spacing)
+#             result_image.paste(current_image, (x_coordinate, y_coordinate))
 
-    # Resize the image to new dimensions
-    img = cv2.resize(img, (new_width, new_height))
-    height, width = img.shape[:2]
-    # Check if the dimensions are divisible by 6
-    if height % 6 != 0 or width % 6 != 0:
-        raise ValueError("Image dimensions are not divisible by 6")
-
-    # Initialize an empty list to store the smaller images
-    smaller_images = []
-
-    square_size = min(height, width) // int(36 ** 0.5)
-    # Iterate through the image and split it into 6x6 smaller images
-    for y in range(0, height, square_size):
-        for x in range(0, width, square_size):
-            # Extract the square region from the image
-            square = img[y:y+square_size, x:x+square_size]
-            # Append the square to the list
-
-
-             # Add position text on top of the square with a black background
-            square_with_text = square.copy()
-            text = f"{y//square_size+1},{x//square_size+1}"
-            # font_scale = min(square_size, 25) / 25  # Adjust font size based on square size
-            # text_thickness = max(1, int(font_scale))  # Adjust text thickness based on font size
-            # text_size, _ = cv2.getTextSize(text, cv2.FONT_HERSHEY_SIMPLEX, font_scale, text_thickness)
-            # text_x = (square_size - text_size[0]) // 2
-            # text_y = (square_size + text_size[1]) // 2
-            # bg_rect_size = (text_size[0] + 6, text_size[1] + 6)  # Fixed size for background rectangle
-            # bg_rect_x = (square_size - bg_rect_size[0]) // 2
-            # bg_rect_y = (square_size - bg_rect_size[1]) // 2
-            # cv2.rectangle(square_with_text, (bg_rect_x, bg_rect_y), (bg_rect_x + bg_rect_size[0], bg_rect_y + bg_rect_size[1]), (0, 0, 0), cv2.FILLED)
-            # cv2.putText(square_with_text, text, (text_x, text_y), cv2.FONT_HERSHEY_SIMPLEX, font_scale, (255, 255, 255), text_thickness)
-
-            font=cv2.FONT_HERSHEY_SIMPLEX
-            pos=(0, 0)
-            font_scale=1
-            font_thickness=2
-            text_color=(0, 255, 0)
-            text_color_bg=(0, 0, 0)
-
-            text_size, _ = cv2.getTextSize(text, font, font_scale, font_thickness)
-            text_w, text_h = text_size
-            cv2.rectangle(square_with_text, pos, (0 + text_w, 0 + text_h), text_color_bg, -1)
-            cv2.putText(square_with_text, text, (0, 0 + text_h + font_scale - 1), font, font_scale, text_color, font_thickness)
-
-            # cv2.imshow("",square_with_text)
-
-            if text == red:
-                red_transparent_layer = np.zeros((square_size, square_size, 3), dtype=np.uint8)
-                red_transparent_layer[:, :] = (0, 0, 255)  # Red color
-                overlay = cv2.addWeighted(square_with_text, 0.5, red_transparent_layer, 0.5, 0)
-                smaller_images.append(overlay)
-            elif text == blue:
-                blue_transparent_layer = np.zeros((square_size, square_size, 3), dtype=np.uint8)
-                blue_transparent_layer[:, :] = (255, 0, 0)  # Blue color
-                overlay = cv2.addWeighted(square_with_text, 0.5, blue_transparent_layer, 0.5, 0)
-                smaller_images.append(overlay)
-
-
-            smaller_images.append(square_with_text)
-
-
-    return smaller_images
-
-def concatenate_PIL_images(image_list, grid_size=(6, 6), spacing=10):
-    # Calculate the size of the final image
-    image_width, image_height = image_list[0].size
-    grid_width = grid_size[1] * image_width + (grid_size[1] - 1) * spacing
-    grid_height = grid_size[0] * image_height + (grid_size[0] - 1) * spacing
-
-    # Create a blank white image as the background
-    result_image = Image.new('RGB', (grid_width, grid_height), (255, 255, 255))
-
-    # Paste each image into the result image
-    for i in range(grid_size[0]):
-        for j in range(grid_size[1]):
-            if not image_list:
-                break
-            current_image = image_list.pop(0)
-            x_coordinate = j * (image_width + spacing)
-            y_coordinate = i * (image_height + spacing)
-            result_image.paste(current_image, (x_coordinate, y_coordinate))
-
-    return result_image
+#     return result_image
 
 def has_airplay_on_screen():
     global shuffle_move_first_square_position   
@@ -372,6 +296,17 @@ def execute_commands(command_sequence, source=None):
     pyautogui.hotkey('ctrl', 'l')
 
 
+def get_metrics(match_list):
+    numbers_list = [match.cosine_similarity for match in match_list]
+    return {
+    "maximum": max(numbers_list),
+    "minimum": min(numbers_list),
+    "median": statistics.median(numbers_list),
+    "variance": statistics.variance(numbers_list),
+    }
+
+    
+
 def start_from_helper(request_values: list[Pokemon], has_barriers, root=None, source=None):
     global last_image, last_board_commands
     if source == "loop" and not has_airplay_on_screen():
@@ -385,11 +320,11 @@ def start_from_helper(request_values: list[Pokemon], has_barriers, root=None, so
     for idx, cell in enumerate(cell_list):
         result = predict(cell, icons_list, has_barriers)
         match_list.append(result)
-    
-    # img1 = concatenate_cv2_images([match.board_icon for match in match_list])
-    # img2 = concatenate_cv2_images([match.match_icon for match in match_list])
-    # last_image = custom_utils.concatenate_list_images([img1, img2])
 
+    # new_list = match_list.copy()    
+    # new_list = custom_utils.sort_by_class_attribute(new_list, "cosine_similarity", False)
+    # metrics = get_metrics(new_list)
+    
     extra_supports_list = [pokemon[0].name for pokemon in request_values if pokemon.stage_added]
     sequence_names_list = [match.name for match in match_list]
     original_complete_names_list = [icon.name for icon in icons_list]
@@ -406,7 +341,7 @@ def start_from_helper(request_values: list[Pokemon], has_barriers, root=None, so
 def start_from_bot(request_values, has_barriers, image, source="bot"):
     icons_list = load_icon_classes(request_values, has_barriers)
     match_list: List[Match] = []
-    cell_list = make_cell_list_with_img(image)
+    cell_list = make_cell_list_from_img(image)
     for cell in cell_list:
         result = predict(cell, icons_list, has_barriers)
         match_list.append(result)

@@ -3,3 +3,6 @@ class Pokemon():
         self.name = name
         self.disabled = disabled
         self.stage_added = stage_added
+        
+    def __repr__(self):
+        return self.name

@@ -493,7 +493,7 @@ class ImageSelectorApp():
             extra_image.thumbnail((50,50))
             extra_image_list.append(extra_image)
         
-        extra_complete_image = custom_utils.merge_pil_images_list(extra_image_list)
+        extra_complete_image = merge_pil_images_list(extra_image_list)
         extra_photo = customtkinter.CTkImage(extra_complete_image, size=extra_complete_image.size)
         CTkToolTip(selected_image_label, delay=0.5, message="", image=extra_photo)
 
@@ -583,7 +583,7 @@ class ImageSelectorApp():
                     image2 = Image.open(r"assets\x.png")
                 image.thumbnail((50, 50))
                 image2.thumbnail((50, 50))
-                image = custom_utils.merge_pil_images(image, image2)
+                image = merge_pil_images(image, image2)
                 photo = customtkinter.CTkImage(image, size=image.size)
                 label.configure(image=photo)
                 label.photo = photo
@@ -591,7 +591,7 @@ class ImageSelectorApp():
     def show_current_board(self):
         image_frame = tk.Toplevel(self.master)
         image_frame.title("Image Frame")
-        image = match_icons.concatenate_PIL_images(match_icons.make_cell_list())
+        image = match_icons.concatenate_PIL_images(match_icons.make_cell_list()) #####
         # image = match_icons.capture_board_screensot(False)
         photo = customtkinter.CTkImage(image, size=image.size)
         label = customtkinter.CTkLabel(image_frame, image=photo)
@@ -636,6 +636,44 @@ class ImageSelectorApp():
             match_icons.board_bottom_right = (756, 1036)
         else:
             return
+
+def merge_pil_images(image1, image2):
+    # Get the width and height of each image
+    width1, height1 = image1.size
+    width2, height2 = image2.size
+
+    # Calculate the width and height of the new image
+    new_width = width1 + width2
+    new_height = max(height1, height2)
+
+    # Create a new image with the calculated size
+    merged_image = Image.new("RGB", (new_width, new_height))
+
+    # Paste the first image on the left
+    merged_image.paste(image1, (0, 0))
+
+    # Paste the second image on the right
+    merged_image.paste(image2, (width1, 0))
+
+    # Save the merged image
+    return merged_image
+
+def merge_pil_images_list(image_list):
+    # Get the total width and maximum height
+    total_width = sum(img.width for img in image_list)
+    max_height = max(img.height for img in image_list)
+
+    # Create a new blank image with the calculated dimensions
+    merged_image = Image.new("RGB", (total_width, max_height))
+
+    # Paste each image horizontally
+    current_x = 0
+    for img in image_list:
+        merged_image.paste(img, (current_x, 0))
+        current_x += img.width
+
+    return merged_image
+
 
 if __name__ == "__main__":    
     root = customtkinter.CTk()
