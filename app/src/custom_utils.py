@@ -128,7 +128,7 @@ def merge_cv2_images(img1, img2, spacing=10):
     return output_img
 
 
-def concatenate_as_full_grid(image_list, grid_size=(6, 6), spacing=10):
+def concatenate_cv2_list_as_full_grid(image_list, grid_size=(6, 6), spacing=10):
     # Get image dimensions
     image_height, image_width, _ = image_list[0].shape
 
@@ -201,8 +201,8 @@ def make_match_image_comparison(result, match_list: List[Match]):
     try:
         update_match_with_result(result, match_list)
 
-        final_image1 = concatenate_as_full_grid([match.board_icon for match in match_list])
-        final_image2 = concatenate_as_full_grid([match.match_icon for match in match_list])
+        final_image1 = concatenate_cv2_list_as_full_grid([match.board_icon for match in match_list])
+        final_image2 = concatenate_cv2_list_as_full_grid([match.match_icon for match in match_list])
 
         return concatenate_list_images([final_image1, final_image2])
     except:

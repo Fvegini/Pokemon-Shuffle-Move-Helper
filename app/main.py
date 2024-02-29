@@ -233,7 +233,7 @@ class ImageSelectorApp():
         btn2_1_1 = customtkinter.CTkButton(frame3_2_top, text="Load Team", command=self.load_team, image=self.get_icon("cloud-download-alt"), **self.tab_button_style)
         CTkToolTip(btn2_1_1, delay=0.5, message="Load Team From Shuffle Move Config File")
         btn2_1_1.pack(side=tk.LEFT, padx=5)
-        customtkinter.CTkButton(frame3_2_top, text="Current Board", command=self.show_current_board, image=self.get_icon("search"), **self.tab_button_style).pack(side=tk.LEFT)
+        customtkinter.CTkButton(frame3_2_top, text="Current Board", command=self.show_current_board_with_matches, image=self.get_icon("search"), **self.tab_button_style).pack(side=tk.LEFT)
 
         frame3_3 = customtkinter.CTkFrame(self.tab3, fg_color="transparent")
         frame3_3_top = customtkinter.CTkFrame(frame3_3, fg_color="transparent")
@@ -544,7 +544,7 @@ class ImageSelectorApp():
             return None
 
     def show_board_position_selector_app(self):
-        mouse_utils.BoardPositionSelectorApp(master=self.master)
+        mouse_utils.BoardPositionSelectorApp(master=self.master, selector_app=self)
 
     def disable_loop(self):
         if self.control_loop_var.get():
@@ -601,10 +601,20 @@ class ImageSelectorApp():
 
     def show_current_board(self):
         self.disable_loop()
+        cv2_image = custom_utils.concatenate_cv2_list_as_full_grid(match_icons.make_cell_list())
+        image_frame = tk.Toplevel(self.master)
+        image_frame.title("Image Frame")
+        image = Image.fromarray(cv2.cvtColor(cv2_image, cv2.COLOR_RGB2BGR))
+        photo = customtkinter.CTkImage(image, size=image.size)
+        label = customtkinter.CTkLabel(image_frame, image=photo)
+        label.image = photo
+        label.pack()
+
+    def show_current_board_with_matches(self):
+        self.disable_loop()
         result = self.execute_board_analysis(create_image=True)
         image_frame = tk.Toplevel(self.master)
         image_frame.title("Image Frame")
-        # image = custom_utils.concatenate_cv2_images(match_icons.make_cell_list())
         image = Image.fromarray(cv2.cvtColor(result.match_image, cv2.COLOR_RGB2BGR))
         photo = customtkinter.CTkImage(image, size=image.size)
         label = customtkinter.CTkLabel(image_frame, image=photo)

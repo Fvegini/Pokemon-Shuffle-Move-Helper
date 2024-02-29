@@ -7,11 +7,11 @@ from src import match_icons, config_utils, custom_utils
 
 class BoardPositionSelectorApp():
 
-    def __init__(self, master):
+    def __init__(self, master, selector_app=None):
         self.master = master
         self.keep_open = False
         self.scale = 0.5
-
+        self.selector_app = selector_app
         self.master.update()
         screen_width = self.master.winfo_screenwidth()
         screen_height = self.master.winfo_screenheight()
@@ -27,6 +27,12 @@ class BoardPositionSelectorApp():
 
         # Resize the frame
         frame = cv2.resize(frame, (window_width, window_height))
+
+        old_topleft = tuple([int(point * self.scale) for point in config_utils.config_values.get("board_top_left")])
+        
+        old_bottomright = tuple([int(point * self.scale) for point in config_utils.config_values.get("board_bottom_right")])
+
+        cv2.rectangle(frame, old_topleft, old_bottomright, (0, 0, 255), 1)
 
         # Create a window and set the callback function for mouse events
         cv2.namedWindow("Select Rectangle")
@@ -47,8 +53,8 @@ class BoardPositionSelectorApp():
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
 
-        # Destroy the OpenCV window
         cv2.destroyAllWindows()
+        self.master.after(500, self.selector_app.show_current_board)
 
     def on_mouse(self, event, x, y, flags, param):
         frame = param
