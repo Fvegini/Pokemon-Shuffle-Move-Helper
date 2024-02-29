@@ -4,16 +4,11 @@ import math
 from src import custom_utils, load_from_shuffle, shuffle_config_files, match_icons, config_utils, constants
 import requests
 import pickle
+from src.classes import Pokemon
 from src.discord import pokemon_names
 import asyncio
-
-USER_TEAMS_PKL = "user_teams.pkl"
-
-try:
-    with open(USER_TEAMS_PKL, 'rb') as file:
-        user_teams_dict = pickle.load(file)
-except:
-    user_teams_dict = {}
+from io import BytesIO
+import discord
 
 known_scales_dict = {
     (750 / 1334): (7 / 1334), #Felipe Phone
@@ -24,11 +19,6 @@ known_scales_dict = {
 
 square_size_percentage = (730 / 750)
 scaled_square_size_starting_point_percentage = (10 / 750)
-
-def update_teams_pkl():
-    global user_teams_dict
-    with open(USER_TEAMS_PKL, 'wb') as file: 
-        pickle.dump(user_teams_dict, file) 
 
 def closest_number(number_to_compare, number_list):
      
@@ -76,68 +66,90 @@ def load_image_cv2(url):
     return img_cv2
 
 
-async def process_with_image_url(url, ctx, username="Vegini", text=""):
-    original_image = load_image_cv2(url)
-    cropped_image = get_cropped_image(original_image)
-    if text:
-        await register_team(username, text, ctx)
-
-    current_team = load_team(username)
-    result = match_icons.start_from_bot(current_team, True, cropped_image)
+async def process_with_image_url(ctx, url, target_user=None):
     try:
-       red = result.split(":")[0].split("->")[0].strip()
-       blue = result.split(":")[0].split("->")[1].strip()
-    except:
-        red = None
-        blue = None
-    splitted_image = custom_utils.make_cell_list_from_img(cropped_image, True, red, blue)
-    final_image = custom_utils.concatenate_cv2_images(splitted_image)
-    return result, final_image
+        original_image = load_image_cv2(url)
+        cropped_image = get_cropped_image(original_image)
+        current_team, current_stage =  shuffle_config_files.get_current_stage_and_team(expand_megas=True)
+        if current_team is None and current_stage is None:
+            return await send_message(ctx, "You must Select a Team First", target_user)
+        elif current_team is None and current_stage:
+            return await send_message(ctx, f"The Selected stage {current_stage} don't have any pokemon selected", target_user)
+        if "Wood" not in current_team:
+            current_team.append(Pokemon("Wood", False, False))
+        if "Metal" not in current_team:
+            current_team.append(Pokemon("Metal", False, False))
+        if "Air" not in current_team:
+            current_team.append(Pokemon("Air", False, False))
+
+        result, final_image = match_icons.start_from_bot(current_team, True, cropped_image, current_stage, create_image=True)
+
+        image_bytes = cv2.imencode('.png', final_image)[1].tobytes()
+        image_file = BytesIO(image_bytes)
+        if ctx.message.author.name == "WebhookTest" and target_user:
+            await ctx.send(file=discord.File(image_file, "final_image.png"))
+            await target_user.send(result)
+        else:
+            await ctx.send(file=discord.File(image_file, "final_image.png"))
+            await ctx.send(f"Result: {result}")
+    except Exception as ex:
+        send_message(ctx, str(ex), target_user)
     
 
-def load_team(username):
-    global user_teams_dict
-    team_text = user_teams_dict.get(username)
-    final_team = shuffle_config_files.get_team_from_teams_data_line(team_text, expand_megas=True)
-    return final_team
+async def show_team(ctx):
+    team_list, _ =  shuffle_config_files.get_current_stage_and_team()
+    await send_message(ctx, f"{team_list}")
 
-async def show_team(username, ctx):
-    global user_teams_dict
-    team_string =  user_teams_dict.get(username)
-    await ctx.send(f"Team registered: {shuffle_move_team_string_format(team_string)}")
+async def add_to_team(ctx, pokemon_name):
+    try:
+        team_list, stage_name =  shuffle_config_files.get_current_stage_and_team()
+        pokemon = pokemon_names.find_pokemon(pokemon_name)
+        if pokemon in team_list:
+            await send_message(ctx, f"{pokemon} was already on team {stage_name}")
+        else:
+            team_list.append(pokemon)
+            final_shuffle_string = shuffle_config_files.update_teams_file_with_pokemon_list(team_list, stage_name)
+            if final_shuffle_string:
+                await send_message(ctx, f"Successfully added {pokemon} to the team {stage_name}")
+    except Exception as ex:
+        await send_message(ctx, ex)
 
-def shuffle_move_team_string_format(original_line):
-    text = original_line.replace('STAGE NONE','').strip()
-    text_list = text.split(" ")
-    if len(text_list) == 1 or text_list[1] == "-":
-        return f'{", ".join(text_list[0].split(","))}'
-    else:
-        return f'{", ".join(text_list[0].split(","))}, Mega_{text_list[1]}'
+async def remove_from_team(ctx, pokemon_name):
+    try:
+        team_list, stage_name =  shuffle_config_files.get_current_stage_and_team()
+        pokemon = pokemon_names.find_pokemon(pokemon_name)
+        if pokemon not in team_list:
+            await send_message(ctx, f"{pokemon} isn't on {stage_name}")
+        else:
+            team_list.remove(pokemon)
+            final_shuffle_string = shuffle_config_files.update_teams_file_with_pokemon_list(team_list, stage_name)
+            if final_shuffle_string:
+                await send_message(ctx, f"Successfully removed {pokemon} from the team {stage_name}")
+    except Exception as ex:
+        await send_message(ctx, ex)
 
-async def register_team(username, team_text, ctx):
+async def set_team_stage(ctx, team_text):
     global user_teams_dict
     if team_text.strip().upper() in load_from_shuffle.stages_set:
         stage_name = team_text.strip().upper()
         current_team = shuffle_config_files.get_team_from_stage_name(stage_name, expand_megas=True)
-        team_string = f"STAGE NONE {','.join([pokemon.name for pokemon in current_team])}"
-        pokemons_not_found = []
-        # current_team, current_stage = shuffle_config_files.get_current_stage_and_team()
-        # shuffle_config_files.update_teams_file_with_move_string(complete_names_list, mega_name, "NONE")
+        team_string = f"STAGE {stage_name} {','.join([pokemon.name for pokemon in current_team])}"
+        # pokemons_not_found = []
+        shuffle_config_files.update_current_stage(stage_name)
+        await send_message(ctx, f"Team registered: {current_team}")
     else:
-        team_string, pokemons_not_found = pokemon_names.create_shuffle_string_structure(team_text, expand_megas=True)
-    if len(pokemons_not_found) > 0:
-        for key in pokemons_not_found:
-            await ctx.send(f"{key} not found, similar names found: {pokemons_not_found.get(key)}")
-    if team_string != "":
-        user_teams_dict[username] = team_string
-        update_teams_pkl()
-        await ctx.send(f"Team registered: {shuffle_move_team_string_format(team_string)}")
-        return True
-    else:
-        await ctx.send(f"Team Not Registered.")
+        await send_message(ctx, f"Not Found a Team with the name: {team_text.strip().upper()}")
+        await send_message(ctx, f"Possible teams are: {load_from_shuffle.stages_set}")
 
+async def send_message(ctx, message, target_user=None):
+    if ctx and target_user:
+        await target_user.send(message)
+    elif ctx:
+        await ctx.send(message)
+    else:
+        print(message)
 
 if __name__ == "__main__":
     # result = process_with_image_url(r"https://media.discordapp.net/attachments/1205125025062060042/1207083761649586298/IMG_3916.png?ex=65de5b5b&is=65cbe65b&hm=44cde4e9112f20b54c220bdfcea14d4de008fa3a5cc4abc47fabea94c20b234c&=&format=webp&quality=lossless", None)
     # print(result)
-    asyncio.run(register_team("Vegini", "latest fire", None))
+    asyncio.run(set_team_stage("fire", None))

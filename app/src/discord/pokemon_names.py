@@ -3,6 +3,7 @@ from pathlib import Path
 import os
 from thefuzz import fuzz
 from thefuzz import process
+from src.classes import Pokemon
 
 folder_path = constants.IMAGES_PATH
 
@@ -36,43 +37,61 @@ def search_in_list_ignore_case(search_string, current_list=None):
             return item
     return None 
 
-def create_shuffle_string_structure(line):
-    try:
-        line = line.lower()
-        pokemons_list = []
-        pokemons_not_found = {}
-        mega = "-"
-        for pokemon_name in line.split(","):
-            pokemon_name.strip()
-            final_pokemon_name = None
-            pokemon_correct_name = None
-            similar_name = None
-            pokemon_name = pokemon_name.strip().replace(" ", "_")
-            if search_in_list_ignore_case(pokemon_name, load_from_shuffle.exception_list):
-                    pokemon_name = f"_{pokemon_name}"
-            if pokemon_name in original_names_set:
-                final_pokemon_name = pokemon_name
-            elif (pokemon_correct_name := find_original_key(pokemon_name)):
-                final_pokemon_name = pokemon_correct_name
-            elif (pokemon_correct_name := search_in_list_ignore_case(pokemon_name)):
-                final_pokemon_name = pokemon_correct_name
-            else:
-                similar_names = [fuzz_tuple[0] for fuzz_tuple in process.extractBests(pokemon_name, original_names_set, score_cutoff=80)]
-                pokemons_not_found[pokemon_name] = similar_names
-            if final_pokemon_name:
-                if final_pokemon_name.startswith("Mega_"):
-                    final_pokemon_name = final_pokemon_name.split("Mega_")[1]
-                    mega = final_pokemon_name
-                if final_pokemon_name not in pokemons_list:
-                    pokemons_list.append(final_pokemon_name)
-        if len(pokemons_list) > 0:
-            final_string = f"STAGE NONE {','.join(pokemons_list)} {mega}"
-        else:
-            final_string = ""
-        return final_string, pokemons_not_found
-    except Exception as ex:
-        print(f"Error on set team: {ex}")
-        return "", {}
+def find_pokemon(original_pokemon_name):
+    pokemon_name = original_pokemon_name.strip()
+    final_pokemon_name = None
+    pokemon_correct_name = None
+    pokemon_name = pokemon_name.strip().replace(" ", "_")
+    if search_in_list_ignore_case(pokemon_name, load_from_shuffle.exception_list):
+        pokemon_name = f"_{pokemon_name}"
+    if pokemon_name in original_names_set:
+        final_pokemon_name = pokemon_name
+    elif (pokemon_correct_name := find_original_key(pokemon_name)):
+        final_pokemon_name = pokemon_correct_name
+    elif (pokemon_correct_name := search_in_list_ignore_case(pokemon_name)):
+        final_pokemon_name = pokemon_correct_name
+    else:
+        similar_names = [fuzz_tuple[0] for fuzz_tuple in process.extractBests(pokemon_name, original_names_set, score_cutoff=80)]
+        raise Exception(f"{pokemon_name} not found, maybe you mean: {similar_names}")
+    return Pokemon(final_pokemon_name, False, False)
+
+# def create_shuffle_string_structure(line):
+#     try:
+#         line = line.lower()
+#         pokemons_list = []
+#         pokemons_not_found = {}
+#         mega = "-"
+#         for pokemon_name in line.split(","):
+#             pokemon_name.strip()
+#             final_pokemon_name = None
+#             pokemon_correct_name = None
+#             similar_name = None
+#             pokemon_name = pokemon_name.strip().replace(" ", "_")
+#             if search_in_list_ignore_case(pokemon_name, load_from_shuffle.exception_list):
+#                     pokemon_name = f"_{pokemon_name}"
+#             if pokemon_name in original_names_set:
+#                 final_pokemon_name = pokemon_name
+#             elif (pokemon_correct_name := find_original_key(pokemon_name)):
+#                 final_pokemon_name = pokemon_correct_name
+#             elif (pokemon_correct_name := search_in_list_ignore_case(pokemon_name)):
+#                 final_pokemon_name = pokemon_correct_name
+#             else:
+#                 similar_names = [fuzz_tuple[0] for fuzz_tuple in process.extractBests(pokemon_name, original_names_set, score_cutoff=80)]
+#                 pokemons_not_found[pokemon_name] = similar_names
+#             if final_pokemon_name:
+#                 if final_pokemon_name.startswith("Mega_"):
+#                     final_pokemon_name = final_pokemon_name.split("Mega_")[1]
+#                     mega = final_pokemon_name
+#                 if final_pokemon_name not in pokemons_list:
+#                     pokemons_list.append(final_pokemon_name)
+#         if len(pokemons_list) > 0:
+#             final_string = f"STAGE NONE {','.join(pokemons_list)} {mega}"
+#         else:
+#             final_string = ""
+#         return final_string, pokemons_not_found
+#     except Exception as ex:
+#         print(f"Error on set team: {ex}")
+#         return "", {}
     
     
 # string1 = "smcx, hoopa_u, tyranitar, hoopa u, hoopa unbound"
