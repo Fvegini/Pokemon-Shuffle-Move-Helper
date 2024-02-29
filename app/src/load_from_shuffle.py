@@ -39,10 +39,10 @@ class TeamLoader(tk.Toplevel):
             team_name = parts[1]
             if team_name not in stages_fixed_list:
                 continue
-            icons = parts[2]
+            icons_str = parts[2]
             for item in exception_list:
-                icons = icons.replace(item, f"_{item}")
-            icons = icons.split(",")
+                icons_str = icons_str.replace(item, f"_{item}")
+            icons = icons_str.split(",")
             #Append mega:
             try:
                 mega_name = f"Mega_{parts[4]}"
@@ -119,19 +119,19 @@ class TeamLoader(tk.Toplevel):
             photo = ImageTk.PhotoImage(Image.fromarray(new_img))
 
             self.image_preview.config(image=photo)
-            self.image_preview.image = photo
+            # self.image_preview.image = photo
 
     def on_double_click(self, event):
         self.root.destroy_selected_pokemons()
         selected_index = self.listbox.curselection()
         if selected_index:
             execution_variables.current_stage = self.teams[selected_index[0]].stage
-            if execution_variables.current_stage == "SP_084":
-                execution_variables.current_stage = "MEOWTH COIN MANIA"
             if execution_variables.current_stage == "MEOWTH COIN MANIA":
-                execution_variables.current_strategy = constants.move_strategy.get(constants.GRADING_WEEKEND_MEOWTH)
+                execution_variables.current_stage = "SP_084"
+            if execution_variables.current_stage == "SP_084":
+                execution_variables.current_strategy = constants.move_strategy.get(constants.GRADING_WEEKEND_MEOWTH, "")
             else:
-                execution_variables.current_strategy = constants.move_strategy.get(constants.GRADING_TOTAL_SCORE)
+                execution_variables.current_strategy = constants.move_strategy.get(constants.GRADING_TOTAL_SCORE, "")
             execution_variables.has_modifications = True
             selected_team: TeamData = self.teams[selected_index[0]]
             print("Selected Team:", selected_team.icons)

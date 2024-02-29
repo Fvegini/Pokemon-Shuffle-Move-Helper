@@ -27,3 +27,5 @@ class Embedder():
     
     def cosine_similarity(self, embed_1, embed_2):
         return ImageEmbedder.cosine_similarity(embed_1, embed_2)
+
+loaded_embedder = Embedder()

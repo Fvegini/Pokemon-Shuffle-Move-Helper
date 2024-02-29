@@ -3,7 +3,7 @@ LAST_BOARD_IMAGE_PATH = r"last_board.png"
 IMAGES_BARRIER_PATH = r"assets\icons_barrier"
 IMAGES_EXTRA_PATH = r"assets\icons_extra"
 IMAGES_PATH = r"assets\icons_processed"
-
+ASSETS_PATH = r"assets"
 BARRIER_TYPE_REAL = "Real"
 BARRIER_TYPE_FAKE = "Fake"
 
@@ -45,3 +45,4 @@ move_stages = {
     "NONE": "NONE",
     "SP_084": "MEOWTH COIN MANIA"
 }
+downscale_res = (128, 128)

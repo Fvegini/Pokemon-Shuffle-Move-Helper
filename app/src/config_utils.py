@@ -3,13 +3,10 @@ import ast
 def create_default_config():
     config = configparser.ConfigParser()
     config['SETTINGS'] = {
-    "shuffle_move_first_square_position": "(1500, 90)",
-    "mouse_after_shuffle_position": "(1420, 560)",
     "board_top_left": "(210, 484)",
     "board_bottom_right": "(752, 1030)",
-    "has_barrier": False,
-    "board_image_path": r"D:\Dropbox\Envio da câmera\Imagem.png",
-    "airplay_app_name": ["air screen", "EasyCast"],
+    "has_barrier": False, #type: ignore
+    "airplay_app_name": ["air screen", "EasyCast"], #type: ignore
     "shuffle_move_name": "shuffle move"
     }
 

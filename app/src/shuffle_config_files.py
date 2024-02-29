@@ -12,48 +12,30 @@ MEGA_NOT_ACTIVATED = "0"
 MEGA_ACTIVATED = "99"
 
 pattern = re.compile(r'^\d+(,\d+){2,}')
-board_path = Path.joinpath(Path.home(), "Shuffle-Move", "config", "boards", "board.txt")
-teams_data_path = Path.joinpath(Path.home(), "Shuffle-Move", "config", "teamsData.txt")
-grading_modes_path = Path.joinpath(Path.home(), "Shuffle-Move", "config", "gradingModes.txt")
-def get_current_stage_and_team():
+BOARD_PATH = Path.joinpath(Path.home(), "Shuffle-Move", "config", "boards", "board.txt")
+TEAMS_DATA_PATH = Path.joinpath(Path.home(), "Shuffle-Move", "config", "teamsData.txt")
+GRADING_MODES_PATH = Path.joinpath(Path.home(), "Shuffle-Move", "config", "gradingModes.txt")
+
+def get_current_stage_and_team(expand_megas=False):
 
     stage_name = "NONE"
-    with open(board_path, 'r') as file:
+    with open(BOARD_PATH, 'r') as file:
         lines = file.readlines()
     for line in lines:
         if "STAGE" in line:
             stage_name = line.split(" ")[-1].strip()
             break
-    return get_team_from_stage_name(stage_name), stage_name
-    # print(current_stage)
-    # current_stage_string = f"TEAM {current_stage}"
-    # with open(teams_data_path, 'r') as file:
-    #     lines = file.readlines()
-
-    # current_team = None
-    # stage_added = []
-    # for i, line in enumerate(lines):
-    #     if line.lower().startswith(current_stage_string.lower()):
-    #         values_list = line.replace(current_stage_string, "").strip().split()
-    #         current_team = values_list[0].split(",") + [f"Mega_{values_list[2]}"]
-    #         if len(values_list) == 3:
-    #             stage_added = []
-    #         elif len(values_list) == 4:
-    #             stage_added = values_list[3].split(",")
-    #         else:
-    #             raise Exception("Deu Ruim")
-    #         break
-    # return current_team, stage_added, current_stage
+    return get_team_from_stage_name(stage_name, expand_megas), stage_name
 
 def get_team_from_stage_name(stage_name, expand_megas=False):
     current_stage_string = f"TEAM {stage_name}"
-    with open(teams_data_path, 'r') as file:
+    with open(TEAMS_DATA_PATH, 'r') as file:
         lines = file.readlines()
     for i, line in enumerate(lines):
         if line.lower().startswith(current_stage_string.lower()):
-            return get_team_from_teams_data_line(line.strip(), expand_megas)
+            return get_team_from_config_file_line(line.strip(), expand_megas)
 
-def get_team_from_teams_data_line(line, expand_megas):
+def get_team_from_config_file_line(line, expand_megas):
     if line.startswith(("TEAM", "STAGE")):
         values_list = line.split()[2:]
     else:
@@ -64,16 +46,17 @@ def get_team_from_teams_data_line(line, expand_megas):
     else:
         current_team = values_list[0].split(",") + [f"Mega_{values_list[1]}"]
     if len(values_list) == 3:
-        stage_added = values_list[3].split(",")
+        stage_added = values_list[2].split(",")
     else:
         stage_added = []
     final_team = []
     for pokemon_name in current_team:
         pokemon = Pokemon(pokemon_name, False, (pokemon_name in stage_added))
-        final_team.append(pokemon)
+        if pokemon not in final_team:
+            final_team.append(pokemon)
         mega_name = f"Mega_{pokemon.name}"
         if expand_megas:
-            if mega_name in pokemon_names.original_names_set:
+            if mega_name in pokemon_names.original_names_set and mega_name not in final_team:
                 final_team.append(Pokemon(mega_name, False, False))
     return final_team
 
@@ -82,7 +65,6 @@ def create_board_files(sequence_names_list, original_complete_names_list, extra_
     frozen_list = []
     mega_activated = MEGA_NOT_ACTIVATED
     mega_name = "-"
-
 
     for name in sequence_names_list:
         if "Barrier_" in name:
@@ -98,8 +80,8 @@ def create_board_files(sequence_names_list, original_complete_names_list, extra_
         else:
             names_list.append(name)
 
-    names_list, frozen_list, mega_name = process_names_list(sequence_names_list)
-    complete_names_list, _, forced_mega_name = process_names_list(original_complete_names_list)
+    names_list, frozen_list, mega_name = process_pokemon_names_list(sequence_names_list)
+    complete_names_list, _, forced_mega_name = process_pokemon_names_list(original_complete_names_list)
     if mega_name == "-":
         mega_name = forced_mega_name
     else:
@@ -114,7 +96,7 @@ def create_board_files(sequence_names_list, original_complete_names_list, extra_
         update_gradingModes_file(source, mega_activated)
     return
 
-def process_names_list(original_names_list):
+def process_pokemon_names_list(original_names_list):
     names_list = []
     frozen_list = []
     mega_name = "-"
@@ -132,6 +114,18 @@ def process_names_list(original_names_list):
         else:
             names_list.append(name)    
     return names_list, frozen_list, mega_name
+
+def update_current_stage(current_stage):
+    with open(BOARD_PATH, 'r') as file:
+        lines = file.readlines()
+    for i, line in enumerate(lines):
+        if line.startswith("STAGE"):
+            # Replace the line
+            lines[i] = f"STAGE {current_stage}\n"
+            break
+    with open(BOARD_PATH, 'w') as file:
+        file.writelines(lines)
+    return  
 
 def update_board_file(names_list, frozen_list, mega_activated, stage):
     if not stage:
@@ -159,30 +153,39 @@ ROW_6 {",".join(names_list[30:36])}
 FROW_6 {",".join(frozen_list[30:36])}
 CROW_6 {CROW}
 """
-    with open(board_path, 'w') as file:
+    with open(BOARD_PATH, 'w') as file:
         file.write(board_file_content)
+
+def update_teams_file_with_pokemon_list(pokemon_list, stage_name):
+    names_list, _, mega_name = process_pokemon_names_list([pokemon.name for pokemon in pokemon_list])
+    return update_teams_file(names_list, mega_name, [], stage_name)
+    
 
 def update_teams_file(names_list, mega_name, extra_supports_list, stage):
     if not stage:
         stage = execution_variables.current_stage
     move_string = f"TEAM {stage} {','.join(list(set(names_list)))} {KEYS_LIST} {mega_name} {','.join(list(set(extra_supports_list)))}\n"
-    update_teams_file_with_move_string(move_string, stage)
-
+    return update_teams_file_with_move_string(move_string, stage)
 
 def update_teams_file_with_move_string(move_string, stage_name):
     team_stage_string = f"TEAM {stage_name}"
-    with open(teams_data_path, 'r') as file:
+    with open(TEAMS_DATA_PATH, 'r') as file:
         lines = file.readlines()
 
+    found = False
     # Find the line with the specified prefix
     for i, line in enumerate(lines):
         if line.startswith(team_stage_string):
             # Replace the line
             lines[i] = move_string
+            found = True
+            break
+    if not found:
+        lines[-1] = move_string
     # Write the modified content back to the file
-    with open(teams_data_path, 'w') as file:
+    with open(TEAMS_DATA_PATH, 'w') as file:
         file.writelines(lines)
-    return   
+    return move_string
 
 def update_gradingModes_file(source, mega_activated):
     if source == "bot":
@@ -194,7 +197,7 @@ def update_gradingModes_file(source, mega_activated):
     prefix_to_replace = f"STRING CURRENT_MODE"
     new_line = f"STRING CURRENT_MODE {strategy}\n"
     has_modifications = False
-    with open(grading_modes_path, 'r') as file:
+    with open(GRADING_MODES_PATH, 'r') as file:
         lines = file.readlines()
 
     for i, line in enumerate(lines):
@@ -203,7 +206,6 @@ def update_gradingModes_file(source, mega_activated):
                 lines[i] = new_line
                 has_modifications = True
     if has_modifications:
-        with open(grading_modes_path, 'w') as file:
+        with open(GRADING_MODES_PATH, 'w') as file:
             file.writelines(lines)
-        
     return

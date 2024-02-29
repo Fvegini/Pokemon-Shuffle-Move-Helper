@@ -6,6 +6,7 @@ import os
 from src import constants, custom_utils
 import customtkinter
 import cv2
+
 class BoardIconSelector(tk.Toplevel):
      
     def __init__(self, master = None, root = None, folder = ""):
@@ -40,19 +41,19 @@ class BoardIconSelector(tk.Toplevel):
                 row_index += 1
     
     def on_image_click(self, image):
-        # image.show()
         self.selected_image = image
-        self.root.open_app_register_screen()
         self.destroy()
+        PokemonIconSelector(root=self.root, folder=self.folder)
 
-class AppIconSelector(tk.Toplevel):
+class PokemonIconSelector(tk.Toplevel):
      
-    def __init__(self, master = None, root = None, action = None):
+    def __init__(self, master = None, root = None, action = None, folder = None):
          
         super().__init__(master = master)
         self.title("Select The Pokemon That the New Icon will be Saved")
         self.root = root
         self.action = action
+        self.folder=folder
         self.selected_image = None
         self.create_widgets()
 
@@ -63,7 +64,12 @@ class AppIconSelector(tk.Toplevel):
 
         widgets_list = self.root.get_selected_images_widgets_list()
         for widgets in widgets_list:
-            image = Image.open(Path(constants.IMAGES_PATH, widgets[0].cget("text")))
+            if self.folder == "barrier":
+                image_cv2 = cv2.imread(Path(constants.IMAGES_PATH, widgets[0].cget("text")).as_posix())
+                image_cv2 = custom_utils.add_transparent_image(image_cv2)
+                image = Image.fromarray(cv2.cvtColor(image_cv2, cv2.COLOR_RGB2BGR))
+            else:
+                image = Image.open(Path(constants.IMAGES_PATH, widgets[0].cget("text")))
             tk_image = customtkinter.CTkImage(image, size=image.size)
 
             label = customtkinter.CTkLabel(self, image=tk_image, text="", cursor="hand2")
@@ -141,37 +147,10 @@ def save_new_icon(image, image_name, folder):
     if folder == "barrier":
         os.makedirs(constants.IMAGES_BARRIER_PATH, exist_ok=True)
         image_path = Path(constants.IMAGES_BARRIER_PATH, image_name)
-        image_path = get_next_filename(image_path)
+        image_path = custom_utils.get_next_filename(image_path)
     else:
         os.makedirs(constants.IMAGES_EXTRA_PATH, exist_ok=True)
         image_path = Path(constants.IMAGES_EXTRA_PATH, image_name)
-        image_path = get_next_filename(image_path)
-    image = image.resize(match_icons.downscale_res)
+        image_path = custom_utils.get_next_filename(image_path)
+    image = image.resize(constants.downscale_res)
     image.save(image_path)
-    
-def get_next_filename(filepath):
-    path = Path(filepath)
-    base_name = path.stem
-    suffix = path.suffix
-    directory = path.parent
-
-    # Check if the file already exists
-    while path.exists():
-        # Extract the base name and sequence number (if any)
-        base_name_parts = base_name.rsplit('_', 1)
-        if len(base_name_parts) == 2 and base_name_parts[1].isdigit():
-            sequence_number = int(base_name_parts[1])
-            base_name = base_name_parts[0]
-        else:
-            sequence_number = 0
-
-        # Increment the sequence number
-        sequence_number += 1
-
-        # Construct the new filename
-        base_name = f"{base_name}_{sequence_number}"
-
-        # Update the path
-        path = directory / f"{base_name}{suffix}"
-
-    return path

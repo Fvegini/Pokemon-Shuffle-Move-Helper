@@ -9,20 +9,16 @@ import numpy as np
 # from PIL import Image
 from pathlib import Path
 import time
-from src.custom_utils import make_cell_list_from_img
-from src.embed import Embedder
+from src.embed import loaded_embedder
 from src import constants, custom_utils, config_utils
 from src.config_utils import config_values
 from src import get_window, socket_utils, shuffle_config_files
 from src.execution_variables import execution_variables
-from src.classes import Pokemon
+from src.classes import Icon, Match, Pokemon, MatchResult
 import statistics
 
 
-embedder = Embedder()
-downscale_res = (128, 128)
-shuffle_move_first_square_position = config_values.get("shuffle_move_first_square_position")
-mouse_after_shuffle_position = config_values.get("mouse_after_shuffle_position")
+
 board_top_left = config_values.get("board_top_left")
 board_bottom_right = config_values.get("board_bottom_right")
 shuffle_move_name = config_values.get("shuffle_move_name")
@@ -31,82 +27,8 @@ fake_barrier_active = False
 
 custom_board_image = None
 last_image = None
-last_board_commands = []
+last_pokemon_board_sequence: list[str] = []
 
-
-
-class CustomImage():
-    
-    def __init__(self, image):
-        self.image = image
-        self.embed = embedder.create_embed_from_np(image)
-
-class Icon():
-
-    name: str
-    barrier: bool
-    barrier_type: str
-    original_path: Path
-    images_list: List[CustomImage]
-
-    def __init__(self, path, barrier):
-        if isinstance(path, str):
-            path = Path(path)
-        if path.stem == "_Fog":
-            self.name = "Pikachu_a"
-        elif path.stem == "_Empty":
-            self.name = "Air"
-        elif path.stem.startswith("_"):
-            self.name = path.stem[1:]
-        else:
-            self.name = path.stem
-        self.barrier = barrier
-        self.barrier_type = None
-        self.original_path = path
-        if self.barrier:
-            self.name = f"{constants.BARRIER_PREFIX}{self.name}"
-        self.populate_images()
-        
-    def __repr__(self):
-        return self.name
-    
-    def populate_images(self):
-        self.images_list = []
-        if not self.barrier:
-            directories = [constants.IMAGES_PATH, constants.IMAGES_EXTRA_PATH]
-        else:
-            directories = [constants.IMAGES_BARRIER_PATH]
-            self.barrier_type = constants.BARRIER_TYPE_REAL
-        matching_files = []
-        for directory in directories:
-            matching_files.extend(custom_utils.find_matching_files(directory, self.original_path.stem, ".*"))
-            if len(matching_files) == 0:
-                matching_files.extend(custom_utils.find_matching_files(directory, f"_{self.original_path.stem}", ".*"))
-        for image_path in matching_files:
-            image = custom_utils.open_and_resize_np_image(image_path, downscale_res)
-            self.images_list.append(CustomImage(image))
-        if len(self.images_list) == 0 and self.barrier and fake_barrier_active:
-            original_img = custom_utils.open_and_resize_np_image(self.original_path, downscale_res)
-            barrier_img = add_barrier_layer(original_img)
-            self.images_list.append(CustomImage(barrier_img))
-            self.barrier_type = constants.BARRIER_TYPE_FAKE
-
-class Match():
-    
-    def __init__(self, board_icon, embed, icon: Icon):
-        self.name = icon.name
-        self.board_icon = board_icon
-        cosine_tuples_list = [(embedder.cosine_similarity(embed, icon_image.embed), icon_image.image) for icon_image in icon.images_list]
-        if len(cosine_tuples_list) > 0:
-            self.cosine_similarity, self.match_icon = max(cosine_tuples_list, key=lambda x: x[0])
-        else:
-            self.cosine_similarity, self.match_icon = (0, None)
-
-    def __repr__(self):
-        return self.name 
-    
-    def inspect_match(self):
-        custom_utils.show_list_images([self.board_icon, self.match_icon])
 
 
 def load_icon_classes(values_to_execute: list[Pokemon], has_barriers):
@@ -151,7 +73,7 @@ def add_barrier_layer(original_image, custom_border=None):
     else:
         final_image = cut_borders(image)
 
-    final_image = custom_utils.resize_cv2_image(final_image, downscale_res)
+    final_image = custom_utils.resize_cv2_image(final_image, constants.downscale_res)
     return final_image
 
 def cut_borders(image, border_size=15):
@@ -172,15 +94,15 @@ def cut_borders(image, border_size=15):
 
 def compare_with_list(original_image, icons_list: List[Icon], has_barriers):
     # Compare the input image with each image in the folder
-    embed = embedder.create_embed_from_np(original_image)
+    embed = loaded_embedder.create_embed_from_np(original_image)
     if has_barriers:
-        fake_barrier_img = custom_utils.resize_cv2_image(cut_borders(original_image), downscale_res)
+        fake_barrier_img = custom_utils.resize_cv2_image(cut_borders(original_image), constants.downscale_res)
     # best_rmse = None
     # best_ssim = None
     best_cosine = None
     # results_rmse = {}
     # results_ssim = {}
-    results_cosine = {}
+    # results_cosine = {}
     full_match_list_tmp = []
     for icon in icons_list:
         if not icon.barrier_type == constants.BARRIER_TYPE_FAKE:
@@ -190,7 +112,7 @@ def compare_with_list(original_image, icons_list: List[Icon], has_barriers):
         full_match_list_tmp.append(match)
         # results_rmse[match.name] = match.rmse
         # results_ssim[match.name] = match.ssim
-        results_cosine[match.name] = match.cosine_similarity
+        # results_cosine[match.name] = match.cosine_similarity
         # if not best_rmse or best_rmse.rmse > match.rmse:
             # best_rmse = match
         # if not best_ssim or best_ssim.ssim < match.ssim:
@@ -201,7 +123,7 @@ def compare_with_list(original_image, icons_list: List[Icon], has_barriers):
     # Sort the results by similarity index
     # results_rmse = sorted(results_rmse.items(), key=lambda x: x[1], reverse=False)
     # results_ssim = sorted(results_ssim.items(), key=lambda x: x[1], reverse=True)
-    results_cosine = sorted(results_cosine.items(), key=lambda x: x[1], reverse=True)
+    # results_cosine = sorted(results_cosine.items(), key=lambda x: x[1], reverse=True)
     
     # percentage_rmse = calculate_percentage_difference(results_rmse[0][1], results_rmse[1][1])
     # percentage_ssim = calculate_percentage_difference(results_ssim[0][1], results_ssim[1][1])
@@ -220,7 +142,7 @@ def calculate_percentage_difference(num1, num2):
     return percentage_difference
 
 def predict(original_image, icons_list, has_barriers) -> Match:
-    resized = cv2.resize(original_image, downscale_res)
+    resized = cv2.resize(original_image, constants.downscale_res)
     return compare_with_list(resized, icons_list, has_barriers)
     
 
@@ -236,7 +158,7 @@ def capture_board_screensot():
 
 def make_cell_list():
     img = capture_board_screensot()
-    return make_cell_list_from_img(img)
+    return custom_utils.make_cell_list_from_img(img)
 
 # def concatenate_PIL_images(image_list, grid_size=(6, 6), spacing=10):
 #     # Calculate the size of the final image
@@ -260,10 +182,6 @@ def make_cell_list():
 #     return result_image
 
 def has_airplay_on_screen():
-    global shuffle_move_first_square_position   
-
-    # app_in_move_position = get_window.get_window_name_at_coordinate(shuffle_move_first_square_position[0], y=shuffle_move_first_square_position[1])
-    # is_move = (shuffle_move_name in app_in_move_position.lower())
     app_in_airplay_position = get_window.get_window_name_at_coordinate(board_top_left[0], y=board_top_left[1])
     has_airplay = any([name.lower() in app_in_airplay_position.lower() for name in airplay_app_name])
     if not has_airplay:
@@ -271,30 +189,6 @@ def has_airplay_on_screen():
         print(f"List of possible app names is: {airplay_app_name}")
 
     return has_airplay
-
-def execute_commands(command_sequence, source=None):
-    global shuffle_move_first_square_position
-
-    if execution_variables.socket_mode:
-        return socket_utils.loadNewBoard()
-    focused_name = get_window.get_focused_window_name()
-    behind_name = get_window.get_window_name_at_coordinate(shuffle_move_first_square_position[0], y=shuffle_move_first_square_position[1])
-    move_is_focused = (shuffle_move_name in focused_name.lower())
-    move_is_behind = (shuffle_move_name in behind_name.lower())
-    mouse_click = False
-    if source == "loop" and not move_is_focused and not move_is_behind:
-        return
-    elif source == "loop" and not move_is_focused and move_is_behind:
-        mouse_click = True
-    elif source == "loop":
-        pass
-    else:
-        mouse_click = True
-    if mouse_click:
-        pyautogui.click(shuffle_move_first_square_position[0], y=shuffle_move_first_square_position[1])
-        time.sleep(0.1)
-    pyautogui.hotkey('ctrl', 'l')
-
 
 def get_metrics(match_list):
     numbers_list = [match.cosine_similarity for match in match_list]
@@ -307,14 +201,14 @@ def get_metrics(match_list):
 
     
 
-def start_from_helper(request_values: list[Pokemon], has_barriers, root=None, source=None):
-    global last_image, last_board_commands
+def start_from_helper(pokemon_list: list[Pokemon], has_barriers, root=None, source=None, create_image=False) -> MatchResult:
+    global last_image, last_pokemon_board_sequence
     if source == "loop" and not has_airplay_on_screen():
         print("airplay not on screen, ignoring")
         if root:
             root.info_message.configure(text="Loop Mode: Airplay not on screen, ignoring")
-        return 2000
-    icons_list = load_icon_classes(request_values, has_barriers)
+        return MatchResult()
+    icons_list = load_icon_classes(pokemon_list, has_barriers)
     match_list: List[Match] = []
     cell_list = make_cell_list()
     for idx, cell in enumerate(cell_list):
@@ -325,29 +219,36 @@ def start_from_helper(request_values: list[Pokemon], has_barriers, root=None, so
     # new_list = custom_utils.sort_by_class_attribute(new_list, "cosine_similarity", False)
     # metrics = get_metrics(new_list)
     
-    extra_supports_list = [pokemon[0].name for pokemon in request_values if pokemon.stage_added]
+    extra_supports_list = [pokemon.name for pokemon in pokemon_list if pokemon.stage_added]
     sequence_names_list = [match.name for match in match_list]
     original_complete_names_list = [icon.name for icon in icons_list]
-    commands_list = [match.name for match in match_list]
-    if commands_list != last_board_commands or source != "loop":
+    pokemon_board_sequence = [match.name for match in match_list]
+    if pokemon_board_sequence != last_pokemon_board_sequence or source != "loop":
         shuffle_config_files.create_board_files(sequence_names_list, original_complete_names_list, extra_supports_list, source)
-        last_board_commands = commands_list
-        result = execute_commands(commands_list, source)
+        last_pokemon_board_sequence = pokemon_board_sequence
+        result = socket_utils.loadNewBoard()
     else:
         if root:
             root.info_message.configure(text="Loop Mode: Same commands found")
-    return 0
+    result_image = None
+    if create_image:
+        result_image = custom_utils.make_match_image_comparison(result, match_list)
+    return MatchResult(result=result, match_image=result_image, match_list=match_list)
 
-def start_from_bot(request_values, has_barriers, image, source="bot"):
-    icons_list = load_icon_classes(request_values, has_barriers)
+def start_from_bot(pokemon_list: list[Pokemon], has_barriers, image, current_stage, source="bot", create_image=False):
+    icons_list = load_icon_classes(pokemon_list, has_barriers)
     match_list: List[Match] = []
-    cell_list = make_cell_list_from_img(image)
+    cell_list = custom_utils.make_cell_list_from_img(image)
     for cell in cell_list:
         result = predict(cell, icons_list, has_barriers)
         match_list.append(result)
-    extra_supports_list = [pokemon[0].name for pokemon in request_values if pokemon.stage_added]
+    extra_supports_list = [pokemon.name for pokemon in pokemon_list if pokemon.stage_added]
     sequence_names_list = [match.name for match in match_list]
     original_complete_names_list = [icon.name for icon in icons_list]
-    shuffle_config_files.create_board_files(sequence_names_list, original_complete_names_list, extra_supports_list, source, stage="NONE")
-    result = execute_commands(sequence_names_list)
-    return result
+    shuffle_config_files.create_board_files(sequence_names_list, original_complete_names_list, extra_supports_list, source, current_stage)
+    result = socket_utils.loadNewBoard()
+    result_image = None
+    if create_image:
+        result_image = custom_utils.make_match_image_comparison(result, match_list)
+    return MatchResult(result=result, match_image=result_image, match_list=match_list)
+
