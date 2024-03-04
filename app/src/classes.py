@@ -6,7 +6,12 @@ import numpy as np
 
 class Pokemon():
     def __init__(self, name, disabled, stage_added):
-        self.name = name
+        path = Path(name)
+        self.name = path.stem
+        if not path.suffix:
+            self.path = path.with_suffix(".png")
+        else:
+            self.path = path
         self.disabled = disabled
         self.stage_added = stage_added
         
@@ -32,17 +37,15 @@ class Icon():
     original_path: Path
     images_list: List[CustomImage]
 
-    def __init__(self, path, barrier):
-        if isinstance(path, str):
-            path = Path(path)
-        if path.stem == "_Fog":
+    def __init__(self, name, path, barrier):
+        if name == "_Fog":
             self.name = "Pikachu_a"
-        elif path.stem == "_Empty":
+        elif name == "_Empty":
             self.name = "Air"
-        elif path.stem.startswith("_"):
+        elif name.startswith("_"):
             self.name = path.stem[1:]
         else:
-            self.name = path.stem
+            self.name = name
         self.barrier = barrier
         self.barrier_type = ""
         self.original_path = path
@@ -52,6 +55,11 @@ class Icon():
 
     def __repr__(self):
         return self.name
+
+    def __eq__(self, other):
+        if isinstance(other, str):
+            return self.name == other
+        return self.name == other.name
 
     def populate_images(self):
         self.images_list = []

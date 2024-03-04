@@ -8,7 +8,7 @@ from PIL import Image
 
 def find_matching_files(directory, prefix, suffix):
     directory_path = Path(directory)
-    search_pattern1 = f"{prefix}_*[0-9]{suffix}"
+    search_pattern1 = f"{prefix}_[0-9]*{suffix}"
     search_pattern2 = f"{prefix}{suffix}"
     matching_files = list(directory_path.glob(search_pattern1)) + list(directory_path.glob(search_pattern2))
     return matching_files

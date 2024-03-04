@@ -17,6 +17,7 @@ from src.icon_register import IconRegister
 import cv2
 warnings.filterwarnings("ignore", category=UserWarning, message="CTkButton Warning: Given image is not CTkImage but*")
 
+# from viztracer.decorator import trace_and_save
 
 customtkinter.set_appearance_mode("dark")  # Modes: "System" (standard), "Dark", "Light"
 # customtkinter.set_appearance_mode("light")
@@ -488,7 +489,7 @@ class ImageSelectorApp():
     def insert_extra_images_tooltip(self, image_path, selected_image_label):
         extra_image_list = []
         original_path = Path(image_path)
-        images_path = [original_path] + custom_utils.find_matching_files(constants.IMAGES_EXTRA_PATH, original_path.stem, ".*") + custom_utils.find_matching_files(constants.IMAGES_BARRIER_PATH, original_path.stem, ".*")
+        images_path = [original_path] + custom_utils.find_matching_files(constants.IMAGES_EXTRA_PATH, original_path.stem, ".png") + custom_utils.find_matching_files(constants.IMAGES_BARRIER_PATH, original_path.stem, ".png")
 
 
         for extra_image_path in images_path:
@@ -529,12 +530,16 @@ class ImageSelectorApp():
         return widget_list
 
     def execute_board_analysis(self, source=None, create_image=False) -> MatchResult:
+        pokemons_list = self.extract_pokemon_list()
+        return match_icons.start_from_helper(pokemons_list, self.has_barrier_var.get(), root=self, source=source, create_image=create_image)
+
+    def extract_pokemon_list(self):
         pokemons_list = []
         for image_widgets in self.get_selected_images_widgets_list():
             if hasattr(image_widgets[0].master, "pokemon"):
                 pokemon = image_widgets[0].master.pokemon
                 pokemons_list.append(pokemon)
-        return match_icons.start_from_helper(pokemons_list, self.has_barrier_var.get(), root=self, source=source, create_image=create_image)
+        return pokemons_list
 
     def get_execution_values(self, image_widgets):
         try:
