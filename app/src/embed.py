@@ -6,7 +6,7 @@ ImageEmbedder = mp.tasks.vision.ImageEmbedder
 ImageEmbedderOptions = mp.tasks.vision.ImageEmbedderOptions
 VisionRunningMode = mp.tasks.vision.RunningMode
 
-model_path = Path(r"assets\models\1.tflite")
+model_path = Path(r"assets\models\small-100-224-feature-vector-metadata\1.tflite")
 
 class Embedder():
     

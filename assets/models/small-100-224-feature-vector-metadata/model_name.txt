@@ -1,0 +1,1 @@
+google/mobilenet-v3/TfLite/small-100-224-feature-vector-metadata/1
