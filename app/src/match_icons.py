@@ -212,7 +212,7 @@ def get_metrics(match_list):
 
     
 
-def start_from_helper(pokemon_list: list[Pokemon], has_barriers, root=None, source=None, create_image=False) -> MatchResult:
+def start_from_helper(pokemon_list: list[Pokemon], has_barriers, root=None, source=None, create_image=False, skip_shuffle_move=False) -> MatchResult:
     global last_image, last_pokemon_board_sequence
     if source == "loop" and not has_airplay_on_screen():
         print("airplay not on screen, ignoring")
@@ -222,7 +222,6 @@ def start_from_helper(pokemon_list: list[Pokemon], has_barriers, root=None, sour
     icons_list = load_icon_classes(pokemon_list, has_barriers)
     match_list: List[Match] = []
     cell_list = make_cell_list()
-    idx = -1
     for idx, cell in enumerate(cell_list):
         result = predict(cell, icons_list, has_barriers)
         match_list.append(result)
@@ -235,6 +234,8 @@ def start_from_helper(pokemon_list: list[Pokemon], has_barriers, root=None, sour
     sequence_names_list = [match.name for match in match_list]
     original_complete_names_list = [icon.name for icon in icons_list]
     pokemon_board_sequence = [match.name for match in match_list]
+    if skip_shuffle_move:
+        return MatchResult(match_list=match_list)
     if pokemon_board_sequence != last_pokemon_board_sequence or source != "loop":
         shuffle_config_files.create_board_files(sequence_names_list, original_complete_names_list, extra_supports_list, source)
         last_pokemon_board_sequence = pokemon_board_sequence

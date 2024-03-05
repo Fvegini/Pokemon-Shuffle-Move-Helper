@@ -12,3 +12,4 @@ dist
 main.exe
 *.rar
 .env
+*.json

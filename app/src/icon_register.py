@@ -40,7 +40,7 @@ class IconRegister(customtkinter.CTkToplevel):
 
     def create_widgets(self):
         index = 0
-        self.match_result: MatchResult = self.root.execute_board_analysis(create_image=True)
+        self.match_result: MatchResult = self.root.execute_board_analysis(create_image=False, skip_shuffle_move=True)
         if self.match_result.match_list:
             ordered_list = custom_utils.sort_by_class_attribute(self.match_result.match_list, "cosine_similarity", False)
             for match in ordered_list:

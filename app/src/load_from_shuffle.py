@@ -71,16 +71,10 @@ class TeamLoader(tk.Toplevel):
 
         self.listbox.config(yscrollcommand=scrollbar.set)
 
-
-        # self.images_frame = customtkinter.CTkFrame(self)
-        # self.images_frame.pack(side=tk.RIGHT, padx=10, pady=10)
         self.image_preview = tk.Label(self)
         self.image_preview.grid(row=1, column=3, padx=5, pady=5)
 
-        # Bind double-click event to print the third element of the selected tuple
-        # self.listbox.bind("<<ListboxSelect>>", self.preview_team)
         self.listbox.bind("<Double-Button-1>", self.on_double_click)
-        # Pack the listbox into the window
         self.listbox.grid(row=1, column=1, sticky='ns')
         self.rowconfigure(1, weight=1)
         
@@ -101,27 +95,8 @@ class TeamLoader(tk.Toplevel):
         # Set window geometry
         self.geometry(f"{app_width}x{screen_height}+{x}+{y}")
 
-
-    def preview_team(self, event):
-        selected_index = self.listbox.curselection()
-        if selected_index:
-            selected_team: TeamData = self.teams[selected_index[0]]
-            img_list = []
-            for icon_name in selected_team.icons:
-                try:
-                    image_path = os.path.join(constants.IMAGES_PATH, f"{icon_name}.png")
-                    image = custom_utils.open_and_resize_np_image(image_path, (50,50))
-                    img_list.append(image)
-                except:
-                    pass
-            
-            new_img = custom_utils.concatenate_list_images(img_list, blank_space=5)
-            photo = ImageTk.PhotoImage(Image.fromarray(new_img))
-
-            self.image_preview.config(image=photo)
-            # self.image_preview.image = photo
-
     def on_double_click(self, event):
+        self.withdraw()
         self.root.destroy_selected_pokemons()
         selected_index = self.listbox.curselection()
         if selected_index:
@@ -134,11 +109,10 @@ class TeamLoader(tk.Toplevel):
                 execution_variables.current_strategy = constants.move_strategy.get(constants.GRADING_TOTAL_SCORE, "")
             execution_variables.has_modifications = True
             selected_team: TeamData = self.teams[selected_index[0]]
-            print("Selected Team:", selected_team.icons)
             for pokemon in selected_team.icons:
                 self.root.insert_image_widget(f"{pokemon}.png")
+                self.update_idletasks()
         
         self.root.stage_combobox.set(execution_variables.current_stage)
         self.root.strategy_combobox.set(execution_variables.current_strategy)
-        
         self.destroy()

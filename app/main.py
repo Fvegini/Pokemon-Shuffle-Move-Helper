@@ -484,8 +484,6 @@ class ImageSelectorApp():
             self.insert_image_widget(f"Mega_{selected_image_frame.name}")
         return
 
-
-
     def insert_extra_images_tooltip(self, image_path, selected_image_label):
         extra_image_list = []
         original_path = Path(image_path)
@@ -511,7 +509,7 @@ class ImageSelectorApp():
 
     def register_new_icon(self):
         self.disable_loop()
-        self.new_icon_selector = IconRegister(root=self)
+        IconRegister(root=self)
 
     def open_create_register_screen(self, folder):
         self.disable_loop()
@@ -529,9 +527,9 @@ class ImageSelectorApp():
                 widget_list.append(image_widgets)
         return widget_list
 
-    def execute_board_analysis(self, source=None, create_image=False) -> MatchResult:
+    def execute_board_analysis(self, source=None, create_image=False, skip_shuffle_move=False) -> MatchResult:
         pokemons_list = self.extract_pokemon_list()
-        return match_icons.start_from_helper(pokemons_list, self.has_barrier_var.get(), root=self, source=source, create_image=create_image)
+        return match_icons.start_from_helper(pokemons_list, self.has_barrier_var.get(), root=self, source=source, create_image=create_image, skip_shuffle_move=skip_shuffle_move)
 
     def extract_pokemon_list(self):
         pokemons_list = []
