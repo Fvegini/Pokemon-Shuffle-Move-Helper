@@ -110,7 +110,7 @@ class PokemonIconSelector(customtkinter.CTkToplevel):
             barrier_image_cv2 = custom_utils.add_transparent_image(original_image_cv2)
             self.append_widget(custom_utils.cv2_to_pil(original_image_cv2, custom_downscale), name, row_index, col_index, False)
             col_index, row_index = append_index(col_index, row_index, num_columns)
-            self.append_widget(custom_utils.cv2_to_pil(barrier_image_cv2, custom_downscale), name, row_index, col_index, False)
+            self.append_widget(custom_utils.cv2_to_pil(barrier_image_cv2, custom_downscale), name, row_index, col_index, True)
             col_index, row_index = append_index(col_index, row_index, num_columns)
     
     def append_widget(self, image, image_name="", row_index=0, col_index=0, is_barrier=False, can_be_clicked=True, columnspan=1):
@@ -124,6 +124,7 @@ class PokemonIconSelector(customtkinter.CTkToplevel):
     def on_image_click(self, image_name, is_barrier):
         save_new_icon(self.selected_image, image_name, is_barrier)
         self.root.reveal_or_hide_barrier_img()
+        self.root.clear_icons_cache()
         self.destroy()
 
 

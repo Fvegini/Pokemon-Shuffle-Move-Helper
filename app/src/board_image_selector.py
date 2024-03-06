@@ -135,6 +135,7 @@ class ExtraIconSelector(tk.Toplevel):
         self.image_path = image_path
         remove_icon(image_path)
         self.root.reveal_or_hide_barrier_img()
+        self.root.clear_icons_cache()
         self.destroy()
 
 def remove_icon(image_path):

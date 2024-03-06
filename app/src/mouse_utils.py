@@ -10,7 +10,7 @@ class BoardPositionSelectorApp():
     def __init__(self, master, selector_app=None):
         self.master = master
         self.keep_open = False
-        self.scale = 0.5
+        self.scale = 0.9
         self.selector_app = selector_app
         self.master.update()
         screen_width = self.master.winfo_screenwidth()

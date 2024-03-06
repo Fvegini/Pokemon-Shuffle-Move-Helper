@@ -14,7 +14,9 @@ import warnings
 from CTkToolTip import CTkToolTip
 from src.classes import MatchResult, Pokemon
 from src.icon_register import IconRegister
+from src import embed
 import cv2
+import numpy as np
 warnings.filterwarnings("ignore", category=UserWarning, message="CTkButton Warning: Given image is not CTkImage but*")
 
 # from viztracer.decorator import trace_and_save
@@ -314,7 +316,7 @@ class ImageSelectorApp():
         self.image_preview.grid(row=1, column=3, padx=5, pady=5, sticky='w')
 
     def create_bottom_message(self):
-        self.info_message = customtkinter.CTkLabel(self.appview, text="App Open")
+        self.info_message = customtkinter.CTkLabel(self.appview, text=f"Model: {embed.model_path.parent.name}")
         self.info_message.pack(side=tk.BOTTOM, fill=tk.X)
 
     def create_right_app_screen(self):
@@ -485,17 +487,23 @@ class ImageSelectorApp():
         return
 
     def insert_extra_images_tooltip(self, image_path, selected_image_label):
-        extra_image_list = []
+        image_list = []
+        barrier_image_list = []
         original_path = Path(image_path)
-        images_path = [original_path] + custom_utils.find_matching_files(constants.IMAGES_EXTRA_PATH, original_path.stem, ".png") + custom_utils.find_matching_files(constants.IMAGES_BARRIER_PATH, original_path.stem, ".png")
+        images_path_list = [original_path] + custom_utils.find_matching_files(constants.IMAGES_EXTRA_PATH, original_path.stem, ".png")
+        barrier_images_path_list = custom_utils.find_matching_files(constants.IMAGES_BARRIER_PATH, original_path.stem, ".png")
 
+        for image_path in images_path_list:
+            icon_image = Image.open(image_path)
+            icon_image.thumbnail((50,50))
+            image_list.append(icon_image)
 
-        for extra_image_path in images_path:
-            extra_image = Image.open(extra_image_path)
-            extra_image.thumbnail((50,50))
-            extra_image_list.append(extra_image)
+        for image_path in barrier_images_path_list:
+            icon_image = Image.open(image_path)
+            icon_image.thumbnail((50,50))
+            barrier_image_list.append(icon_image)
         
-        extra_complete_image = merge_pil_images_list(extra_image_list)
+        extra_complete_image = merge_tooltip_pil_images(image_list, barrier_image_list)
         extra_photo = customtkinter.CTkImage(extra_complete_image, size=extra_complete_image.size)
         CTkToolTip(selected_image_label, delay=0.5, message="", image=extra_photo)
 
@@ -518,6 +526,9 @@ class ImageSelectorApp():
     def open_remove_register_screen(self, action=None):
         self.disable_loop()
         self.app_image_selector = PokemonIconSelector(root=self, action=action)
+
+    def clear_icons_cache(self):
+        match_icons.loaded_icons_cache = {}
 
     def get_selected_images_widgets_list(self):
         widget_list = []
@@ -638,8 +649,8 @@ class ImageSelectorApp():
                 if pokemon.name in load_from_shuffle.exception_list:
                     pokemon.name = f"_{pokemon.name}"
                 self.insert_image_widget(pokemon.name, skip_barrier=True)
-            # if self.has_barrier_var.get():
-            #     self.reveal_or_hide_barrier_img()
+            if self.has_barrier_var.get():
+                self.reveal_or_hide_barrier_img()
         except Exception as ex:
             print(ex)
             pass
@@ -659,8 +670,8 @@ class ImageSelectorApp():
             print("Updating to Full HD Positions")
             # match_icons.board_top_left = (214, 488)
             # match_icons.board_bottom_right = (741, 1010)
-            match_icons.board_top_left = (210, 484)
-            match_icons.board_bottom_right = (752, 1030)
+            match_icons.board_top_left = (208, 482)
+            match_icons.board_bottom_right = (750, 1021)
         else:
             return
 
@@ -685,7 +696,7 @@ def merge_pil_images(image1, image2):
     # Save the merged image
     return merged_image
 
-def merge_pil_images_list(image_list):
+def merge_pil_images_horizontally(image_list):
     # Get the total width and maximum height
     total_width = sum(img.width for img in image_list)
     max_height = max(img.height for img in image_list)
@@ -701,11 +712,34 @@ def merge_pil_images_list(image_list):
 
     return merged_image
 
-from typing import TypeVar
+def merge_pil_images_vertically(image_list):
 
-# Define a type variable representing the class in file a.py
-A = TypeVar('A')
+    widths, heights = zip(*(i.size for i in image_list))
 
+    max_width = max(widths)
+    total_height = sum(heights)
+
+    new_im = Image.new('RGB', (max_width, total_height), color=(0, 0, 0))
+
+    y_offset = 0
+    for im in image_list:
+        new_im.paste(im, (0, y_offset))
+        y_offset += im.size[1]
+
+    return new_im
+    
+
+def merge_tooltip_pil_images(*args):
+    
+    horizontal_images_list = []
+    
+    for image_list in args:
+        if len(image_list) > 0:
+            horizontal_images_list.append(merge_pil_images_horizontally(image_list))
+
+    final_image = merge_pil_images_vertically(horizontal_images_list)
+    
+    return final_image
 
 if __name__ == "__main__":    
     root = customtkinter.CTk()

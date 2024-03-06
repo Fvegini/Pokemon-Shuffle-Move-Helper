@@ -28,28 +28,30 @@ fake_barrier_active = False
 custom_board_image = None
 last_image = None
 last_pokemon_board_sequence: list[str] = []
-loaded_icons: dict[str, Icon] = {}
+loaded_icons_cache: dict[str, Icon] = {}
 
 
 def load_icon_classes(values_to_execute: list[Pokemon], has_barriers):
     icons_list = []
+    if not loaded_icons_cache:
+        print("Icons Cache is Empty, starting a new one")
     for pokemon in values_to_execute:
         if pokemon.disabled:
             continue
-        if pokemon.name in loaded_icons:
-            icons_list.append(loaded_icons.get(pokemon.name))
+        if pokemon.name in loaded_icons_cache:
+            icons_list.append(loaded_icons_cache.get(pokemon.name))
         else:
             new_icon = Icon(pokemon.name, pokemon.path, False)
             icons_list.append(new_icon)
-            loaded_icons[new_icon.name] = new_icon
+            loaded_icons_cache[new_icon.name] = new_icon
         if has_barriers:
             pokemon_barrier_name = f"{constants.BARRIER_PREFIX}{pokemon.name}"
-            if pokemon_barrier_name in loaded_icons:
-                icons_list.append(loaded_icons.get(pokemon_barrier_name))
+            if pokemon_barrier_name in loaded_icons_cache:
+                icons_list.append(loaded_icons_cache.get(pokemon_barrier_name))
             else:
                 new_icon = Icon(pokemon.name, pokemon.path, True)
                 icons_list.append(new_icon)
-                loaded_icons[new_icon.name] = new_icon
+                loaded_icons_cache[new_icon.name] = new_icon
     return icons_list
 
 
