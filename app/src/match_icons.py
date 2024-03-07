@@ -16,7 +16,7 @@ from src import get_window, socket_utils, shuffle_config_files
 from src.execution_variables import execution_variables
 from src.classes import Icon, Match, Pokemon, MatchResult
 import statistics
-
+from datetime import datetime
 
 
 board_top_left = config_values.get("board_top_left")
@@ -159,40 +159,27 @@ def predict(original_image, icons_list, has_barriers) -> Match:
     return compare_with_list(resized, icons_list, has_barriers)
     
 
-def capture_board_screensot():
+def capture_board_screensot(save=True, return_type="cv2"):
     global board_top_left, board_bottom_right
     x0 = board_top_left[0]
     x1 = board_bottom_right[0] - board_top_left[0]
     y0 = board_top_left[1]
     y1 = board_bottom_right[1] - board_top_left[1]
+    print(f"Screenshot at: {datetime.now()}")
     img = pyautogui.screenshot(region=(x0, y0, x1, y1))
-    img.save(constants.LAST_BOARD_IMAGE_PATH)
-    return cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
+    if save:
+        img.save(constants.LAST_BOARD_IMAGE_PATH)
+    if return_type == "cv2":
+        return cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
+    else:
+        return img
 
-def make_cell_list():
-    img = capture_board_screensot()
-    return custom_utils.make_cell_list_from_img(img)
-
-# def concatenate_PIL_images(image_list, grid_size=(6, 6), spacing=10):
-#     # Calculate the size of the final image
-#     image_width, image_height = image_list[0].size
-#     grid_width = grid_size[1] * image_width + (grid_size[1] - 1) * spacing
-#     grid_height = grid_size[0] * image_height + (grid_size[0] - 1) * spacing
-
-#     # Create a blank white image as the background
-#     result_image = Image.new('RGB', (grid_width, grid_height), (255, 255, 255))
-
-#     # Paste each image into the result image
-#     for i in range(grid_size[0]):
-#         for j in range(grid_size[1]):
-#             if not image_list:
-#                 break
-#             current_image = image_list.pop(0)
-#             x_coordinate = j * (image_width + spacing)
-#             y_coordinate = i * (image_height + spacing)
-#             result_image.paste(current_image, (x_coordinate, y_coordinate))
-
-#     return result_image
+def make_cell_list(forced_board_image=None):
+    if forced_board_image is None:
+        img = capture_board_screensot()
+        return custom_utils.make_cell_list_from_img(img)
+    else:
+        return custom_utils.make_cell_list_from_img(forced_board_image)
 
 def has_airplay_on_screen():
     app_in_airplay_position = get_window.get_window_name_at_coordinate(board_top_left[0], y=board_top_left[1])
@@ -214,7 +201,7 @@ def get_metrics(match_list):
 
     
 
-def start_from_helper(pokemon_list: list[Pokemon], has_barriers, root=None, source=None, create_image=False, skip_shuffle_move=False) -> MatchResult:
+def start_from_helper(pokemon_list: list[Pokemon], has_barriers, root=None, source=None, create_image=False, skip_shuffle_move=False, forced_board_image=None) -> MatchResult:
     global last_image, last_pokemon_board_sequence
     if source == "loop" and not has_airplay_on_screen():
         print("airplay not on screen, ignoring")
@@ -223,7 +210,7 @@ def start_from_helper(pokemon_list: list[Pokemon], has_barriers, root=None, sour
         return MatchResult()
     icons_list = load_icon_classes(pokemon_list, has_barriers)
     match_list: List[Match] = []
-    cell_list = make_cell_list()
+    cell_list = make_cell_list(forced_board_image)
     for idx, cell in enumerate(cell_list):
         result = predict(cell, icons_list, has_barriers)
         match_list.append(result)

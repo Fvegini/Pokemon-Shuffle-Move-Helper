@@ -12,18 +12,20 @@ from src.classes import MatchResult
 custom_downscale = (96,96)
 
 class IconRegister(customtkinter.CTkToplevel):
-    def __init__(self, root = None):
+    def __init__(self, root = None, title="Icon Register", forced_board_image=None):
          
         super().__init__()
         self.root = root
+        self.title(title)
         self.geometry("250x250")
         self.selected_image = None
+        self.forced_board_image = forced_board_image
         self.image_widgets = []
         self.scrollable_frame = customtkinter.CTkScrollableFrame(master=self)
         self.scrollable_frame.pack(expand=True, fill="both")
         self.create_widgets()
         self.configure_initial_geometry()
-    
+
     def configure_initial_geometry(self):
         self.update()
         screen_width = self.winfo_screenwidth()
@@ -40,7 +42,10 @@ class IconRegister(customtkinter.CTkToplevel):
 
     def create_widgets(self):
         index = 0
-        self.match_result: MatchResult = self.root.execute_board_analysis(create_image=False, skip_shuffle_move=True)
+        if self.forced_board_image is not None:
+            self.match_result: MatchResult = self.root.execute_board_analysis(create_image=False, skip_shuffle_move=True, forced_board_image=self.forced_board_image)
+        else:
+            self.match_result = self.root.execute_board_analysis(create_image=False, skip_shuffle_move=True)
         if self.match_result.match_list:
             ordered_list = custom_utils.sort_by_class_attribute(self.match_result.match_list, "cosine_similarity", False)
             for match in ordered_list:

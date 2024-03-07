@@ -438,10 +438,10 @@ class ImageSelectorApp():
         remove_button = customtkinter.CTkButton(selected_image_frame, text="Remove", width=80, command=lambda: self.remove_selected_image(selected_image_frame, image_path))
         remove_button.pack(pady=5)
 
-        checkbox_disable: Any = customtkinter.CTkCheckBox(selected_image_frame, text="Disable", checkbox_width=12, checkbox_height=12, corner_radius=0, onvalue=True, offvalue=False, command=lambda: self.checkbox_disable_clicked(checkbox_disable, selected_image_frame))
+        checkbox_disable: customtkinter.CTkCheckBox = customtkinter.CTkCheckBox(selected_image_frame, text="Disable", checkbox_width=12, checkbox_height=12, corner_radius=0, onvalue=True, offvalue=False, command=lambda: self.checkbox_disable_clicked(checkbox_disable, selected_image_frame))
         checkbox_disable.pack(padx=(25, 0))
 
-        checkbox_stage = customtkinter.CTkCheckBox(selected_image_frame, text="Stage Add", checkbox_width=12, checkbox_height=12, corner_radius=0, onvalue=True, offvalue=False, command=lambda: self.checkbox_stage_add_clicked(checkbox_disable, selected_image_frame))
+        checkbox_stage: customtkinter.CTkCheckBox = customtkinter.CTkCheckBox(selected_image_frame, text="Stage Add", checkbox_width=12, checkbox_height=12, corner_radius=0, onvalue=True, offvalue=False, command=lambda: self.checkbox_stage_add_clicked(checkbox_stage, selected_image_frame))
         checkbox_stage.pack(padx=(25, 0))
 
         selected_image_frame.pokemon = Pokemon(selected_image_frame.name, checkbox_disable.get(), checkbox_stage.get())
@@ -462,6 +462,7 @@ class ImageSelectorApp():
         
 
     def checkbox_disable_clicked(self, checkbox, selected_image_frame):
+        self.clear_icons_cache()
         if checkbox.get():
             selected_image_frame.configure(fg_color="gray")
             selected_image_frame.pokemon.disabled = True
@@ -470,6 +471,7 @@ class ImageSelectorApp():
             selected_image_frame.pokemon.disabled = False
 
     def checkbox_stage_add_clicked(self, checkbox, selected_image_frame):
+        self.clear_icons_cache()
         if checkbox.get():
             selected_image_frame.pokemon.stage_added = True
         else:
@@ -517,7 +519,12 @@ class ImageSelectorApp():
 
     def register_new_icon(self):
         self.disable_loop()
-        IconRegister(root=self)
+        img_list = []
+        for i in range(0,6):
+            img_list.append(match_icons.capture_board_screensot(save=False, return_type="PIL"))
+        for idx, screen in enumerate(img_list):
+            cv2_board = cv2.cvtColor(np.array(screen), cv2.COLOR_RGB2BGR)
+            IconRegister(root=self, title=idx, forced_board_image=cv2_board)
 
     def open_create_register_screen(self, folder):
         self.disable_loop()
@@ -529,6 +536,7 @@ class ImageSelectorApp():
 
     def clear_icons_cache(self):
         match_icons.loaded_icons_cache = {}
+        execution_variables.has_modifications = True
 
     def get_selected_images_widgets_list(self):
         widget_list = []
@@ -538,9 +546,9 @@ class ImageSelectorApp():
                 widget_list.append(image_widgets)
         return widget_list
 
-    def execute_board_analysis(self, source=None, create_image=False, skip_shuffle_move=False) -> MatchResult:
+    def execute_board_analysis(self, source=None, create_image=False, skip_shuffle_move=False, forced_board_image=None) -> MatchResult:
         pokemons_list = self.extract_pokemon_list()
-        return match_icons.start_from_helper(pokemons_list, self.has_barrier_var.get(), root=self, source=source, create_image=create_image, skip_shuffle_move=skip_shuffle_move)
+        return match_icons.start_from_helper(pokemons_list, self.has_barrier_var.get(), root=self, source=source, create_image=create_image, skip_shuffle_move=skip_shuffle_move, forced_board_image=forced_board_image)
 
     def extract_pokemon_list(self):
         pokemons_list = []
