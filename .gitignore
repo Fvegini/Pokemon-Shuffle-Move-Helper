@@ -13,3 +13,5 @@ main.exe
 *.rar
 .env
 *.json
+teste.ipynb
+*.zip
