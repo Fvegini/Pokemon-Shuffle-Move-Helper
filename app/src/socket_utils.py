@@ -25,10 +25,14 @@ def loadNewBoard():
             s.settimeout(5)
             s.connect(('localhost', socket_port))  # Use the same port as in the Java application
             s.sendall(b'loadNewBoard\n')
-
             result = s.recv(1024).decode('utf-8')
+            if not result:
+                print(f"Socket connected on port {socket_port} but without any response.")
+            else:
+                print(f"Shuffle Move Result: {result}")
             return result
     except:
+        print(f"Cant connect to the socket on port {socket_port}, check if Shuffle Move is opened or if the port is being used by another program")
         return ""
 
 def ping_shuffle_move():

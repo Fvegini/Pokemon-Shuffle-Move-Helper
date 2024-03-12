@@ -156,6 +156,10 @@ CROW_6 {CROW}
     with open(BOARD_PATH, 'w') as file:
         file.write(board_file_content)
 
+def verify_shuffle_file(file_path: Path):
+    if not file_path.exists():
+        print(f"File {file_path.as_posix()} not found")
+
 def update_teams_file_with_pokemon_list(pokemon_list, stage_name):
     names_list, _, mega_name = process_pokemon_names_list([pokemon.name for pokemon in pokemon_list])
     return update_teams_file(names_list, mega_name, [], stage_name)
@@ -209,3 +213,7 @@ def update_gradingModes_file(source, mega_activated):
         with open(GRADING_MODES_PATH, 'w') as file:
             file.writelines(lines)
     return
+
+verify_shuffle_file(BOARD_PATH)
+verify_shuffle_file(TEAMS_DATA_PATH)
+verify_shuffle_file(GRADING_MODES_PATH)
