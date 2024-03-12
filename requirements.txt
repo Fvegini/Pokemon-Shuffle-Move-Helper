@@ -6,5 +6,6 @@ pyautogui==0.9.54
 pynput==1.7.6
 mediapipe==0.10.8
 CTkToolTip==0.8
+CTkMessagebox==2.5
 # viztracer==0.16.2
 # pyinstaller==6.3.0

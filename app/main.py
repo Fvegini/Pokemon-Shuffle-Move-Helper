@@ -15,6 +15,8 @@ from CTkToolTip import CTkToolTip
 from src.classes import MatchResult, Pokemon
 from src.icon_register import IconRegister
 from src import embed
+from src import version
+from src import splash
 import cv2
 import numpy as np
 warnings.filterwarnings("ignore", category=UserWarning, message="CTkButton Warning: Given image is not CTkImage but*")
@@ -30,7 +32,7 @@ class ImageSelectorApp():
     def __init__(self, master):
         
         self.master = master
-        self.master.title("Pokemon Shuffle Helper")
+        self.master.title(f"Pokemon Shuffle Helper {version.current_version}")
         self.create_tab_menu()
         
         self.appview = customtkinter.CTkFrame(self.master)
@@ -45,6 +47,8 @@ class ImageSelectorApp():
         self.load_last_team()
         self.update_preview_image()
         self.configure_initial_geometry()
+        splash.close_splash()
+        version.verify_new_version()
 
     def create_tab_menu(self):
         self.tabview = customtkinter.CTkTabview(self.master, height=100)

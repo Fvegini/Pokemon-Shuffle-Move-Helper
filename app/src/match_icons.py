@@ -158,7 +158,7 @@ def capture_board_screensot(save=True, return_type="cv2"):
     x1 = board_bottom_right[0] - board_top_left[0]
     y0 = board_top_left[1]
     y1 = board_bottom_right[1] - board_top_left[1]
-    print(f"Screenshot at: {datetime.now()}")
+    # print(f"Screenshot at: {datetime.now()}")
     img = pyautogui.screenshot(region=(x0, y0, x1, y1))
     if save:
         img.save(constants.LAST_BOARD_IMAGE_PATH)
