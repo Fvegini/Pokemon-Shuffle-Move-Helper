@@ -14,7 +14,7 @@ for /f %%v in ('python -c "from app.src.version import current_version; print(cu
 
 echo Zipping contents of dist\main...
 cd dist
-powershell Compress-Archive -Path .\main\* -DestinationPath ..\%version%.zip
+powershell Compress-Archive -Path .\main\* -DestinationPath ..\Shufle_Move_Helper_%version%.zip
 cd ..
 
 echo Done.
