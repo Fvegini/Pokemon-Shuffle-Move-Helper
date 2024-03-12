@@ -1,8 +1,5 @@
-from itertools import chain
-import shutil
 from typing import List
 import cv2
-import os
 # from image_similarity_measures.quality_metrics import rmse, ssim
 import pyautogui
 import numpy as np
@@ -10,10 +7,9 @@ import numpy as np
 from pathlib import Path
 import time
 from src.embed import loaded_embedder
-from src import constants, custom_utils, config_utils
+from src import constants, custom_utils
 from src.config_utils import config_values
-from src import get_window, socket_utils, shuffle_config_files
-from src.execution_variables import execution_variables
+from src import socket_utils, shuffle_config_files
 from src.classes import Icon, Match, Pokemon, MatchResult
 import statistics
 from datetime import datetime
@@ -21,12 +17,9 @@ from datetime import datetime
 
 board_top_left = config_values.get("board_top_left")
 board_bottom_right = config_values.get("board_bottom_right")
-shuffle_move_name = config_values.get("shuffle_move_name")
-airplay_app_name = config_values.get("airplay_app_name")
 fake_barrier_active = False
 
 custom_board_image = None
-last_image = None
 last_pokemon_board_sequence: list[str] = []
 loaded_icons_cache: dict[str, Icon] = {}
 
@@ -181,15 +174,6 @@ def make_cell_list(forced_board_image=None):
     else:
         return custom_utils.make_cell_list_from_img(forced_board_image)
 
-def has_airplay_on_screen():
-    app_in_airplay_position = get_window.get_window_name_at_coordinate(board_top_left[0], y=board_top_left[1])
-    has_airplay = any([name.lower() in app_in_airplay_position.lower() for name in airplay_app_name])
-    if not has_airplay:
-        print(f"App Found in AirPlay Position: {app_in_airplay_position} - In Position ({board_top_left[0]}, {board_top_left[1]})")
-        print(f"List of possible app names is: {airplay_app_name}")
-
-    return has_airplay
-
 def get_metrics(match_list):
     numbers_list = [match.cosine_similarity for match in match_list]
     return {
@@ -202,12 +186,7 @@ def get_metrics(match_list):
     
 
 def start_from_helper(pokemon_list: list[Pokemon], has_barriers, root=None, source=None, create_image=False, skip_shuffle_move=False, forced_board_image=None) -> MatchResult:
-    global last_image, last_pokemon_board_sequence
-    if source == "loop" and not has_airplay_on_screen():
-        print("airplay not on screen, ignoring")
-        if root:
-            root.info_message.configure(text="Loop Mode: Airplay not on screen, ignoring")
-        return MatchResult()
+    global last_pokemon_board_sequence
     icons_list = load_icon_classes(pokemon_list, has_barriers)
     match_list: List[Match] = []
     cell_list = make_cell_list(forced_board_image)
