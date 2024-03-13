@@ -289,3 +289,7 @@ def get_next_filename(filepath):
         path = directory / f"{base_name}{suffix}"
 
     return path
+
+def verify_shuffle_file(file_path: Path):
+    if not file_path.exists():
+        print(f"File {file_path.as_posix()} not found")

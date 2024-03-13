@@ -1,19 +1,26 @@
 import socket
 from pathlib import Path
+from src import custom_utils
 
 socket_port = None
-
+PREFERENCES_PATH = Path.joinpath(Path.home(), "Shuffle-Move", "config", "preferences.txt")
+custom_utils.verify_shuffle_file(PREFERENCES_PATH)
 
 def load_socker_port():
     global socket_port
-    with open( Path.joinpath(Path.home(), "Shuffle-Move", "config", "preferences.txt"), "r") as file:
-        lines = file.readlines()
-    
-    for line in lines:
-        if "SOCKET_PORT" in line:
-            socket_port = int(line.split()[-1])
-            return
-    return 54321
+    try:
+        with open(PREFERENCES_PATH, "r") as file:
+            lines = file.readlines()
+        
+        for line in lines:
+            if "SOCKET_PORT" in line:
+                socket_port = int(line.split()[-1])
+                return
+    except:
+        pass
+    print(f"No SOCKET_PORT found in {PREFERENCES_PATH.as_posix()}")
+    socket_port = 54321
+    return
     
 
 def loadNewBoard():
