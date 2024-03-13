@@ -4,7 +4,7 @@ import json
 import customtkinter
 from CTkMessagebox import CTkMessagebox
 
-current_version = "1.2.2"
+current_version = "1.2.3"
 latest_version = None
 
 def verify_new_version():
