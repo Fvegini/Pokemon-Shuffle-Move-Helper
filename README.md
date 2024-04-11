@@ -2,11 +2,12 @@
 
 This app helps with the filling of the Shuffle Move Team and Board to speed up-some simple and fast Pokemon Shuffle Plays.
 
+I made a video showing how to properly use the app: [Youtube Tutorial Link](https://youtu.be/dj1tD3g5shQ)
+
 ## Getting Started
 
 ### Dependencies
 
-<!-- <img src="assets/images/last_board.png" width="200"> -->
 * I only have Windows, so I'm not sure if it will work on other OS.
 
 * Modified Version of the shuffle move, found in my fork from the official version here: [Shuffle Move](https://github.com/Fvegini/Shuffle-Move) 
