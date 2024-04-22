@@ -65,7 +65,7 @@ class PokemonIconSelector(tk.Toplevel):
         widgets_list = self.root.get_selected_images_widgets_list()
         for widgets in widgets_list:
             if self.folder == "barrier":
-                image_cv2 = cv2.imread(Path(constants.IMAGES_PATH, widgets[0].cget("text")).as_posix())
+                image_cv2 = custom_utils.open_cv2_image(Path(constants.IMAGES_PATH, widgets[0].cget("text")).as_posix())
                 image_cv2 = custom_utils.add_transparent_image(image_cv2)
                 image = Image.fromarray(cv2.cvtColor(image_cv2, cv2.COLOR_RGB2BGR))
             else:

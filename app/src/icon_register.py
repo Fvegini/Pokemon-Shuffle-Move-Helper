@@ -111,7 +111,7 @@ class PokemonIconSelector(customtkinter.CTkToplevel):
         widgets_list = self.root.get_selected_images_widgets_list()
         for widgets in widgets_list:
             name = widgets[0].cget("text")
-            original_image_cv2 = cv2.imread(Path(constants.IMAGES_PATH, widgets[0].cget("text")).as_posix())
+            original_image_cv2 = custom_utils.open_cv2_image(Path(constants.IMAGES_PATH, widgets[0].cget("text")).as_posix())
             barrier_image_cv2 = custom_utils.add_transparent_image(original_image_cv2)
             self.append_widget(custom_utils.cv2_to_pil(original_image_cv2, custom_downscale), name, row_index, col_index, False)
             col_index, row_index = append_index(col_index, row_index, num_columns)

@@ -29,10 +29,19 @@ def resize_and_save_np_image(image_path, np_image, image_size):
 def open_and_resize_np_image(image_path, image_size):
     if type(image_path) == str:
         image_path = Path(image_path)
-    np_img = cv2.imread(image_path.as_posix())
+    np_img = open_cv2_image(image_path.as_posix())
     np_img = resize_cv2_image(np_img, image_size)
     return np_img
 
+def open_cv2_image(image_path):
+    np_img = cv2.imread(image_path)
+    if np_img is not None:
+        return np_img
+    try:
+        return cv2.imdecode(np.fromfile(image_path, dtype=np.uint8), cv2.IMREAD_UNCHANGED)
+    except:
+        return None
+      
 def cv2_to_pil(cv2_image, image_size=None):
     if image_size:
         cv2_image = resize_cv2_image(cv2_image, image_size)
