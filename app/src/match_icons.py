@@ -6,6 +6,7 @@ import numpy as np
 # from PIL import Image
 from pathlib import Path
 import time
+from src.custom_utils import capture_board_screensot
 from src.embed import loaded_embedder
 from src import constants, custom_utils
 from src.config_utils import config_values
@@ -13,16 +14,20 @@ from src import socket_utils, shuffle_config_files
 from src.classes import Icon, Match, Pokemon, MatchResult
 import statistics
 from datetime import datetime
+import screen_ocr
+from src import adb_utils
+import math
 
-
-board_top_left = config_values.get("board_top_left")
-board_bottom_right = config_values.get("board_bottom_right")
+center_poinst_list = custom_utils.get_center_positions_list(config_values.get("board_top_left"), config_values.get("board_bottom_right"))
+screenshot_region = (config_values.get("board_top_left")[0], 0, config_values.get("board_bottom_right")[0] - config_values.get("board_top_left")[0], 1080)
 fake_barrier_active = False
+ocr_reader = screen_ocr.Reader.create_quality_reader()
 
 custom_board_image = None
 last_pokemon_board_sequence: list[str] = []
 loaded_icons_cache: dict[str, Icon] = {}
 
+metal_icon = Icon("Metal", Path("Metal.png"), False)
 
 def load_icon_classes(values_to_execute: list[Pokemon], has_barriers):
     icons_list = []
@@ -150,22 +155,6 @@ def calculate_percentage_difference(num1, num2):
 def predict(original_image, icons_list, has_barriers) -> Match:
     resized = cv2.resize(original_image, constants.downscale_res)
     return compare_with_list(resized, icons_list, has_barriers)
-    
-
-def capture_board_screensot(save=True, return_type="cv2"):
-    global board_top_left, board_bottom_right
-    x0 = board_top_left[0]
-    x1 = board_bottom_right[0] - board_top_left[0]
-    y0 = board_top_left[1]
-    y1 = board_bottom_right[1] - board_top_left[1]
-    # print(f"Screenshot at: {datetime.now()}")
-    img = pyautogui.screenshot(region=(x0, y0, x1, y1))
-    if save:
-        img.save(constants.LAST_BOARD_IMAGE_PATH)
-    if return_type == "cv2":
-        return cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
-    else:
-        return img
 
 def make_cell_list(forced_board_image=None):
     if forced_board_image is None:
@@ -187,11 +176,22 @@ def get_metrics(match_list):
 
 def start_from_helper(pokemon_list: list[Pokemon], has_barriers, root=None, source=None, create_image=False, skip_shuffle_move=False, forced_board_image=None) -> MatchResult:
     global last_pokemon_board_sequence
+    print("Starting a new check")
     icons_list = load_icon_classes(pokemon_list, has_barriers)
     match_list: List[Match] = []
     cell_list = make_cell_list(forced_board_image)
+
+    original_image = cv2.imread(constants.LAST_SCREEN_IMAGE_PATH)
+    if not adb_utils.has_board_active(original_image):
+        print("No Board Active")
+        adb_utils.check_hearts(original_image)
+        adb_utils.check_buttons_to_click(original_image)
+        return MatchResult()
+        
     for idx, cell in enumerate(cell_list):
         result = predict(cell, icons_list, has_barriers)
+        if result.name in ["Fog", "_Fog", "Pikachu_a"]:
+            result = update_fog_match(result, icons_list, has_barriers, idx)
         match_list.append(result)
 
     # new_list = match_list.copy()    
@@ -204,13 +204,16 @@ def start_from_helper(pokemon_list: list[Pokemon], has_barriers, root=None, sour
     pokemon_board_sequence = [match.name for match in match_list]
     if skip_shuffle_move:
         return MatchResult(match_list=match_list)
-    if pokemon_board_sequence != last_pokemon_board_sequence or source != "loop":
-        shuffle_config_files.create_board_files(sequence_names_list, original_complete_names_list, extra_supports_list, source)
-        last_pokemon_board_sequence = pokemon_board_sequence
-        result = socket_utils.loadNewBoard()
-    else:
-        if root:
-            root.info_message.configure(text="Loop Mode: Same commands found")
+    # if pokemon_board_sequence != last_pokemon_board_sequence or source != "loop":
+    shuffle_config_files.create_board_files(sequence_names_list, original_complete_names_list, extra_supports_list, source)
+    last_pokemon_board_sequence = pokemon_board_sequence
+    result = socket_utils.loadNewBoard()
+    # else:
+        # if root:
+            # root.info_message.configure(text="Loop Mode: Same commands found")
+    
+    adb_utils.execute_play(result)
+    # execute_move(result)
     result_image = None
     if create_image:
         result_image = custom_utils.make_match_image_comparison(result, match_list)
@@ -233,3 +236,25 @@ def start_from_bot(pokemon_list: list[Pokemon], has_barriers, image, current_sta
         result_image = custom_utils.make_match_image_comparison(result, match_list)
     return MatchResult(result=result, match_image=result_image, match_list=match_list)
 
+def update_fog_match(result, icons_list, has_barriers, idx):
+    # row, column = [int(coordinate) for coordinate in custom_utils.index_to_coordinates(idx)]
+    row, column = custom_utils.index_to_coordinates(idx)
+    board_top_left = config_values.get("board_top_left")
+    board_bottom_right = config_values.get("board_bottom_right")
+
+    board_x = board_top_left[0]
+    board_y = board_top_left[1]
+    board_w = (board_bottom_right[0] - board_top_left[0]) / 6
+    board_h = (board_bottom_right[1] - board_top_left[1]) / 6
+
+    cell_x0 =  math.floor(board_x + (board_w * (column - 1)))
+    cell_y0 =  math.floor(board_y + (board_h * (row - 1)))
+    cell_x1 =  math.floor(board_x + (board_w * (column)))
+    cell_y1 =  math.floor(board_y + (board_h * (row)))
+
+    
+    new_img = adb_utils.update_fog_image(cell_x0, cell_y0, cell_x1, cell_y1, board_w, board_h)
+    new_result = predict(new_img, icons_list, has_barriers)
+    if new_result.name == "Fog":
+        return predict(new_img, [metal_icon], False)
+    return new_result

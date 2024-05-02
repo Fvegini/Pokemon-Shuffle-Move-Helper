@@ -17,10 +17,13 @@ from src.icon_register import IconRegister
 from src import embed
 from src import version
 from src import splash
+from src import adb_utils
 import cv2
 import numpy as np
-warnings.filterwarnings("ignore", category=UserWarning, message="CTkButton Warning: Given image is not CTkImage but*")
+import threading
+import time
 
+warnings.filterwarnings("ignore", category=UserWarning, message="CTkButton Warning: Given image is not CTkImage but*")
 # from viztracer.decorator import trace_and_save
 
 customtkinter.set_appearance_mode("dark")  # Modes: "System" (standard), "Dark", "Light"
@@ -30,7 +33,7 @@ customtkinter.set_default_color_theme("dark-blue")  # Themes: "blue" (standard),
 class ImageSelectorApp():
 
     def __init__(self, master):
-        
+        self.analysis_lock = threading.Lock()
         self.master = master
         self.master.title(f"Pokemon Shuffle Helper {version.current_version}")
         self.create_tab_menu()
@@ -97,17 +100,17 @@ class ImageSelectorApp():
         # btn1_1_1 = customtkinter.CTkButton(frame1_1_top, text="Top Left", command=lambda: self.show_click_popup(click_counter= 1), image=icon, **self.tab_button_style)
         # btn1_1_2 = customtkinter.CTkButton(frame1_1_top, text="Bottom Right", command=lambda: self.show_click_popup(click_counter= 2), image=icon, **self.tab_button_style)
         btn1_1_3 = customtkinter.CTkButton(frame1_1_top, text="Board Position", command=lambda: self.show_board_position_selector_app(), image=icon, **self.tab_button_style)
-        # btn1_1_4 = customtkinter.CTkButton(frame1_1_top, text="Return Position", command=lambda: self.show_click_popup(click_counter= 4), image=icon, **self.tab_button_style)
+        btn1_1_4 = customtkinter.CTkButton(frame1_1_top, text="Select Current Stage", command=lambda: self.show_select_current_stage(), image=icon, **self.tab_button_style)
 
         # CTkToolTip(btn1_1_1, delay=0.5, message="Configure Board Top Left")
         # CTkToolTip(btn1_1_2, delay=0.5, message="Configure Board Bottom Right")
         CTkToolTip(btn1_1_3, delay=0.5, message="Configure Shuffle Move First Square")
-        # CTkToolTip(btn1_1_4, delay=0.5, message="Configure Mouse Return Position")
+        CTkToolTip(btn1_1_4, delay=0.5, message="Configure Mouse Return Position")
 
         # btn1_1_1.pack(side=tk.LEFT)
         # btn1_1_2.pack(side=tk.LEFT)
         btn1_1_3.pack(side=tk.LEFT)
-        # btn1_1_4.pack(side=tk.LEFT)
+        btn1_1_4.pack(side=tk.LEFT)
 
         frame1_2 = customtkinter.CTkFrame(self.tab1, fg_color="transparent")
         frame1_2_top = customtkinter.CTkFrame(frame1_2, fg_color="transparent")
@@ -213,13 +216,19 @@ class ImageSelectorApp():
         
         self.has_barrier_var = tk.BooleanVar(value=config_utils.config_values.get("has_barrier")) 
         self.control_loop_var = tk.BooleanVar(value=False)
-
-       
+        self.adb_board_var = tk.BooleanVar(value=config_utils.config_values.get("adb_board")) 
+        self.adb_move_var = tk.BooleanVar(value=config_utils.config_values.get("adb_move"))
+        
+        
         self.control_loop_switch = customtkinter.CTkSwitch(frame3_1_top, text="Capture Loop", variable=self.control_loop_var, onvalue=True, offvalue=False, command=lambda: self.control_loop_function())
         self.has_barrier_switch = customtkinter.CTkSwitch(frame3_1_top, text="Has Barriers", variable=self.has_barrier_var, command=self.reveal_or_hide_barrier_img)
         self.control_loop_switch.pack(side=tk.TOP, anchor=tk.W, padx=5)
         self.has_barrier_switch.pack(side=tk.TOP, anchor=tk.W, padx=5)
         
+        self.adb_board_switch = customtkinter.CTkSwitch(frame3_1_top, text="ADB Board", variable=self.adb_board_var, onvalue=True, offvalue=False, command=self.adb_board)
+        self.adb_move_switch = customtkinter.CTkSwitch(frame3_1_top, text="ADB Move", variable=self.adb_move_var, onvalue=True, offvalue=False, command=self.adb_move)
+        self.adb_board_switch.pack(side=tk.TOP, anchor=tk.W, padx=5)
+        self.adb_move_switch.pack(side=tk.TOP, anchor=tk.W, padx=5)
         keyboard.add_hotkey('f3', lambda:  self.control_loop_switch.toggle())
         keyboard.add_hotkey('f4', lambda: self.has_barrier_switch.toggle())
         
@@ -232,10 +241,10 @@ class ImageSelectorApp():
         ttk.Separator(self.tab3, orient='vertical').pack(side=tk.LEFT, fill='y', anchor=tk.W)
         customtkinter.CTkLabel(frame3_2_bottom, text="").pack(side=tk.BOTTOM)
 
-        btn3_2_1 = customtkinter.CTkButton(frame3_2_top, text="Execute", command=lambda: self.execute_board_analysis(source="button"), image=self.get_icon("play-circle"), **self.tab_button_style)
+        btn3_2_1 = customtkinter.CTkButton(frame3_2_top, text="Execute", command=lambda: self.execute_board_analysis_threaded(source="button"), image=self.get_icon("play-circle"), **self.tab_button_style)
         CTkToolTip(btn3_2_1, delay=0.5, message="Execute (F2)")
         btn3_2_1.pack(side=tk.LEFT)
-        keyboard.add_hotkey('f2', lambda: self.execute_board_analysis(source="shortcut")) #type: ignore
+        keyboard.add_hotkey('f2', lambda: self.execute_board_analysis_threaded(source="shortcut")) #type: ignore
         
         btn2_1_1 = customtkinter.CTkButton(frame3_2_top, text="Load Team", command=self.load_team, image=self.get_icon("cloud-download-alt"), **self.tab_button_style)
         CTkToolTip(btn2_1_1, delay=0.5, message="Load Team From Shuffle Move Config File")
@@ -525,10 +534,10 @@ class ImageSelectorApp():
         self.disable_loop()
         img_list = []
         for i in range(0,6):
-            img_list.append(match_icons.capture_board_screensot(save=False, return_type="PIL"))
+            img_list.append(custom_utils.capture_board_screensot(save=False, return_type="cv2"))
         for idx, screen in enumerate(img_list):
-            cv2_board = cv2.cvtColor(np.array(screen), cv2.COLOR_RGB2BGR)
-            IconRegister(root=self, title=idx, forced_board_image=cv2_board)
+            # cv2_board = cv2.cvtColor(np.array(screen), cv2.COLOR_RGB2BGR)
+            IconRegister(root=self, title=idx, forced_board_image=screen)
 
     def open_create_register_screen(self, folder):
         self.disable_loop()
@@ -551,8 +560,32 @@ class ImageSelectorApp():
         return widget_list
 
     def execute_board_analysis(self, source=None, create_image=False, skip_shuffle_move=False, forced_board_image=None) -> MatchResult:
-        pokemons_list = self.extract_pokemon_list()
-        return match_icons.start_from_helper(pokemons_list, self.has_barrier_var.get(), root=self, source=source, create_image=create_image, skip_shuffle_move=skip_shuffle_move, forced_board_image=forced_board_image)
+        if self.analysis_lock.locked():
+            print("Already running.")
+            return MatchResult()
+
+        with self.analysis_lock:
+            print("Iniciando o start_from_helper")
+            pokemons_list = self.extract_pokemon_list()
+            match_result = match_icons.start_from_helper(pokemons_list, self.has_barrier_var.get(), root=self, source=source, create_image=create_image, skip_shuffle_move=skip_shuffle_move, forced_board_image=forced_board_image)
+            if match_result:
+                self.master.after(200, self.control_loop_function)
+            else:
+                self.master.after(5000, self.control_loop_function)
+        return match_result
+
+    def execute_board_analysis_threaded(self, source=None, create_image=False, skip_shuffle_move=False, forced_board_image=None):
+        threading.Thread(target=self.execute_board_analysis, args=(source, create_image, skip_shuffle_move, forced_board_image)).start()
+
+    def control_loop_function(self):
+        if not self.control_loop_var.get():
+            return
+        else:
+            self.execute_board_analysis_threaded(source="loop")
+            if adb_utils.thread_sleep_timer:
+                print(f"Thread is locked for {adb_utils.thread_sleep_timer} seconds, waiting to return the loop.")
+                self.master.after(adb_utils.thread_sleep_timer * 1000, self.control_loop_function)                
+                return
 
     def extract_pokemon_list(self):
         pokemons_list = []
@@ -572,26 +605,27 @@ class ImageSelectorApp():
     def show_board_position_selector_app(self):
         mouse_utils.BoardPositionSelectorApp(master=self.master, selector_app=self)
 
+    def show_select_current_stage(self):
+        mouse_utils.CurrentStageSelectorApp(master=self.master, selector_app=self)
+
     def disable_loop(self):
         if self.control_loop_var.get():
             self.control_loop_switch.toggle()
         
-
-    def control_loop_function(self):
-        if not self.control_loop_var.get():
-            return
-        else:
-            result = self.execute_board_analysis(source="loop")
-            if not result:
-                self.check_job = self.master.after(3000, self.control_loop_function)
-            else:
-                self.check_job = self.master.after(200, self.control_loop_function)
 
     def get_icon(self, icon_name):
         if customtkinter.get_appearance_mode() == "Dark":
             return customtkinter.CTkImage(Image.open(Path("assets", "fonts", f"{icon_name}-solid_w.png")), size=(25, 25))
         else:
             return customtkinter.CTkImage(Image.open(Path("assets", "fonts", f"{icon_name}-solid.png")), size=(25, 25))
+
+    def adb_board(self):
+            v = self.adb_board_var.get()
+            config_utils.update_config("adb_board", v)
+
+    def adb_move(self):
+        v = self.adb_move_var.get()
+        config_utils.update_config("adb_move", v)
 
     def reveal_or_hide_barrier_img(self):
         has_barrier = self.has_barrier_var.get()
@@ -673,19 +707,21 @@ class ImageSelectorApp():
 
     def force_update_mouse_buttons(self):
         self.master.update()
-        screen_width = self.master.winfo_screenwidth()
-        if screen_width == 2560:
-            print("Updating to Ultra Wide Positions")
-            match_icons.board_top_left = (364, 488)
-            match_icons.board_bottom_right = (914, 1031)
-        elif screen_width == 1920:
-            print("Updating to Full HD Positions")
-            # match_icons.board_top_left = (214, 488)
-            # match_icons.board_bottom_right = (741, 1010)
-            match_icons.board_top_left = (208, 482)
-            match_icons.board_bottom_right = (750, 1021)
-        else:
-            return
+        # screen_width = self.master.winfo_screenwidth()
+        # if screen_width == 2560:
+        #     print("Updating to Ultra Wide Positions")
+        #     match_icons.board_top_left = (364, 488)
+        #     match_icons.board_bottom_right = (914, 1031)
+        #     match_icons.center_poinst_list = custom_utils.get_center_positions_list(match_icons.board_top_left, match_icons.board_bottom_right)
+        # elif screen_width == 1920:
+        #     print("Updating to Full HD Positions")
+        #     # match_icons.board_top_left = (208, 482)
+        #     # match_icons.board_bottom_right = (750, 1021)
+        #     match_icons.board_top_left = (826, 483)
+        #     match_icons.board_bottom_right = (1380, 1032)
+        #     match_icons.center_poinst_list = custom_utils.get_center_positions_list(match_icons.board_top_left, match_icons.board_bottom_right)
+        # else:
+        #     return
 
 def merge_pil_images(image1, image2):
     # Get the width and height of each image

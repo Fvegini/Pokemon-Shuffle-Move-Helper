@@ -38,9 +38,7 @@ class Icon():
     images_list: List[CustomImage]
 
     def __init__(self, name, path, barrier):
-        if name == "_Fog":
-            self.name = "Pikachu_a"
-        elif name == "_Empty":
+        if name == "_Empty":
             self.name = "Air"
         elif name.startswith("_"):
             self.name = path.stem[1:]

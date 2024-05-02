@@ -4,6 +4,7 @@ __pycache__
 *test
 to_remove
 last_board.png
+last_screen.png
 *.pkl
 custom_tk
 *.ini

@@ -9,5 +9,6 @@ CTkToolTip==0.8
 CTkMessagebox==2.5
 thefuzz==0.22.1
 requests==2.31.0
+# pip install screen-ocr[winrt]
 # viztracer==0.16.2
 # pyinstaller==6.3.0

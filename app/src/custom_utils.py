@@ -3,8 +3,10 @@ import cv2
 import numpy as np
 from src.classes import Match
 from typing import List
-from src import constants
+from src import adb_utils, constants, custom_utils
 from PIL import Image
+import pyautogui
+from src.config_utils import config_values, read_config
 
 def find_matching_files(directory, prefix, suffix):
     directory_path = Path(directory)
@@ -18,6 +20,40 @@ def resize_cv2_image(image, target_size):
         return cv2.resize(image, target_size)
     except:
         return None
+
+def resize_cv2_with_scale(image, scale_percent):
+    # Get the current dimensions of the image
+    height, width = image.shape[:2]
+
+    # Calculate the new dimensions
+    new_width = int(width * scale_percent / 100)
+    new_height = int(height * scale_percent / 100)
+
+    # Resize the image
+    resized_image = cv2.resize(image, (new_width, new_height))
+
+    return resized_image
+
+def resize_image_to_fit(image, screen_width, screen_height):
+    image_height, image_width = image.shape[:2]
+
+    # Calculate the aspect ratios
+    screen_aspect_ratio = screen_width / screen_height
+    image_aspect_ratio = image_width / image_height
+
+    # Determine which dimension to scale by
+    if screen_aspect_ratio > image_aspect_ratio:
+        # Scale by height
+        scale_factor = screen_height / image_height
+    else:
+        # Scale by width
+        scale_factor = screen_width / image_width
+
+    # Resize the image
+    resized_image = cv2.resize(image, None, fx=scale_factor, fy=scale_factor)
+
+    return resized_image
+
 
 def resize_and_save_np_image(image_path, np_image, image_size):
     resized = resize_cv2_image(np_image, image_size)
@@ -46,6 +82,12 @@ def cv2_to_pil(cv2_image, image_size=None):
     if image_size:
         cv2_image = resize_cv2_image(cv2_image, image_size)
     return Image.fromarray(cv2.cvtColor(cv2_image, cv2.COLOR_RGB2BGR))
+
+def pil_to_cv2(pil_image):
+    return cv2.cvtColor(np.array(pil_image), cv2.COLOR_RGB2BGR)
+
+def show_cv2_as_pil(cv2_image):
+    Image.fromarray(cv2.cvtColor(cv2_image, cv2.COLOR_RGB2BGR)).show()
 
 def get_taskbar_size():
     try:
@@ -217,6 +259,29 @@ def make_match_image_comparison(result, match_list: List[Match]):
     except:
         return None
 
+def extract_result_idx(result):
+    try:
+       red = result.split(":")[0].split("->")[0].strip()
+       red_idx = coordinates_to_index(*red.split(","))
+       blue = result.split(":")[0].split("->")[1].strip()
+       blue_idx = coordinates_to_index(*blue.split(","))
+       if red == "0,0" or blue == "0,0":
+           return None, None
+       return red_idx, blue_idx
+    except:
+        return None, None
+
+def extract_result_position(result):
+    try:
+        result_str_list = result.split(":")[0].split("->")
+        if result_str_list[0] == "0,0" or result_str_list[1] == "0,0":
+           return None, None, None, None
+        red_row, red_column = [int(point) for point in result_str_list[0].strip().split(",")]
+        blue_row, blue_column = [int(point) for point in result_str_list[1].strip().split(",")]
+        return red_row, red_column, blue_row, blue_column
+    except:
+        return None, None, None, None
+
 def update_match_with_result(result, match_list: List[Match]):
     try:
        red = result.split(":")[0].split("->")[0].strip()
@@ -233,6 +298,11 @@ def update_match_with_result(result, match_list: List[Match]):
 
 def coordinates_to_index(x, y, width=6):
     return ((int(x) - 1) * width) + (int(y) - 1)
+
+def index_to_coordinates(index, width=6):
+    x = index // width + 1
+    y = index % width + 1
+    return x, y
 
 def add_layer(image, color):
     square_size = image.shape[0]
@@ -302,3 +372,117 @@ def get_next_filename(filepath):
 def verify_shuffle_file(file_path: Path):
     if not file_path.exists():
         print(f"File {file_path.as_posix()} not found")
+
+
+def get_center_positions_list(left_position, right_position):
+    
+    x0 = left_position[0]
+    y0 = left_position[1]
+    x1 = right_position[0]
+    y1 = right_position[1]
+
+    # Calculate the width and height of each sub-square
+    width = (x1 - x0) / 6
+    height = (y1 - y0) / 6
+    
+    # List to store the center points
+    center_points_list = []
+    
+    
+    # Iterate through each row and column
+    for i in range(6):
+        for j in range(6):
+            # Calculate the center point of the current sub-square
+            center_x = x0 + (j + 0.5) * width
+            center_y = y0 + (i + 0.5) * height
+            center_points_list.append((center_x, center_y))
+    
+    # Return the list of center points
+    return center_points_list
+
+
+def capture_screen_screenshot():
+    adb_board = read_config().get("adb_board")
+    if adb_board:
+        return adb_utils.get_screenshot()
+    else:
+        return pyautogui.screenshot()
+
+
+def capture_board_screensot(save=True, return_type="cv2"):
+    adb_board = read_config().get("adb_board")
+    if adb_board:
+        # adb_utils.get_screen_positions()
+        img = adb_utils.crop_board(adb_utils.get_screenshot())
+        if return_type == "cv2":
+            return img
+        else:
+            return custom_utils.cv2_to_pil(img)
+    else:
+        x0 = config_values.get("board_top_left")[0]
+        x1 = config_values.get("board_bottom_right")[0] - config_values.get("board_top_left")[0]
+        y0 = config_values.get("board_top_left")[1]
+        y1 = config_values.get("board_bottom_right")[1] - config_values.get("board_top_left")[1]
+        # print(f"Screenshot at: {datetime.now()}")
+        img = pyautogui.screenshot(region=(x0, y0, x1, y1))
+        if save:
+            img.save(constants.LAST_BOARD_IMAGE_PATH)
+        if return_type == "cv2":
+            return custom_utils.pil_to_cv2(img)
+        else:
+            return img
+        
+def remove_sequences(matrix):
+    rows = len(matrix)
+    cols = len(matrix[0])
+    sequence_found = True
+
+    while sequence_found:
+        sequence_found = False
+
+        # Check rows
+        for i in range(rows):
+            j = 0
+            while j < cols - 2:
+                if matrix[i][j] != 0 and matrix[i][j] == matrix[i][j+1] == matrix[i][j+2]:
+                    matrix[i][j] = matrix[i][j+1] = matrix[i][j+2] = 0
+                    sequence_found = True
+                    j += 3
+                else:
+                    j += 1
+
+        # Check columns
+        for j in range(cols):
+            i = 0
+            while i < rows - 2:
+                if matrix[i][j] != 0 and matrix[i][j] == matrix[i+1][j] == matrix[i+2][j]:
+                    matrix[i][j] = matrix[i+1][j] = matrix[i+2][j] = 0
+                    sequence_found = True
+                    i += 3
+                else:
+                    i += 1
+
+    return matrix
+
+# # Example usage
+# matrix = [
+#     [1, 2, 2, 2, 5, 6],
+#     [1, 2, 2, 2, 5, 6],
+#     [1, 2, 2, 2, 5, 6],
+#     [1, 2, 2, 2, 5, 6],
+#     [1, 2, 3, 4, 5, 6],
+#     [1, 2, 3, 4, 5, 6]
+# ]
+
+# updated_matrix = remove_sequences(matrix)
+
+# # Check columns after removing rows
+# updated_matrix = list(map(list, zip(*updated_matrix)))
+
+# updated_matrix = remove_sequences(updated_matrix)
+
+# # Revert the matrix back to original orientation
+# updated_matrix = list(map(list, zip(*updated_matrix)))
+
+# for row in updated_matrix:
+#     print(row)
