@@ -97,20 +97,17 @@ class ImageSelectorApp():
 
         icon = self.get_icon("mouse")
 
-        # btn1_1_1 = customtkinter.CTkButton(frame1_1_top, text="Top Left", command=lambda: self.show_click_popup(click_counter= 1), image=icon, **self.tab_button_style)
-        # btn1_1_2 = customtkinter.CTkButton(frame1_1_top, text="Bottom Right", command=lambda: self.show_click_popup(click_counter= 2), image=icon, **self.tab_button_style)
-        btn1_1_3 = customtkinter.CTkButton(frame1_1_top, text="Board Position", command=lambda: self.show_board_position_selector_app(), image=icon, **self.tab_button_style)
-        btn1_1_4 = customtkinter.CTkButton(frame1_1_top, text="Select Current Stage", command=lambda: self.show_select_current_stage(), image=icon, **self.tab_button_style)
+        btn1_1_1 = customtkinter.CTkButton(frame1_1_top, text="Board Position", command=lambda: self.show_board_position_selector_app(), image=icon, **self.tab_button_style)
+        btn1_1_2 = customtkinter.CTkButton(frame1_1_top, text="Select Current Stage", command=lambda: self.show_select_current_stage(), image=icon, **self.tab_button_style)
+        btn1_1_3 = customtkinter.CTkButton(frame1_1_top, text="Add Auto Click Icon", command=lambda: self.show_add_auto_click_icon(), image=icon, **self.tab_button_style)
 
-        # CTkToolTip(btn1_1_1, delay=0.5, message="Configure Board Top Left")
-        # CTkToolTip(btn1_1_2, delay=0.5, message="Configure Board Bottom Right")
-        CTkToolTip(btn1_1_3, delay=0.5, message="Configure Shuffle Move First Square")
-        CTkToolTip(btn1_1_4, delay=0.5, message="Configure Mouse Return Position")
+        CTkToolTip(btn1_1_1, delay=0.5, message="Configure Shuffle Move Board Position")
+        CTkToolTip(btn1_1_2, delay=0.5, message="Configure Current Stage for the Auto loop")
+        CTkToolTip(btn1_1_3, delay=0.5, message="Add a new icon to the search loop when not on active stage")
 
-        # btn1_1_1.pack(side=tk.LEFT)
-        # btn1_1_2.pack(side=tk.LEFT)
+        btn1_1_1.pack(side=tk.LEFT)
+        btn1_1_2.pack(side=tk.LEFT)
         btn1_1_3.pack(side=tk.LEFT)
-        btn1_1_4.pack(side=tk.LEFT)
 
         frame1_2 = customtkinter.CTkFrame(self.tab1, fg_color="transparent")
         frame1_2_top = customtkinter.CTkFrame(frame1_2, fg_color="transparent")
@@ -214,23 +211,48 @@ class ImageSelectorApp():
         customtkinter.CTkLabel(frame3_1_bottom, text="Board Capture Mode", bg_color="transparent").pack(side=tk.BOTTOM)
         
         
+        frame3_1_top_1 = customtkinter.CTkFrame(frame3_1_top, fg_color="transparent")
+        frame3_1_top_2 = customtkinter.CTkFrame(frame3_1_top, fg_color="transparent")
+        frame3_1_top_1.pack(side=tk.LEFT)
+        frame3_1_top_2.pack(side=tk.LEFT)
+
+        self.control_loop_var = tk.BooleanVar(value=False)        
         self.has_barrier_var = tk.BooleanVar(value=config_utils.config_values.get("has_barrier")) 
-        self.control_loop_var = tk.BooleanVar(value=False)
         self.adb_board_var = tk.BooleanVar(value=config_utils.config_values.get("adb_board")) 
         self.adb_move_var = tk.BooleanVar(value=config_utils.config_values.get("adb_move"))
         
-        
-        self.control_loop_switch = customtkinter.CTkSwitch(frame3_1_top, text="Capture Loop", variable=self.control_loop_var, onvalue=True, offvalue=False, command=lambda: self.control_loop_function())
-        self.has_barrier_switch = customtkinter.CTkSwitch(frame3_1_top, text="Has Barriers", variable=self.has_barrier_var, command=self.reveal_or_hide_barrier_img)
+        self.control_loop_switch = customtkinter.CTkSwitch(frame3_1_top_1, text="Capture Loop", variable=self.control_loop_var, onvalue=True, offvalue=False, command=self.control_loop_function)
+        self.has_barrier_switch = customtkinter.CTkSwitch(frame3_1_top_1, text="Has Barriers", variable=self.has_barrier_var, command=self.reveal_or_hide_barrier_img)
+        self.adb_board_switch = customtkinter.CTkSwitch(frame3_1_top_1, text="ADB Board", variable=self.adb_board_var, onvalue=True, offvalue=False, command=self.adb_board)
+        self.adb_move_switch = customtkinter.CTkSwitch(frame3_1_top_1, text="ADB Move", variable=self.adb_move_var, onvalue=True, offvalue=False, command=self.adb_move)
+
         self.control_loop_switch.pack(side=tk.TOP, anchor=tk.W, padx=5)
         self.has_barrier_switch.pack(side=tk.TOP, anchor=tk.W, padx=5)
-        
-        self.adb_board_switch = customtkinter.CTkSwitch(frame3_1_top, text="ADB Board", variable=self.adb_board_var, onvalue=True, offvalue=False, command=self.adb_board)
-        self.adb_move_switch = customtkinter.CTkSwitch(frame3_1_top, text="ADB Move", variable=self.adb_move_var, onvalue=True, offvalue=False, command=self.adb_move)
         self.adb_board_switch.pack(side=tk.TOP, anchor=tk.W, padx=5)
         self.adb_move_switch.pack(side=tk.TOP, anchor=tk.W, padx=5)
+
         keyboard.add_hotkey('f3', lambda:  self.control_loop_switch.toggle())
         keyboard.add_hotkey('f4', lambda: self.has_barrier_switch.toggle())
+        
+        
+        self.auto_next_stage_var = tk.BooleanVar(value=config_utils.config_values.get("auto_next_stage"))      
+        self.timed_stage_var = tk.BooleanVar(value=config_utils.config_values.get("timed_stage")) 
+        self.tapper_var = tk.BooleanVar(value=config_utils.config_values.get("tapper")) 
+        self.placeholder_var = tk.BooleanVar(value=config_utils.config_values.get("placeholder"))
+        
+        self.auto_next_stage_switch = customtkinter.CTkSwitch(frame3_1_top_2, text="Auto Next Stage", variable=self.auto_next_stage_var, onvalue=True, offvalue=False, command=self.auto_next_stage)
+        self.timed_stage_switch = customtkinter.CTkSwitch(frame3_1_top_2, text="Timed Stage", variable=self.timed_stage_var, command=self.timed_stage)
+        self.tapper_switch = customtkinter.CTkSwitch(frame3_1_top_2, text="Tapper", variable=self.tapper_var, onvalue=True, offvalue=False, command=self.tapper)
+        self.placeholder_switch = customtkinter.CTkSwitch(frame3_1_top_2, text="Placeholder", variable=self.placeholder_var, onvalue=True, offvalue=False, command=self.placeholder)
+
+        self.auto_next_stage_switch.pack(side=tk.TOP, anchor=tk.W, padx=5)
+        self.timed_stage_switch.pack(side=tk.TOP, anchor=tk.W, padx=5)
+        self.tapper_switch.pack(side=tk.TOP, anchor=tk.W, padx=5)
+        self.placeholder_switch.pack(side=tk.TOP, anchor=tk.W, padx=5)
+        
+        
+        
+        
         
         frame3_2 = customtkinter.CTkFrame(self.tab3, fg_color="transparent")
         frame3_2_top = customtkinter.CTkFrame(frame3_2, fg_color="transparent")
@@ -241,10 +263,10 @@ class ImageSelectorApp():
         ttk.Separator(self.tab3, orient='vertical').pack(side=tk.LEFT, fill='y', anchor=tk.W)
         customtkinter.CTkLabel(frame3_2_bottom, text="").pack(side=tk.BOTTOM)
 
-        btn3_2_1 = customtkinter.CTkButton(frame3_2_top, text="Execute", command=lambda: self.execute_board_analysis_threaded(source="button"), image=self.get_icon("play-circle"), **self.tab_button_style)
+        btn3_2_1 = customtkinter.CTkButton(frame3_2_top, text="Execute", command=lambda: self.execute_board_analysis_threaded(source="manual"), image=self.get_icon("play-circle"), **self.tab_button_style)
         CTkToolTip(btn3_2_1, delay=0.5, message="Execute (F2)")
         btn3_2_1.pack(side=tk.LEFT)
-        keyboard.add_hotkey('f2', lambda: self.execute_board_analysis_threaded(source="shortcut")) #type: ignore
+        keyboard.add_hotkey('f2', lambda: self.execute_board_analysis_threaded(source="manual")) #type: ignore
         
         btn2_1_1 = customtkinter.CTkButton(frame3_2_top, text="Load Team", command=self.load_team, image=self.get_icon("cloud-download-alt"), **self.tab_button_style)
         CTkToolTip(btn2_1_1, delay=0.5, message="Load Team From Shuffle Move Config File")
@@ -418,7 +440,7 @@ class ImageSelectorApp():
             selected_file = self.image_listbox.get(selected_index)
             self.insert_image_widget(selected_file)
     
-    def insert_image_widget(self, selected_file, disabled=False, skip_barrier=False):
+    def insert_image_widget(self, selected_file, disabled=False, skip_barrier=False, stage_added=False):
         image_path = Path(constants.IMAGES_PATH, selected_file)  # Change this to the path of your folder
         if not image_path.suffix:
             image_path = image_path.with_suffix('.png')
@@ -451,17 +473,19 @@ class ImageSelectorApp():
         remove_button = customtkinter.CTkButton(selected_image_frame, text="Remove", width=80, command=lambda: self.remove_selected_image(selected_image_frame, image_path))
         remove_button.pack(pady=5)
 
+        selected_image_frame.pokemon = Pokemon(selected_image_frame.name, False, False)
+
         checkbox_disable: customtkinter.CTkCheckBox = customtkinter.CTkCheckBox(selected_image_frame, text="Disable", checkbox_width=12, checkbox_height=12, corner_radius=0, onvalue=True, offvalue=False, command=lambda: self.checkbox_disable_clicked(checkbox_disable, selected_image_frame))
         checkbox_disable.pack(padx=(25, 0))
 
-        checkbox_stage: customtkinter.CTkCheckBox = customtkinter.CTkCheckBox(selected_image_frame, text="Stage Add", checkbox_width=12, checkbox_height=12, corner_radius=0, onvalue=True, offvalue=False, command=lambda: self.checkbox_stage_add_clicked(checkbox_stage, selected_image_frame))
-        checkbox_stage.pack(padx=(25, 0))
-
-        selected_image_frame.pokemon = Pokemon(selected_image_frame.name, checkbox_disable.get(), checkbox_stage.get())
-
         if disabled:
             checkbox_disable.toggle()
-          
+
+        checkbox_stage_added: customtkinter.CTkCheckBox = customtkinter.CTkCheckBox(selected_image_frame, text="Stage Add", checkbox_width=12, checkbox_height=12, corner_radius=0, onvalue=True, offvalue=False, command=lambda: self.checkbox_stage_add_clicked(checkbox_stage_added, selected_image_frame))
+        checkbox_stage_added.pack(padx=(25, 0))
+        if stage_added:
+            checkbox_stage_added.toggle()
+
         if selected_file in self.mega_list:
             checkbox_mega: Any = customtkinter.CTkCheckBox(selected_image_frame, text="Mega", checkbox_width=12, checkbox_height=12, corner_radius=0, onvalue=True, offvalue=False, command=lambda: self.checkbox_mega_click(checkbox_mega, selected_image_frame))
             checkbox_mega.pack(padx=(25, 0))
@@ -565,13 +589,14 @@ class ImageSelectorApp():
             return MatchResult()
 
         with self.analysis_lock:
-            print("Iniciando o start_from_helper")
+            # print("Iniciando o start_from_helper")
             pokemons_list = self.extract_pokemon_list()
             match_result = match_icons.start_from_helper(pokemons_list, self.has_barrier_var.get(), root=self, source=source, create_image=create_image, skip_shuffle_move=skip_shuffle_move, forced_board_image=forced_board_image)
-            if match_result:
-                self.master.after(200, self.control_loop_function)
-            else:
-                self.master.after(5000, self.control_loop_function)
+            # if not match_result:
+            #     self.master.after(200, self.control_loop_function)
+            # else:
+            #     self.master.after(5000, self.control_loop_function)
+            self.master.after(100, self.control_loop_function)
         return match_result
 
     def execute_board_analysis_threaded(self, source=None, create_image=False, skip_shuffle_move=False, forced_board_image=None):
@@ -606,7 +631,10 @@ class ImageSelectorApp():
         mouse_utils.BoardPositionSelectorApp(master=self.master, selector_app=self)
 
     def show_select_current_stage(self):
-        mouse_utils.CurrentStageSelectorApp(master=self.master, selector_app=self)
+        mouse_utils.IconCaptureApp(master=self.master, selector_app=self, filename=constants.CURRENT_STAGE_IMAGE)
+
+    def show_add_auto_click_icon(self):
+        mouse_utils.IconCaptureApp(master=self.master, selector_app=self, filename=None)
 
     def disable_loop(self):
         if self.control_loop_var.get():
@@ -626,6 +654,23 @@ class ImageSelectorApp():
     def adb_move(self):
         v = self.adb_move_var.get()
         config_utils.update_config("adb_move", v)
+
+    def auto_next_stage(self):
+        v = self.auto_next_stage_var.get()
+        config_utils.update_config("auto_next_stage", v)
+
+    def timed_stage(self):
+        v = self.timed_stage_var.get()
+        config_utils.update_config("timed_stage", v)
+
+    def tapper(self):
+        v = self.tapper_var.get()
+        config_utils.update_config("tapper", v)
+        
+    def placeholder(self):
+        v = self.placeholder_var.get()
+        config_utils.update_config("placeholder", v)
+
 
     def reveal_or_hide_barrier_img(self):
         has_barrier = self.has_barrier_var.get()
@@ -694,7 +739,7 @@ class ImageSelectorApp():
             for pokemon in current_team:
                 if pokemon.name in load_from_shuffle.exception_list:
                     pokemon.name = f"_{pokemon.name}"
-                self.insert_image_widget(pokemon.name, skip_barrier=True)
+                self.insert_image_widget(pokemon.name, skip_barrier=True, stage_added=pokemon.stage_added)
             if self.has_barrier_var.get():
                 self.reveal_or_hide_barrier_img()
         except Exception as ex:

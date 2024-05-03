@@ -2,11 +2,14 @@ from pathlib import Path
 import cv2
 import numpy as np
 from src.classes import Match
-from typing import List
+from typing import Any, List
 from src import adb_utils, constants, custom_utils
 from PIL import Image
 import pyautogui
-from src.config_utils import config_values, read_config
+from src.config_utils import read_config
+import src.board_utils
+import os
+import re
 
 def find_matching_files(directory, prefix, suffix):
     directory_path = Path(directory)
@@ -109,7 +112,7 @@ def get_taskbar_size():
     
 def show_list_images(images):
     concatenated_image = concatenate_list_images(images)
-    show_img(concatenated_image)
+    show_cv2_as_pil(concatenated_image)
 
 def concatenate_list_images(images, blank_space=40):
     max_height = max(image.shape[0] for image in images)
@@ -296,13 +299,13 @@ def update_match_with_result(result, match_list: List[Match]):
         red = None
         blue = None
 
-def coordinates_to_index(x, y, width=6):
-    return ((int(x) - 1) * width) + (int(y) - 1)
+def coordinates_to_index(row, column, width=6):
+    return ((int(row) - 1) * width) + (int(column) - 1)
 
 def index_to_coordinates(index, width=6):
-    x = index // width + 1
-    y = index % width + 1
-    return x, y
+    row = index // width + 1
+    columns = index % width + 1
+    return row, columns
 
 def add_layer(image, color):
     square_size = image.shape[0]
@@ -369,6 +372,20 @@ def get_next_filename(filepath):
 
     return path
 
+def get_next_filename_number_on_start(folder_path, filename="test.png"):
+    files = [f for f in os.listdir(folder_path) if os.path.isfile(os.path.join(folder_path, f)) and re.match(r'^\d+', f)]
+
+    # Extract sequence numbers from file names
+    sequence_numbers = [int(re.match(r'^(\d+)_', f).group(1)) for f in files] #type: ignore
+
+    # Get the next sequence number
+    next_sequence_number = max(sequence_numbers, default=0) + 1
+
+    # Create your new file name
+    new_file_name = f"{next_sequence_number:02d}_{filename}"
+    
+    return new_file_name
+
 def verify_shuffle_file(file_path: Path):
     if not file_path.exists():
         print(f"File {file_path.as_posix()} not found")
@@ -419,10 +436,10 @@ def capture_board_screensot(save=True, return_type="cv2"):
         else:
             return custom_utils.cv2_to_pil(img)
     else:
-        x0 = config_values.get("board_top_left")[0]
-        x1 = config_values.get("board_bottom_right")[0] - config_values.get("board_top_left")[0]
-        y0 = config_values.get("board_top_left")[1]
-        y1 = config_values.get("board_bottom_right")[1] - config_values.get("board_top_left")[1]
+        x0 = src.board_utils.current_board.board_top_left[0]
+        x1 = src.board_utils.current_board.board_bottom_right[0] - src.board_utils.current_board.board_top_left[0]
+        y0 = src.board_utils.current_board.board_top_left[1]
+        y1 = src.board_utils.current_board.board_bottom_right[1] - src.board_utils.current_board.board_top_left[1]
         # print(f"Screenshot at: {datetime.now()}")
         img = pyautogui.screenshot(region=(x0, y0, x1, y1))
         if save:
@@ -463,6 +480,16 @@ def remove_sequences(matrix):
                     i += 1
 
     return matrix
+
+def split_list_to_dict(complete_list, interest_list):
+    result_dict: dict[Any, List] = {key: [] for key in interest_list}
+    for idx, string in enumerate(complete_list):
+        if string not in interest_list:
+            continue
+        if string not in result_dict:
+            result_dict[string] = []
+        result_dict[string].append(idx)
+    return result_dict
 
 # # Example usage
 # matrix = [

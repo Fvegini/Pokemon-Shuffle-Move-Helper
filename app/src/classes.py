@@ -109,3 +109,32 @@ class MatchResult():
 
     def __bool__(self):
         return bool(self.result)
+
+class ShuffleBoard():
+    
+    match_sequence: List[Match]
+    pokemon_board_sequence: List[str]
+    extra_supports_list: list[str]
+    sequence_names_list: list[str]
+    original_complete_names_list: list[str]
+    frozen_list: list[str]
+    has_mega: bool
+    
+    def __init__(self, match_sequence: List[Match], pokemon_list: List[Pokemon], icons_list: List[Icon]):
+        self.match_sequence = match_sequence
+        self.extra_supports_list = [pokemon.name for pokemon in pokemon_list if pokemon.stage_added]
+        self.sequence_names_list = [match.name for match in self.match_sequence]
+        self.original_complete_names_list = [icon.name for icon in icons_list]
+        self.pokemon_board_sequence = [match.name for match in self.match_sequence]
+        self.frozen_list = []
+        self.has_mega = False
+
+class Board():
+    
+    def __init__(self, board_top_left, board_bottom_right):
+        self.board_top_left = board_top_left
+        self.board_bottom_right = board_bottom_right
+        self.board_x = board_top_left[0]
+        self.board_y = board_top_left[1]
+        self.board_w = (board_bottom_right[0] - board_top_left[0]) / 6
+        self.board_h = (board_bottom_right[1] - board_top_left[1]) / 6

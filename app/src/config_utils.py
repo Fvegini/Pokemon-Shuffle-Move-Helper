@@ -8,6 +8,10 @@ def create_default_config():
     "has_barrier": False, #type: ignore
     "adb_board": False, #type: ignore
     "adb_move": False, #type: ignore
+    "auto_next_stage": False, #type: ignore
+    "timed_stage": False, #type: ignore
+    "tapper": False, #type: ignore
+    "placeholder": False, #type: ignore
     }
 
     with open('config.ini', 'w') as configfile:

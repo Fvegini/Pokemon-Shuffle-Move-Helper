@@ -1,33 +1,25 @@
 from typing import List
 import cv2
-# from image_similarity_measures.quality_metrics import rmse, ssim
-import pyautogui
 import numpy as np
-# from PIL import Image
 from pathlib import Path
-import time
+from src.adb_utils import get_coordinates_from_board_index
 from src.custom_utils import capture_board_screensot
 from src.embed import loaded_embedder
 from src import constants, custom_utils
-from src.config_utils import config_values
+from src import config_utils
 from src import socket_utils, shuffle_config_files
-from src.classes import Icon, Match, Pokemon, MatchResult
+from src.classes import Icon, Match, Pokemon, MatchResult, ShuffleBoard
 import statistics
-from datetime import datetime
-import screen_ocr
 from src import adb_utils
-import math
+from src.board_utils import current_board
 
-center_poinst_list = custom_utils.get_center_positions_list(config_values.get("board_top_left"), config_values.get("board_bottom_right"))
-screenshot_region = (config_values.get("board_top_left")[0], 0, config_values.get("board_bottom_right")[0] - config_values.get("board_top_left")[0], 1080)
 fake_barrier_active = False
-ocr_reader = screen_ocr.Reader.create_quality_reader()
-
-custom_board_image = None
 last_pokemon_board_sequence: list[str] = []
 loaded_icons_cache: dict[str, Icon] = {}
-
+mega_activated_this_round = False
 metal_icon = Icon("Metal", Path("Metal.png"), False)
+last_execution_swiped = False
+fixed_tuple_positions = [("None", 7), ("None", 10)]
 
 def load_icon_classes(values_to_execute: list[Pokemon], has_barriers):
     icons_list = []
@@ -104,16 +96,10 @@ def cut_borders(image, border_size=15):
 
 
 def compare_with_list(original_image, icons_list: List[Icon], has_barriers):
-    # Compare the input image with each image in the folder
     embed = loaded_embedder.create_embed_from_np(original_image)
     if has_barriers:
         fake_barrier_img = custom_utils.resize_cv2_image(cut_borders(original_image), constants.downscale_res)
-    # best_rmse = None
-    # best_ssim = None
     best_cosine = None
-    # results_rmse = {}
-    # results_ssim = {}
-    # results_cosine = {}
     full_match_list_tmp = []
     for icon in icons_list:
         if not icon.barrier_type == constants.BARRIER_TYPE_FAKE:
@@ -121,31 +107,9 @@ def compare_with_list(original_image, icons_list: List[Icon], has_barriers):
         else: 
             match = Match(fake_barrier_img, embed, icon)
         full_match_list_tmp.append(match)
-        # results_rmse[match.name] = match.rmse
-        # results_ssim[match.name] = match.ssim
-        # results_cosine[match.name] = match.cosine_similarity
-        # if not best_rmse or best_rmse.rmse > match.rmse:
-            # best_rmse = match
-        # if not best_ssim or best_ssim.ssim < match.ssim:
-            # best_ssim = match
         if not best_cosine or best_cosine.cosine_similarity < match.cosine_similarity:
             best_cosine = match
-    
-    # Sort the results by similarity index
-    # results_rmse = sorted(results_rmse.items(), key=lambda x: x[1], reverse=False)
-    # results_ssim = sorted(results_ssim.items(), key=lambda x: x[1], reverse=True)
-    # results_cosine = sorted(results_cosine.items(), key=lambda x: x[1], reverse=True)
-    
-    # percentage_rmse = calculate_percentage_difference(results_rmse[0][1], results_rmse[1][1])
-    # percentage_ssim = calculate_percentage_difference(results_ssim[0][1], results_ssim[1][1])
-    # percentage_cosine = calculate_percentage_difference(results_cosine[0][1], results_cosine[1][1])
-    # if not best_rmse == best_ssim == best_cosine:
-        # print(f"RMSE: {percentage_rmse:.2f} - {results_rmse}")
-        # print(f"SSIM: {percentage_ssim:.2f} - {results_ssim}")
-        # print(f"COS: {percentage_cosine:.2f} - {results_cosine}")
-    # if percentage_ssim > 0: #Check a good number
-    return best_cosine# else:
-        # return best_rmse
+    return best_cosine
 
 def calculate_percentage_difference(num1, num2):
     average = (num1 + num2) / 2
@@ -173,51 +137,82 @@ def get_metrics(match_list):
     }
 
     
-
 def start_from_helper(pokemon_list: list[Pokemon], has_barriers, root=None, source=None, create_image=False, skip_shuffle_move=False, forced_board_image=None) -> MatchResult:
-    global last_pokemon_board_sequence
-    print("Starting a new check")
+    global last_pokemon_board_sequence, mega_activated_this_round, last_execution_swiped
+    # print("Starting a new check")
     icons_list = load_icon_classes(pokemon_list, has_barriers)
-    match_list: List[Match] = []
     cell_list = make_cell_list(forced_board_image)
-
-    original_image = cv2.imread(constants.LAST_SCREEN_IMAGE_PATH)
-    if not adb_utils.has_board_active(original_image):
-        print("No Board Active")
-        adb_utils.check_hearts(original_image)
-        adb_utils.check_buttons_to_click(original_image)
+    current_screen_image = cv2.imread(constants.LAST_SCREEN_IMAGE_PATH)
+    not_in_stage_yet = verify_stage_and_click_buttons(current_screen_image)
+    if not_in_stage_yet:
+        last_execution_swiped = False
         return MatchResult()
-        
-    for idx, cell in enumerate(cell_list):
-        result = predict(cell, icons_list, has_barriers)
-        if result.name in ["Fog", "_Fog", "Pikachu_a"]:
-            result = update_fog_match(result, icons_list, has_barriers, idx)
-        match_list.append(result)
-
-    # new_list = match_list.copy()    
-    # new_list = custom_utils.sort_by_class_attribute(new_list, "cosine_similarity", False)
-    # metrics = get_metrics(new_list)
-    
-    extra_supports_list = [pokemon.name for pokemon in pokemon_list if pokemon.stage_added]
-    sequence_names_list = [match.name for match in match_list]
-    original_complete_names_list = [icon.name for icon in icons_list]
-    pokemon_board_sequence = [match.name for match in match_list]
+    combo_is_running = verify_active_combo(current_screen_image)
+    # if source != manual" and verify_active_combo(current_screen_image):
+        # print("Combo still running, return and wait it settle")
+    match_list = match_cell_with_icons(icons_list, cell_list, has_barriers, combo_is_running)
     if skip_shuffle_move:
         return MatchResult(match_list=match_list)
-    # if pokemon_board_sequence != last_pokemon_board_sequence or source != "loop":
-    shuffle_config_files.create_board_files(sequence_names_list, original_complete_names_list, extra_supports_list, source)
-    last_pokemon_board_sequence = pokemon_board_sequence
+    current_board = ShuffleBoard(match_list, pokemon_list, icons_list)
+    shuffle_config_files.create_board_files(current_board, source)
+    if last_execution_swiped or combo_is_running:
+        test_tapper_logic(current_board)
+        last_execution_swiped = False
+        return MatchResult()
     result = socket_utils.loadNewBoard()
-    # else:
-        # if root:
-            # root.info_message.configure(text="Loop Mode: Same commands found")
-    
-    adb_utils.execute_play(result)
-    # execute_move(result)
+    swiped = adb_utils.execute_play(result)
+    if swiped:
+        last_execution_swiped = True
     result_image = None
     if create_image:
         result_image = custom_utils.make_match_image_comparison(result, match_list)
     return MatchResult(result=result, match_image=result_image, match_list=match_list)
+
+def verify_active_combo(current_screen_image):
+    return adb_utils.has_match(current_screen_image, constants.COMBO_IMAGE)
+
+def test_tapper_logic(current_board):
+    global mega_activated_this_round
+    if config_utils.config_values.get("tapper"):
+        if True or mega_activated_this_round or current_board.has_mega:
+            print("Executing crazy Tapper Logic")
+            mega_activated_this_round = True
+            interest_list = ["Frozen", "Metal", "Fog", "Wood"]
+            final_sequence = [match.name if match.cosine_similarity > 0.6 else "None" for match in current_board.match_sequence]
+            tapper_dict = custom_utils.split_list_to_dict(final_sequence, interest_list)
+            tapper_dict["Frozen"] = [idx for idx, value in enumerate(current_board.frozen_list) if value == 'true' and final_sequence[idx] != "None"]
+            list_of_tuples = [(key, value) for key in interest_list for value in tapper_dict[key]]
+            if len(list_of_tuples) < 5:
+                list_of_tuples.extend(fixed_tuple_positions)
+            for icon, index in list_of_tuples[:5]:
+                x, y = adb_utils.click_on_board_index(index)
+                print(f"Tapped on {icon} at {x}, {y}")
+
+def verify_stage_and_click_buttons(current_screen_image):
+    global mega_activated_this_round
+    if not is_on_stage(current_screen_image):
+        mega_activated_this_round = False
+        if should_auto_next_stage():
+            adb_utils.check_hearts(current_screen_image)
+            adb_utils.check_buttons_to_click(current_screen_image)
+            return True
+    return False
+
+def match_cell_with_icons(icons_list, cell_list, has_barriers, combo_is_running=False):
+    global last_execution_swiped
+    match_list: List[Match] = []
+    for idx, cell in enumerate(cell_list):
+        result = predict(cell, icons_list, has_barriers)
+        if not combo_is_running  and not last_execution_swiped and result.name in ["Fog", "_Fog", "Pikachu_a"]:
+            result = update_fog_match(result, icons_list, has_barriers, idx)
+        match_list.append(result)
+    return match_list
+
+def is_on_stage(original_image):
+    return adb_utils.has_match(original_image, constants.ACTIVE_BOARD_IMAGE)
+
+def should_auto_next_stage():
+    return config_utils.config_values.get("auto_next_stage")
 
 def start_from_bot(pokemon_list: list[Pokemon], has_barriers, image, current_stage, source="bot", create_image=False):
     icons_list = load_icon_classes(pokemon_list, has_barriers)
@@ -226,10 +221,8 @@ def start_from_bot(pokemon_list: list[Pokemon], has_barriers, image, current_sta
     for cell in cell_list:
         result = predict(cell, icons_list, has_barriers)
         match_list.append(result)
-    extra_supports_list = [pokemon.name for pokemon in pokemon_list if pokemon.stage_added]
-    sequence_names_list = [match.name for match in match_list]
-    original_complete_names_list = [icon.name for icon in icons_list]
-    shuffle_config_files.create_board_files(sequence_names_list, original_complete_names_list, extra_supports_list, source, current_stage)
+    current_board = ShuffleBoard(match_list, pokemon_list, icons_list)
+    shuffle_config_files.create_board_files(current_board, source, current_stage)
     result = socket_utils.loadNewBoard()
     result_image = None
     if create_image:
@@ -237,23 +230,7 @@ def start_from_bot(pokemon_list: list[Pokemon], has_barriers, image, current_sta
     return MatchResult(result=result, match_image=result_image, match_list=match_list)
 
 def update_fog_match(result, icons_list, has_barriers, idx):
-    # row, column = [int(coordinate) for coordinate in custom_utils.index_to_coordinates(idx)]
-    row, column = custom_utils.index_to_coordinates(idx)
-    board_top_left = config_values.get("board_top_left")
-    board_bottom_right = config_values.get("board_bottom_right")
-
-    board_x = board_top_left[0]
-    board_y = board_top_left[1]
-    board_w = (board_bottom_right[0] - board_top_left[0]) / 6
-    board_h = (board_bottom_right[1] - board_top_left[1]) / 6
-
-    cell_x0 =  math.floor(board_x + (board_w * (column - 1)))
-    cell_y0 =  math.floor(board_y + (board_h * (row - 1)))
-    cell_x1 =  math.floor(board_x + (board_w * (column)))
-    cell_y1 =  math.floor(board_y + (board_h * (row)))
-
-    
-    new_img = adb_utils.update_fog_image(cell_x0, cell_y0, cell_x1, cell_y1, board_w, board_h)
+    new_img = adb_utils.update_fog_image(idx)
     new_result = predict(new_img, icons_list, has_barriers)
     if new_result.name == "Fog":
         return predict(new_img, [metal_icon], False)

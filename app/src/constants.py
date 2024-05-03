@@ -55,18 +55,22 @@ downscale_res = (128, 128)
 
 
 CURRENT_HEARTS_LIST = [
-    Path(r"assets\auto_loop\heart_5.png"),
-    Path(r"assets\auto_loop\heart_4.png"),
-    Path(r"assets\auto_loop\heart_3.png"),
-    Path(r"assets\auto_loop\heart_2.png"),
-    Path(r"assets\auto_loop\heart_1.png"),
-    Path(r"assets\auto_loop\heart_0.png"),
+    Path(r"assets\adb\heart_9.png"),
+    Path(r"assets\adb\heart_5.png"),
+    Path(r"assets\adb\heart_4.png"),
+    Path(r"assets\adb\heart_3.png"),
+    Path(r"assets\adb\heart_2.png"),
+    Path(r"assets\adb\heart_1.png"),
+    Path(r"assets\adb\heart_0.png"),
 ]
 
-CURRENT_STAGE_IMAGE = r"assets\auto_loop\current_stage.png"
-CONTINUE_IMAGE_IMAGE = r"assets\auto_loop\continue_image.png"
-START_BUTTON_IMAGE = r"assets\auto_loop\start_button.png"
-OK_BUTTON_IMAGE = r"assets\auto_loop\ok_button.png"
-OK_BUTTON2_IMAGE = r"assets\auto_loop\ok_button2.png"
-TO_MAP_BUTTON_IMAGE = r"assets\auto_loop\to_map_button.png"
-ACTIVE_BOARD_IMAGE = r"assets\auto_loop\active_board.png"
+CURRENT_STAGE_IMAGE = r"assets\adb\auto\01_current_stage.png"
+COMBO_IMAGE = r"assets\adb\combo.png"
+ACTIVE_BOARD_IMAGE = r"assets\adb\active_board.png"
+ADB_AUTO_FOLDER = r"assets\adb\auto"
+# CONTINUE_IMAGE_IMAGE = r"assets\adb\continue_image.png"
+# START_BUTTON_IMAGE = r"assets\adb\start_button.png"
+# OK_BUTTON_IMAGE = r"assets\adb\ok_button.png"
+# OK_BUTTON2_IMAGE = r"assets\adb\ok_button2.png"
+# TO_MAP_BUTTON_IMAGE = r"assets\adb\to_map_button.png"
+

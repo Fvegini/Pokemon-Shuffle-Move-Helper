@@ -4,15 +4,16 @@ import os
 from src import constants, custom_utils
 from pathlib import Path
 from src.execution_variables import execution_variables
-exception_list = ["Empty", "Coin", "Metal", "Wood"]
+exception_list = ["Empty", "Coin", "Metal", "Wood", "Fog"]
 stages_fixed_list = ['BUG', 'DARK', 'DRAGON', 'ELECTRIC', 'FAIRY', 'FIGHTING', 'FIRE', 'FLYING', 'GHOST', 'GRASS', 'GROUND', 'ICE', 'MEOWTH COIN MANIA', 'NONE', 'NORMAL', 'POISON', 'PSYCHIC', 'ROCK', 'STEEL', 'WATER', 'SP_084', 'MEOWTH COIN MANIA']
 stages_set = set(stages_fixed_list)
 
 class TeamData():
     
-    def __init__(self, stage, icons) -> None:
+    def __init__(self, stage, icons, stage_added=[]) -> None:
         self.stage = stage
         self.icons = icons
+        self.stage_added = stage_added
         
 
 class TeamLoader(tk.Toplevel):
@@ -40,6 +41,10 @@ class TeamLoader(tk.Toplevel):
             if team_name not in stages_fixed_list:
                 continue
             icons_str = parts[2]
+            stage_added = []
+            if len(parts) >= 6:
+                stage_added_str = parts[5]
+                stage_added = stage_added_str.split(",")
             for item in exception_list:
                 icons_str = icons_str.replace(item, f"_{item}")
             icons = icons_str.split(",")
@@ -49,7 +54,7 @@ class TeamLoader(tk.Toplevel):
                 icons.append(mega_name)
             except:
                 pass
-            self.teams.append(TeamData(team_name, icons))
+            self.teams.append(TeamData(team_name, icons, stage_added))
             if team_name == "SP_084":
                 self.teams.append(TeamData("MEOWTH COIN MANIA", icons))
             
@@ -110,7 +115,8 @@ class TeamLoader(tk.Toplevel):
             execution_variables.has_modifications = True
             selected_team: TeamData = self.teams[selected_index[0]]
             for pokemon in selected_team.icons:
-                self.root.insert_image_widget(f"{pokemon}.png")
+                stage_added = pokemon in selected_team.stage_added
+                self.root.insert_image_widget(f"{pokemon}.png", stage_added=stage_added)
                 self.update_idletasks()
         
         self.root.stage_combobox.set(execution_variables.current_stage)

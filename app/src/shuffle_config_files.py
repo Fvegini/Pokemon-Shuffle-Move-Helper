@@ -1,9 +1,10 @@
 from pathlib import Path
-from src import constants
+from src import adb_utils, constants
 from src.custom_utils import verify_shuffle_file
+from src import custom_utils
 from src.discord import pokemon_names
 from src.execution_variables import execution_variables
-from src.classes import Pokemon
+from src.classes import Pokemon, ShuffleBoard
 import re
 
 CROW = "false,false,false,false,false,false"
@@ -65,13 +66,14 @@ def get_team_from_config_file_line(line, expand_megas):
                 final_team.append(Pokemon(mega_name, False, False))
     return final_team
 
-def create_board_files(sequence_names_list, original_complete_names_list, extra_supports_list, source=None, stage=None):
+def create_board_files(current_board: ShuffleBoard, source=None, stage=None):
+    global mega_activated_this_round
     names_list = []
     frozen_list = []
     mega_activated = MEGA_NOT_ACTIVATED
     mega_name = "-"
 
-    for name in sequence_names_list:
+    for name in current_board.sequence_names_list:
         if "Barrier_" in name:
             name = name.split("Barrier_")[1]
             frozen_list.append("true")
@@ -85,20 +87,22 @@ def create_board_files(sequence_names_list, original_complete_names_list, extra_
         else:
             names_list.append(name)
 
-    names_list, frozen_list, mega_name = process_pokemon_names_list(sequence_names_list)
-    complete_names_list, _, forced_mega_name = process_pokemon_names_list(original_complete_names_list)
+    names_list, frozen_list, mega_name = process_pokemon_names_list(current_board.sequence_names_list)
+    complete_names_list, _, forced_mega_name = process_pokemon_names_list(current_board.original_complete_names_list)
+    current_board.frozen_list = frozen_list
     if mega_name == "-":
         mega_name = forced_mega_name
     else:
         mega_activated = MEGA_ACTIVATED
-
     update_board_file(names_list, frozen_list, mega_activated, stage)
     if execution_variables.has_modifications or source == "bot":
-        update_teams_file(complete_names_list, mega_name, extra_supports_list, stage)
+        update_teams_file(complete_names_list, mega_name, current_board.extra_supports_list, stage)
         update_gradingModes_file(source, mega_activated)
         execution_variables.has_modifications = False
     elif execution_variables.current_strategy == constants.GRADING_MEGA_PROGRESS:
         update_gradingModes_file(source, mega_activated)
+    has_mega = mega_activated == MEGA_ACTIVATED
+    current_board.has_mega = has_mega
     return
 
 def process_pokemon_names_list(original_names_list):

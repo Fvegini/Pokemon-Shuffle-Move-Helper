@@ -3,8 +3,8 @@ from tkinter import Button
 import cv2
 import numpy as np
 import pyautogui
-from src import match_icons, config_utils, custom_utils, constants
-
+from src import match_icons, config_utils, custom_utils, constants, board_utils
+from pathlib import Path
 class BoardPositionSelectorApp():
 
     def __init__(self, master, selector_app=None):
@@ -87,6 +87,7 @@ class BoardPositionSelectorApp():
             
             config_utils.update_config("board_top_left", top_left)
             config_utils.update_config("board_bottom_right", bottom_right)
+            board_utils.update_board()
             
             print(f"Top-Left Position: {top_left}")
             print(f"Bottom-Right Position: {bottom_right}")
@@ -94,14 +95,15 @@ class BoardPositionSelectorApp():
             self.keep_open = False
             cv2.destroyAllWindows()
 
-class CurrentStageSelectorApp():
+class IconCaptureApp():
 
-    def __init__(self, master, selector_app=None):
+    def __init__(self, master, selector_app=None, filename=None):
         self.master = master
         self.keep_open = False
         self.scale = 0.9
         self.selector_app = selector_app
         self.master.update()
+        self.filename = filename
         limit_width = int(self.master.winfo_screenwidth() * 0.9)
         limit_height = int(self.master.winfo_screenheight() * 0.9)
 
@@ -160,7 +162,12 @@ class CurrentStageSelectorApp():
            
             cropped_image = self.original_frame[top_left[1]:bottom_right[1], top_left[0]:bottom_right[0]]
             
-            cv2.imwrite(constants.CURRENT_STAGE_IMAGE, cropped_image)
+            if self.filename:
+                cv2.imwrite(self.filename, cropped_image)
+            else:
+                custom_filename = custom_utils.get_next_filename_number_on_start(constants.ADB_AUTO_FOLDER, "new.png")
+                custom_filepath = Path(constants.ADB_AUTO_FOLDER, custom_filename).as_posix()
+                cv2.imwrite(custom_filepath, cropped_image)
             
             self.keep_open = False
             cv2.destroyAllWindows()
