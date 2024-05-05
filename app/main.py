@@ -243,7 +243,7 @@ class ImageSelectorApp():
         self.auto_next_stage_switch = customtkinter.CTkSwitch(frame3_1_top_2, text="Auto Next Stage", variable=self.auto_next_stage_var, onvalue=True, offvalue=False, command=self.auto_next_stage)
         self.timed_stage_switch = customtkinter.CTkSwitch(frame3_1_top_2, text="Timed Stage", variable=self.timed_stage_var, command=self.timed_stage)
         self.tapper_switch = customtkinter.CTkSwitch(frame3_1_top_2, text="Tapper", variable=self.tapper_var, onvalue=True, offvalue=False, command=self.tapper)
-        self.placeholder_switch = customtkinter.CTkSwitch(frame3_1_top_2, text="Placeholder", variable=self.placeholder_var, onvalue=True, offvalue=False, command=self.placeholder)
+        self.placeholder_switch = customtkinter.CTkSwitch(frame3_1_top_2, text="Meowth32", variable=self.placeholder_var, onvalue=True, offvalue=False, command=self.placeholder)
 
         self.auto_next_stage_switch.pack(side=tk.TOP, anchor=tk.W, padx=5)
         self.timed_stage_switch.pack(side=tk.TOP, anchor=tk.W, padx=5)
@@ -584,6 +584,11 @@ class ImageSelectorApp():
         return widget_list
 
     def execute_board_analysis(self, source=None, create_image=False, skip_shuffle_move=False, forced_board_image=None) -> MatchResult:
+        if source == "manual":
+            pokemons_list = self.extract_pokemon_list()
+            match_result = match_icons.start_from_helper(pokemons_list, self.has_barrier_var.get(), root=self, source=source, create_image=create_image, skip_shuffle_move=skip_shuffle_move, forced_board_image=forced_board_image)
+            return MatchResult()
+
         if self.analysis_lock.locked():
             print("Already running.")
             return MatchResult()

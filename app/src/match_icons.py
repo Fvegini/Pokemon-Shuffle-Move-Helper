@@ -143,19 +143,19 @@ def start_from_helper(pokemon_list: list[Pokemon], has_barriers, root=None, sour
     icons_list = load_icon_classes(pokemon_list, has_barriers)
     cell_list = make_cell_list(forced_board_image)
     current_screen_image = cv2.imread(constants.LAST_SCREEN_IMAGE_PATH)
-    not_in_stage_yet = verify_stage_and_click_buttons(current_screen_image)
-    if not_in_stage_yet:
-        last_execution_swiped = False
-        return MatchResult()
-    combo_is_running = verify_active_combo(current_screen_image)
-    # if source != manual" and verify_active_combo(current_screen_image):
-        # print("Combo still running, return and wait it settle")
+    combo_is_running = False
+    if source != "manual":
+        not_in_stage_yet = verify_stage_and_click_buttons(current_screen_image)
+        if not_in_stage_yet:
+            last_execution_swiped = False
+            return MatchResult()
+        combo_is_running = verify_active_combo(current_screen_image)
     match_list = match_cell_with_icons(icons_list, cell_list, has_barriers, combo_is_running)
     if skip_shuffle_move:
         return MatchResult(match_list=match_list)
     current_board = ShuffleBoard(match_list, pokemon_list, icons_list)
     shuffle_config_files.create_board_files(current_board, source)
-    if last_execution_swiped or combo_is_running:
+    if source != "manual" and (last_execution_swiped or combo_is_running):
         test_tapper_logic(current_board)
         last_execution_swiped = False
         return MatchResult()
@@ -171,14 +171,15 @@ def start_from_helper(pokemon_list: list[Pokemon], has_barriers, root=None, sour
 def verify_active_combo(current_screen_image):
     return adb_utils.has_match(current_screen_image, constants.COMBO_IMAGE)
 
-def test_tapper_logic(current_board):
+def test_tapper_logic(current_board: ShuffleBoard):
     global mega_activated_this_round
     if config_utils.config_values.get("tapper"):
         if True or mega_activated_this_round or current_board.has_mega:
             print("Executing crazy Tapper Logic")
             mega_activated_this_round = True
             interest_list = ["Frozen", "Metal", "Fog", "Wood"]
-            final_sequence = [match.name if match.cosine_similarity > 0.6 else "None" for match in current_board.match_sequence]
+            # final_sequence = [match.name if match.cosine_similarity > 0.6 else "None" for match in current_board.match_sequence]
+            final_sequence = [process_tap_match(match, current_board.extra_supports_list) for match in current_board.match_sequence]
             tapper_dict = custom_utils.split_list_to_dict(final_sequence, interest_list)
             tapper_dict["Frozen"] = [idx for idx, value in enumerate(current_board.frozen_list) if value == 'true' and final_sequence[idx] != "None"]
             list_of_tuples = [(key, value) for key in interest_list for value in tapper_dict[key]]
@@ -187,6 +188,13 @@ def test_tapper_logic(current_board):
             for icon, index in list_of_tuples[:5]:
                 x, y = adb_utils.click_on_board_index(index)
                 print(f"Tapped on {icon} at {x}, {y}")
+
+def process_tap_match(match: Match, stage_added_list: list[str]):
+    if match.cosine_similarity < 0.6:
+        return "None"
+    if match.name in stage_added_list:
+        return "Stage_Added"
+    return match.name
 
 def verify_stage_and_click_buttons(current_screen_image):
     global mega_activated_this_round
