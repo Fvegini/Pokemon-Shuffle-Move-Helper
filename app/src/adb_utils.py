@@ -132,14 +132,19 @@ def check_button_and_click(original_image, image_path, confidence=0.7, extra_tim
         template_image = cv2.imread(image_path)
         top_left, board_bottom_right, probability = search_template(original_image, template_image)
         if probability < confidence:
-            log.debug(f"Not Found: {image_path}")
-            return False
-        log.debug(f"Found: {image_path}")
+            top_left, board_bottom_right, probability = search_template(original_image, custom_utils.resize_cv2_with_scale(template_image,104))
+            if probability < confidence:
+                log.debug(f"Not Found: {image_path}")
+                return False
+            else:
+                log.debug(f"Found: {image_path} after rescaling")
+        else:
+            log.debug(f"Found: {image_path}")
         if click:
             x = math.floor((top_left[0] + board_bottom_right[0]) / 2)
             y = math.floor((top_left[1] + board_bottom_right[1]) / 2)
             subprocess.Popen(f"adb -s localhost:5555 shell input tap {x} {y}", stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
-            time.sleep(2.0)
+            time.sleep(1.7)
             if extra_timeout > 0:
                 time.sleep(extra_timeout)
         return True

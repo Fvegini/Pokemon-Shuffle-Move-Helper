@@ -165,9 +165,10 @@ def start_from_helper(pokemon_list: list[Pokemon], has_barriers, root=None, sour
         return MatchResult(match_list=match_list)
     current_board = ShuffleBoard(match_list, pokemon_list, icons_list)
     shuffle_config_files.create_board_files(current_board, source)
-    if source != "manual" and (last_execution_swiped or combo_is_running):
-        test_tapper_logic(current_board)
+    if source != "manual" and not config_utils.config_values.get("fast_swipe") and (last_execution_swiped or combo_is_running):
         last_execution_swiped = False
+        if config_utils.config_values.get("tapper"):
+            execute_tapper(current_board)
         return MatchResult()
     result = socket_utils.loadNewBoard()
     swiped = adb_utils.execute_play(result)
@@ -181,22 +182,21 @@ def start_from_helper(pokemon_list: list[Pokemon], has_barriers, root=None, sour
 def verify_active_combo(current_screen_image):
     return adb_utils.has_match(current_screen_image, constants.COMBO_IMAGE)
 
-def test_tapper_logic(current_board: ShuffleBoard):
+def execute_tapper(current_board: ShuffleBoard):
     global mega_activated_this_round
-    if config_utils.config_values.get("tapper"):
-        if True or mega_activated_this_round or current_board.has_mega:
-            log.debug("Executing crazy Tapper Logic")
-            mega_activated_this_round = True
-            interest_list = ["Frozen", "Metal", "Fog", "Wood"]
-            final_sequence = [process_tap_match(match, current_board.extra_supports_list) for match in current_board.match_sequence]
-            tapper_dict = custom_utils.split_list_to_dict(final_sequence, interest_list)
-            tapper_dict["Frozen"] = [idx for idx, value in enumerate(current_board.frozen_list) if value == 'true' and final_sequence[idx] != "None"]
-            list_of_tuples = [(key, value) for key in interest_list for value in tapper_dict[key]]
-            if len(list_of_tuples) < 5:
-                list_of_tuples.extend(fixed_tuple_positions)
-            for icon, index in list_of_tuples[:5]:
-                x, y = adb_utils.click_on_board_index(index)
-                log.debug(f"Tapped on {icon} at {x}, {y}")
+    if True or mega_activated_this_round or current_board.has_mega:
+        log.debug("Executing crazy Tapper Logic")
+        mega_activated_this_round = True
+        interest_list = ["Frozen", "Metal", "Fog", "Wood"]
+        final_sequence = [process_tap_match(match, current_board.extra_supports_list) for match in current_board.match_sequence]
+        tapper_dict = custom_utils.split_list_to_dict(final_sequence, interest_list)
+        tapper_dict["Frozen"] = [idx for idx, value in enumerate(current_board.frozen_list) if value == 'true' and final_sequence[idx] != "None"]
+        list_of_tuples = [(key, value) for key in interest_list for value in tapper_dict[key]]
+        if len(list_of_tuples) < 5:
+            list_of_tuples.extend(fixed_tuple_positions)
+        for icon, index in list_of_tuples[:5]:
+            x, y = adb_utils.click_on_board_index(index)
+            log.debug(f"Tapped on {icon} at {x}, {y}")
 
 def process_tap_match(match: Match, stage_added_list: list[str]):
     if match.cosine_similarity < 0.6:
@@ -209,15 +209,24 @@ def click_buttons(current_screen_image):
     adb_utils.check_hearts(current_screen_image)
     adb_utils.check_buttons_to_click(current_screen_image)
 
-def match_cell_with_icons(icons_list, cell_list, has_barriers, combo_is_running=False):
+def match_cell_with_icons(icons_list, cell_list, has_barriers, combo_is_running=False) -> List[Match]:
     global last_execution_swiped
     match_list: List[Match] = []
+    is_timed_stage = check_is_timed_stage()
     for idx, cell in enumerate(cell_list):
         result = predict(cell, icons_list, has_barriers)
-        if not combo_is_running  and not last_execution_swiped and result.name in ["Fog", "_Fog", "Pikachu_a"]:
+        if not is_timed_stage and not combo_is_running and not last_execution_swiped and result.name in ["Fog", "_Fog", "Pikachu_a"]:
             result = update_fog_match(result, icons_list, has_barriers, idx)
         match_list.append(result)
+    if is_timed_stage:
+        mask_existant_matches(match_list)
     return match_list
+
+def mask_existant_matches(match_list: List[Match]) -> List[Match]:
+    return match_list
+
+def check_is_timed_stage():
+    return config_utils.config_values.get("timed_stage")
 
 def is_on_stage(original_image):
     return adb_utils.has_match(original_image, constants.ACTIVE_BOARD_IMAGE)

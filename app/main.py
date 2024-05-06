@@ -215,44 +215,64 @@ class ImageSelectorApp():
         
         frame3_1_top_1 = customtkinter.CTkFrame(frame3_1_top, fg_color="transparent")
         frame3_1_top_2 = customtkinter.CTkFrame(frame3_1_top, fg_color="transparent")
+        frame3_1_top_3 = customtkinter.CTkFrame(frame3_1_top, fg_color="transparent")
         frame3_1_top_1.pack(side=tk.LEFT)
         frame3_1_top_2.pack(side=tk.LEFT)
+        frame3_1_top_3.pack(side=tk.LEFT)
 
-        self.control_loop_var = tk.BooleanVar(value=False)        
-        self.has_barrier_var = tk.BooleanVar(value=config_utils.config_values.get("has_barrier")) 
-        self.adb_board_var = tk.BooleanVar(value=config_utils.config_values.get("adb_board")) 
-        self.adb_move_var = tk.BooleanVar(value=config_utils.config_values.get("adb_move"))
+        self.frame3_1_top_1_1_var_control_loop = tk.BooleanVar(value=False)      
+        self.frame3_1_top_1_2_var_control_barrier = tk.BooleanVar(value=config_utils.config_values.get("has_barrier")) 
+        self.frame3_1_top_1_3_var = tk.BooleanVar(value=config_utils.config_values.get("adb_board")) 
+        self.frame3_1_top_1_4_var = tk.BooleanVar(value=config_utils.config_values.get("adb_move"))
         
-        self.control_loop_switch = customtkinter.CTkSwitch(frame3_1_top_1, text="Capture Loop", variable=self.control_loop_var, onvalue=True, offvalue=False, command=self.control_loop_function)
-        self.has_barrier_switch = customtkinter.CTkSwitch(frame3_1_top_1, text="Has Barriers", variable=self.has_barrier_var, command=self.reveal_or_hide_barrier_img)
-        self.adb_board_switch = customtkinter.CTkSwitch(frame3_1_top_1, text="ADB Board", variable=self.adb_board_var, onvalue=True, offvalue=False, command=self.adb_board)
-        self.adb_move_switch = customtkinter.CTkSwitch(frame3_1_top_1, text="ADB Move", variable=self.adb_move_var, onvalue=True, offvalue=False, command=self.adb_move)
+        self.frame3_1_top_1_1_switch_control_loop = customtkinter.CTkSwitch(frame3_1_top_1, variable=self.frame3_1_top_1_1_var_control_loop, command=lambda: self.control_loop_function(), text="Execution Loop", onvalue=True, offvalue=False)
+        self.frame3_1_top_1_2_switch = customtkinter.CTkSwitch(frame3_1_top_1, variable=self.frame3_1_top_1_2_var_control_barrier, command=lambda: self.reveal_or_hide_barrier_img(), text="Has Barriers", onvalue=True, offvalue=False)
+        self.frame3_1_top_1_3_switch = customtkinter.CTkSwitch(frame3_1_top_1, variable=self.frame3_1_top_1_3_var, command=lambda: self.update_switch_config(self.frame3_1_top_1_3_var, "adb_board"), text="ADB Board", onvalue=True, offvalue=False)
+        self.frame3_1_top_1_4_switch = customtkinter.CTkSwitch(frame3_1_top_1, variable=self.frame3_1_top_1_4_var, command=lambda: self.update_switch_config(self.frame3_1_top_1_4_var, "adb_move"), text="ADB Move", onvalue=True, offvalue=False)
+        
 
-        self.control_loop_switch.pack(side=tk.TOP, anchor=tk.W, padx=5)
-        self.has_barrier_switch.pack(side=tk.TOP, anchor=tk.W, padx=5)
-        self.adb_board_switch.pack(side=tk.TOP, anchor=tk.W, padx=5)
-        self.adb_move_switch.pack(side=tk.TOP, anchor=tk.W, padx=5)
+        self.frame3_1_top_1_1_switch_control_loop.pack(side=tk.TOP, anchor=tk.W, padx=5)
+        self.frame3_1_top_1_2_switch.pack(side=tk.TOP, anchor=tk.W, padx=5)
+        self.frame3_1_top_1_3_switch.pack(side=tk.TOP, anchor=tk.W, padx=5)
+        self.frame3_1_top_1_4_switch.pack(side=tk.TOP, anchor=tk.W, padx=5)
 
-        keyboard.add_hotkey('f3', lambda:  self.control_loop_switch.toggle())
-        keyboard.add_hotkey('f4', lambda: self.has_barrier_switch.toggle())
-        
-        
-        self.auto_next_stage_var = tk.BooleanVar(value=config_utils.config_values.get("auto_next_stage"))      
-        self.timed_stage_var = tk.BooleanVar(value=config_utils.config_values.get("timed_stage")) 
-        self.tapper_var = tk.BooleanVar(value=config_utils.config_values.get("tapper")) 
-        self.placeholder_var = tk.BooleanVar(value=config_utils.config_values.get("placeholder"))
-        
-        self.auto_next_stage_switch = customtkinter.CTkSwitch(frame3_1_top_2, text="Auto Next Stage", variable=self.auto_next_stage_var, onvalue=True, offvalue=False, command=self.auto_next_stage)
-        self.timed_stage_switch = customtkinter.CTkSwitch(frame3_1_top_2, text="Timed Stage", variable=self.timed_stage_var, command=self.timed_stage)
-        self.tapper_switch = customtkinter.CTkSwitch(frame3_1_top_2, text="Tapper", variable=self.tapper_var, onvalue=True, offvalue=False, command=self.tapper)
-        self.placeholder_switch = customtkinter.CTkSwitch(frame3_1_top_2, text="Meowth32", variable=self.placeholder_var, onvalue=True, offvalue=False, command=self.placeholder)
 
-        self.auto_next_stage_switch.pack(side=tk.TOP, anchor=tk.W, padx=5)
-        self.timed_stage_switch.pack(side=tk.TOP, anchor=tk.W, padx=5)
-        self.tapper_switch.pack(side=tk.TOP, anchor=tk.W, padx=5)
-        self.placeholder_switch.pack(side=tk.TOP, anchor=tk.W, padx=5)
+        keyboard.add_hotkey('f3', lambda:  self.frame3_1_top_1_1_switch_control_loop.toggle())
+        keyboard.add_hotkey('f4', lambda: self.frame3_1_top_1_2_switch.toggle())
         
+        self.frame3_1_top_2_1_var = tk.BooleanVar(value=config_utils.config_values.get("auto_next_stage"))      
+        self.frame3_1_top_2_2_var = tk.BooleanVar(value=config_utils.config_values.get("timed_stage")) 
+        self.frame3_1_top_2_3_var = tk.BooleanVar(value=config_utils.config_values.get("tapper")) 
+        self.frame3_1_top_2_4_var = tk.BooleanVar(value=config_utils.config_values.get("meowth_37"))
         
+        self.frame3_1_top_2_1_switch = customtkinter.CTkSwitch(frame3_1_top_2, variable=self.frame3_1_top_2_1_var, command=lambda: self.update_switch_config(self.frame3_1_top_2_1_var, "auto_next_stage"), text="Auto Next Stage", onvalue=True, offvalue=False)
+        self.frame3_1_top_2_2_switch = customtkinter.CTkSwitch(frame3_1_top_2, variable=self.frame3_1_top_2_2_var, command=lambda: self.update_switch_config(self.frame3_1_top_2_2_var, "timed_stage"), text="Timed Stage", onvalue=True, offvalue=False)
+        self.frame3_1_top_2_3_switch = customtkinter.CTkSwitch(frame3_1_top_2, variable=self.frame3_1_top_2_3_var, command=lambda: self.update_switch_config(self.frame3_1_top_2_3_var, "tapper"), text="Tapper", onvalue=True, offvalue=False)
+        self.frame3_1_top_2_4_switch = customtkinter.CTkSwitch(frame3_1_top_2, variable=self.frame3_1_top_2_4_var, command=lambda: self.update_switch_config(self.frame3_1_top_2_4_var, "meowth_37"), text="Meowth 37", onvalue=True, offvalue=False)
+        
+
+        self.frame3_1_top_2_1_switch.pack(side=tk.TOP, anchor=tk.W, padx=5)
+        self.frame3_1_top_2_2_switch.pack(side=tk.TOP, anchor=tk.W, padx=5)
+        self.frame3_1_top_2_3_switch.pack(side=tk.TOP, anchor=tk.W, padx=5)
+        self.frame3_1_top_2_4_switch.pack(side=tk.TOP, anchor=tk.W, padx=5)
+
+
+        self.frame3_1_top_3_1_var = tk.BooleanVar(value=config_utils.config_values.get("fast_swipe"))      
+        self.frame3_1_top_3_2_var = tk.BooleanVar(value=config_utils.config_values.get("placeholder1")) 
+        self.frame3_1_top_3_3_var = tk.BooleanVar(value=config_utils.config_values.get("placeholder2")) 
+        self.frame3_1_top_3_4_var = tk.BooleanVar(value=config_utils.config_values.get("placeholder3"))
+        
+        self.frame3_1_top_3_1_switch = customtkinter.CTkSwitch(frame3_1_top_3, variable=self.frame3_1_top_3_1_var, command=lambda: self.update_switch_config(self.frame3_1_top_3_1_var, "fast_swipe"), text="Fast Swipe", onvalue=True, offvalue=False)
+        self.frame3_1_top_3_2_switch = customtkinter.CTkSwitch(frame3_1_top_3, variable=self.frame3_1_top_3_2_var, command=lambda: self.update_switch_config(self.frame3_1_top_3_2_var, "placeholder1"), text="placeholder1", onvalue=True, offvalue=False)
+        self.frame3_1_top_3_3_switch = customtkinter.CTkSwitch(frame3_1_top_3, variable=self.frame3_1_top_3_3_var, command=lambda: self.update_switch_config(self.frame3_1_top_3_3_var, "placeholder2"), text="placeholder2", onvalue=True, offvalue=False)
+        self.frame3_1_top_3_4_switch = customtkinter.CTkSwitch(frame3_1_top_3, variable=self.frame3_1_top_3_4_var, command=lambda: self.update_switch_config(self.frame3_1_top_3_4_var, "placeholder3"), text="placeholder3", onvalue=True, offvalue=False)
+        
+
+        self.frame3_1_top_3_1_switch.pack(side=tk.TOP, anchor=tk.W, padx=5)
+        self.frame3_1_top_3_2_switch.pack(side=tk.TOP, anchor=tk.W, padx=5)
+        self.frame3_1_top_3_3_switch.pack(side=tk.TOP, anchor=tk.W, padx=5)
+        self.frame3_1_top_3_4_switch.pack(side=tk.TOP, anchor=tk.W, padx=5)
+
         
         
         
@@ -495,7 +515,7 @@ class ImageSelectorApp():
             selected_image_frame.checkbox_mega = checkbox_mega
 
 
-        if self.has_barrier_var.get() and not skip_barrier:
+        if self.frame3_1_top_1_2_var_control_barrier.get() and not skip_barrier:
             self.reveal_or_hide_barrier_img()
             
         
@@ -588,7 +608,7 @@ class ImageSelectorApp():
     def execute_board_analysis(self, source=None, create_image=False, skip_shuffle_move=False, forced_board_image=None) -> MatchResult:
         if source == "manual":
             pokemons_list = self.extract_pokemon_list()
-            match_result = match_icons.start_from_helper(pokemons_list, self.has_barrier_var.get(), root=self, source=source, create_image=create_image, skip_shuffle_move=skip_shuffle_move, forced_board_image=forced_board_image)
+            match_result = match_icons.start_from_helper(pokemons_list, self.frame3_1_top_1_2_var_control_barrier.get(), root=self, source=source, create_image=create_image, skip_shuffle_move=skip_shuffle_move, forced_board_image=forced_board_image)
             return MatchResult()
 
         if self.analysis_lock.locked():
@@ -598,7 +618,7 @@ class ImageSelectorApp():
         with self.analysis_lock:
             # log.debug("Iniciando o start_from_helper")
             pokemons_list = self.extract_pokemon_list()
-            match_result = match_icons.start_from_helper(pokemons_list, self.has_barrier_var.get(), root=self, source=source, create_image=create_image, skip_shuffle_move=skip_shuffle_move, forced_board_image=forced_board_image)
+            match_result = match_icons.start_from_helper(pokemons_list, self.frame3_1_top_1_2_var_control_barrier.get(), root=self, source=source, create_image=create_image, skip_shuffle_move=skip_shuffle_move, forced_board_image=forced_board_image)
             # if not match_result:
             #     self.master.after(200, self.control_loop_function)
             # else:
@@ -610,7 +630,7 @@ class ImageSelectorApp():
         threading.Thread(target=self.execute_board_analysis, args=(source, create_image, skip_shuffle_move, forced_board_image)).start()
 
     def control_loop_function(self):
-        if not self.control_loop_var.get():
+        if not self.frame3_1_top_1_1_var_control_loop.get():
             if self.analysis_lock.locked():
                 self.analysis_lock = threading.Lock()
                 adb_utils.thread_sleep_timer = None
@@ -647,8 +667,8 @@ class ImageSelectorApp():
         mouse_utils.IconCaptureApp(master=self.master, selector_app=self, filename=None)
 
     def disable_loop(self):
-        if self.control_loop_var.get():
-            self.control_loop_switch.toggle()
+        if self.frame3_1_top_1_1_var_control_loop.get():
+            self.frame3_1_top_1_1_switch_control_loop.toggle()
         
 
     def get_icon(self, icon_name):
@@ -657,33 +677,12 @@ class ImageSelectorApp():
         else:
             return customtkinter.CTkImage(Image.open(Path("assets", "fonts", f"{icon_name}-solid.png")), size=(25, 25))
 
-    def adb_board(self):
-            v = self.adb_board_var.get()
-            config_utils.update_config("adb_board", v)
-
-    def adb_move(self):
-        v = self.adb_move_var.get()
-        config_utils.update_config("adb_move", v)
-
-    def auto_next_stage(self):
-        v = self.auto_next_stage_var.get()
-        config_utils.update_config("auto_next_stage", v)
-
-    def timed_stage(self):
-        v = self.timed_stage_var.get()
-        config_utils.update_config("timed_stage", v)
-
-    def tapper(self):
-        v = self.tapper_var.get()
-        config_utils.update_config("tapper", v)
-        
-    def placeholder(self):
-        v = self.placeholder_var.get()
-        config_utils.update_config("placeholder", v)
-
+    def update_switch_config(self, swich_var, config_var_name):
+        v = swich_var.get()
+        config_utils.update_config(config_var_name, v)    
 
     def reveal_or_hide_barrier_img(self):
-        has_barrier = self.has_barrier_var.get()
+        has_barrier = self.frame3_1_top_1_2_var_control_barrier.get()
         config_utils.update_config("has_barrier", has_barrier)
         if not has_barrier:
             for image_widgets in self.get_selected_images_widgets_list():
@@ -750,7 +749,7 @@ class ImageSelectorApp():
                 if pokemon.name in load_from_shuffle.exception_list:
                     pokemon.name = f"_{pokemon.name}"
                 self.insert_image_widget(pokemon.name, skip_barrier=True, stage_added=pokemon.stage_added)
-            if self.has_barrier_var.get():
+            if self.frame3_1_top_1_2_var_control_barrier.get():
                 self.reveal_or_hide_barrier_img()
         except Exception as ex:
             log.error(ex)
