@@ -22,7 +22,9 @@ import cv2
 import numpy as np
 import threading
 import time
+from src import log_utils
 
+log = log_utils.get_logger()
 warnings.filterwarnings("ignore", category=UserWarning, message="CTkButton Warning: Given image is not CTkImage but*")
 # from viztracer.decorator import trace_and_save
 
@@ -378,7 +380,7 @@ class ImageSelectorApp():
             self.master.geometry(f"{int(width*scale_factor)}x{int(height*scale_factor)}+{x}+{y}")
         self.check_current_position()
         if os.getenv("DEV_MODE") == "1":
-            print("Dev Mode Activated")
+            log.debug("Dev Mode Activated")
             self.force_update_mouse_buttons()
 
 
@@ -390,7 +392,7 @@ class ImageSelectorApp():
         app_height = self.master.winfo_height()
         screen_position_x = self.master.winfo_x()
         screen_position_y = self.master.winfo_y()
-        print(f"The screen size is {screen_width}x{screen_height}, the app size is {app_width}x{app_height} and its position is ({screen_position_x}, {screen_position_y}).")
+        log.debug(f"The screen size is {screen_width}x{screen_height}, the app size is {app_width}x{app_height} and its position is ({screen_position_x}, {screen_position_y}).")
 
     def update_preview_image(self, event=None):
         try:
@@ -590,11 +592,11 @@ class ImageSelectorApp():
             return MatchResult()
 
         if self.analysis_lock.locked():
-            print("Already running.")
+            log.debug("Already running.")
             return MatchResult()
 
         with self.analysis_lock:
-            # print("Iniciando o start_from_helper")
+            # log.debug("Iniciando o start_from_helper")
             pokemons_list = self.extract_pokemon_list()
             match_result = match_icons.start_from_helper(pokemons_list, self.has_barrier_var.get(), root=self, source=source, create_image=create_image, skip_shuffle_move=skip_shuffle_move, forced_board_image=forced_board_image)
             # if not match_result:
@@ -609,11 +611,14 @@ class ImageSelectorApp():
 
     def control_loop_function(self):
         if not self.control_loop_var.get():
+            if self.analysis_lock.locked():
+                self.analysis_lock = threading.Lock()
+                adb_utils.thread_sleep_timer = None
             return
         else:
             self.execute_board_analysis_threaded(source="loop")
             if adb_utils.thread_sleep_timer:
-                print(f"Thread is locked for {adb_utils.thread_sleep_timer} seconds, waiting to return the loop.")
+                log.debug(f"Thread is locked for {adb_utils.thread_sleep_timer} seconds, waiting to return the loop.")
                 self.master.after(adb_utils.thread_sleep_timer * 1000, self.control_loop_function)                
                 return
 
@@ -629,7 +634,7 @@ class ImageSelectorApp():
         try:
             return (Path(constants.IMAGES_PATH, image_widgets[0].cget("text")), image_widgets[2].get(), image_widgets[3].get())
         except:
-            print(f"Error on widget: {image_widgets}")
+            log.error(f"Error on widget: {image_widgets}")
             return None
 
     def show_board_position_selector_app(self):
@@ -748,7 +753,7 @@ class ImageSelectorApp():
             if self.has_barrier_var.get():
                 self.reveal_or_hide_barrier_img()
         except Exception as ex:
-            print(ex)
+            log.error(ex)
             pass
 
     def load_team(self):
@@ -759,12 +764,12 @@ class ImageSelectorApp():
         self.master.update()
         # screen_width = self.master.winfo_screenwidth()
         # if screen_width == 2560:
-        #     print("Updating to Ultra Wide Positions")
+        #     log.debug("Updating to Ultra Wide Positions")
         #     match_icons.board_top_left = (364, 488)
         #     match_icons.board_bottom_right = (914, 1031)
         #     match_icons.center_poinst_list = custom_utils.get_center_positions_list(match_icons.board_top_left, match_icons.board_bottom_right)
         # elif screen_width == 1920:
-        #     print("Updating to Full HD Positions")
+        #     log.debug("Updating to Full HD Positions")
         #     # match_icons.board_top_left = (208, 482)
         #     # match_icons.board_bottom_right = (750, 1021)
         #     match_icons.board_top_left = (826, 483)

@@ -5,6 +5,10 @@ import numpy as np
 import pyautogui
 from src import match_icons, config_utils, custom_utils, constants, board_utils
 from pathlib import Path
+from src import log_utils
+
+log = log_utils.get_logger()
+
 class BoardPositionSelectorApp():
 
     def __init__(self, master, selector_app=None):
@@ -89,8 +93,8 @@ class BoardPositionSelectorApp():
             config_utils.update_config("board_bottom_right", bottom_right)
             board_utils.update_board()
             
-            print(f"Top-Left Position: {top_left}")
-            print(f"Bottom-Right Position: {bottom_right}")
+            log.debug(f"Top-Left Position: {top_left}")
+            log.debug(f"Bottom-Right Position: {bottom_right}")
             
             self.keep_open = False
             cv2.destroyAllWindows()

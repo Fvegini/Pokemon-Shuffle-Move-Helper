@@ -9,6 +9,9 @@ from src.discord import pokemon_names
 import asyncio
 from io import BytesIO
 import discord
+from src import log_utils
+
+log = log_utils.get_logger()
 
 known_scales_dict = {
     (750 / 1334): (7 / 1334), #Felipe Phone
@@ -36,8 +39,8 @@ def get_cropped_image(img):
         offset_scale = known_scales_dict.get(closest_scale_number)
     else:
         offset_scale = known_scales_dict.get(closest_scale_number)
-        print(f"New Scale Found, using the closest - {offset_scale}")
-        print(f"Image dimensions were: {img.shape}")
+        log.debug(f"New Scale Found, using the closest - {offset_scale}")
+        log.debug(f"Image dimensions were: {img.shape}")
 
     offset = img.shape[0] * offset_scale
     width = int(img.shape[1] * square_size_percentage)
@@ -147,9 +150,9 @@ async def send_message(ctx, message, target_user=None):
     elif ctx:
         await ctx.send(message)
     else:
-        print(message)
+        log.info(message)
 
 if __name__ == "__main__":
     # result = process_with_image_url(r"https://media.discordapp.net/attachments/1205125025062060042/1207083761649586298/IMG_3916.png?ex=65de5b5b&is=65cbe65b&hm=44cde4e9112f20b54c220bdfcea14d4de008fa3a5cc4abc47fabea94c20b234c&=&format=webp&quality=lossless", None)
-    # print(result)
+    # log.info(result)
     asyncio.run(set_team_stage("fire", None))

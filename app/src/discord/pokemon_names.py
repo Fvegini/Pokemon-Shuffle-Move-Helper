@@ -90,7 +90,7 @@ def find_pokemon(original_pokemon_name):
 #             final_string = ""
 #         return final_string, pokemons_not_found
 #     except Exception as ex:
-#         print(f"Error on set team: {ex}")
+#         log.info(f"Error on set team: {ex}")
 #         return "", {}
     
     

@@ -12,6 +12,10 @@ from src.classes import Icon, Match, Pokemon, MatchResult, ShuffleBoard
 import statistics
 from src import adb_utils
 from src.board_utils import current_board
+from src import log_utils
+
+log = log_utils.get_logger()
+
 
 fake_barrier_active = False
 last_pokemon_board_sequence: list[str] = []
@@ -24,7 +28,7 @@ fixed_tuple_positions = [("None", 7), ("None", 10)]
 def load_icon_classes(values_to_execute: list[Pokemon], has_barriers):
     icons_list = []
     if not loaded_icons_cache:
-        print("Icons Cache is Empty, starting a new one")
+        log.debug("Icons Cache is Empty, starting a new one")
     for pokemon in values_to_execute:
         if pokemon.disabled:
             continue
@@ -139,17 +143,23 @@ def get_metrics(match_list):
     
 def start_from_helper(pokemon_list: list[Pokemon], has_barriers, root=None, source=None, create_image=False, skip_shuffle_move=False, forced_board_image=None) -> MatchResult:
     global last_pokemon_board_sequence, mega_activated_this_round, last_execution_swiped
-    # print("Starting a new check")
     icons_list = load_icon_classes(pokemon_list, has_barriers)
     cell_list = make_cell_list(forced_board_image)
     current_screen_image = cv2.imread(constants.LAST_SCREEN_IMAGE_PATH)
     combo_is_running = False
     if source != "manual":
-        not_in_stage_yet = verify_stage_and_click_buttons(current_screen_image)
-        if not_in_stage_yet:
+        if not is_on_stage(current_screen_image):
+            if should_auto_next_stage():
+                click_buttons(current_screen_image)
+            else:
+                log.debug("Stage isn't active and next stage is disabled")
+            mega_activated_this_round = False
             last_execution_swiped = False
             return MatchResult()
         combo_is_running = verify_active_combo(current_screen_image)
+    else:
+        mega_activated_this_round = False
+        last_execution_swiped = False
     match_list = match_cell_with_icons(icons_list, cell_list, has_barriers, combo_is_running)
     if skip_shuffle_move:
         return MatchResult(match_list=match_list)
@@ -175,10 +185,9 @@ def test_tapper_logic(current_board: ShuffleBoard):
     global mega_activated_this_round
     if config_utils.config_values.get("tapper"):
         if True or mega_activated_this_round or current_board.has_mega:
-            print("Executing crazy Tapper Logic")
+            log.debug("Executing crazy Tapper Logic")
             mega_activated_this_round = True
             interest_list = ["Frozen", "Metal", "Fog", "Wood"]
-            # final_sequence = [match.name if match.cosine_similarity > 0.6 else "None" for match in current_board.match_sequence]
             final_sequence = [process_tap_match(match, current_board.extra_supports_list) for match in current_board.match_sequence]
             tapper_dict = custom_utils.split_list_to_dict(final_sequence, interest_list)
             tapper_dict["Frozen"] = [idx for idx, value in enumerate(current_board.frozen_list) if value == 'true' and final_sequence[idx] != "None"]
@@ -187,7 +196,7 @@ def test_tapper_logic(current_board: ShuffleBoard):
                 list_of_tuples.extend(fixed_tuple_positions)
             for icon, index in list_of_tuples[:5]:
                 x, y = adb_utils.click_on_board_index(index)
-                print(f"Tapped on {icon} at {x}, {y}")
+                log.debug(f"Tapped on {icon} at {x}, {y}")
 
 def process_tap_match(match: Match, stage_added_list: list[str]):
     if match.cosine_similarity < 0.6:
@@ -196,15 +205,9 @@ def process_tap_match(match: Match, stage_added_list: list[str]):
         return "Stage_Added"
     return match.name
 
-def verify_stage_and_click_buttons(current_screen_image):
-    global mega_activated_this_round
-    if not is_on_stage(current_screen_image):
-        mega_activated_this_round = False
-        if should_auto_next_stage():
-            adb_utils.check_hearts(current_screen_image)
-            adb_utils.check_buttons_to_click(current_screen_image)
-            return True
-    return False
+def click_buttons(current_screen_image):
+    adb_utils.check_hearts(current_screen_image)
+    adb_utils.check_buttons_to_click(current_screen_image)
 
 def match_cell_with_icons(icons_list, cell_list, has_barriers, combo_is_running=False):
     global last_execution_swiped

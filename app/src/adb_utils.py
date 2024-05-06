@@ -11,6 +11,9 @@ import pyautogui
 import time
 from src.board_utils import current_board
 from pathlib import Path
+from src import log_utils
+
+log = log_utils.get_logger()
 
 pipe = subprocess.Popen("adb kill-server",stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
 output = str(pipe.stdout.read()) #type: ignore
@@ -20,7 +23,7 @@ thread_sleep_timer = None
 hearts_loop_counter = 0
 last_button_clicked = None
 
-def get_screenshot():
+def get_full_screenshot():
     pipe = subprocess.Popen("adb -s localhost:5555 shell screencap -p", stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
     image_bytes = pipe.stdout.read().replace(b'\r\n', b'\n') #type: ignore
     img = cv2.imdecode(np.fromstring(image_bytes, np.uint8), cv2.IMREAD_COLOR) #type: ignore
@@ -50,7 +53,7 @@ def execute_play(result):
             time.sleep(1.0)
             return True
     except Exception as ex:
-        print(f"Error on execute_play: {ex}")
+        log.error(f"Error on execute_play: {ex}")
     return False
 
 def move_second_point(x0_initial, y0_initial, x1_initial, y1_initial, x_offset, y_offset):
@@ -84,38 +87,44 @@ def check_hearts(original_image):
                 best_image = template_path
 
         if max_probability < 0.7:
-            print(f"Current Hearts amount is Unknown")
+            log.debug(f"Current Hearts amount is Unknown")
             return
         hearts_number = int(best_image.stem[-1])
-        print(f"Current Hearts amount is: {hearts_number}")
+        log.debug(f"Current Hearts amount is: {hearts_number}")
         hearts_loop_counter+= 1
         if hearts_number == 0:
-            print("Hearts Ended, waiting for 3600 seconds")
-            thread_sleep_timer = 3600
-            time.sleep(3600)
+            log.info("Hearts Ended, waiting for 300 seconds")
+            thread_sleep_timer = 300
+            time.sleep(300)
             thread_sleep_timer = None
         elif hearts_number >= 5 or hearts_loop_counter > 20:
-            print("Hearts maxed, small click test") #Try to skip the daily login bonus screen
+            log.debug("Hearts maxed, small click test") #Try to skip the daily login bonus screen
             subprocess.Popen(f"adb -s localhost:5555 shell input tap {top_left[0]} {top_left[1]}", stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
     except Exception as ex:
-        print(f"Error checking hearts number: {ex}")
+        log.debug(f"Error checking hearts number: {ex}")
         return
     
 
 def check_buttons_to_click(original_image):
     global hearts_loop_counter, last_button_clicked
+    original_image = get_full_screenshot()
+    some_button_was_clicked = False
     for image in Path(constants.ADB_AUTO_FOLDER).glob("*.png"):
         image_path = image.as_posix()
+        if "return" in image.stem and some_button_was_clicked:
+            continue
         if last_button_clicked == image_path:
             last_button_clicked = None
             continue
         if check_button_and_click(original_image, image_path):
             hearts_loop_counter = 0
             last_button_clicked = image_path
-            return True
-    last_button_clicked = None
-    print("No buttons found to be clicked")
-    return False 
+            some_button_was_clicked = True
+            original_image = get_full_screenshot()
+    if not some_button_was_clicked:
+        last_button_clicked = None
+        log.debug("No buttons found to be clicked")
+    return some_button_was_clicked 
 
 
 def check_button_and_click(original_image, image_path, confidence=0.7, extra_timeout=2.0, click=True):
@@ -123,16 +132,19 @@ def check_button_and_click(original_image, image_path, confidence=0.7, extra_tim
         template_image = cv2.imread(image_path)
         top_left, board_bottom_right, probability = search_template(original_image, template_image)
         if probability < confidence:
-            return
-        print(f"Found: {image_path}")
+            log.debug(f"Not Found: {image_path}")
+            return False
+        log.debug(f"Found: {image_path}")
         if click:
             x = math.floor((top_left[0] + board_bottom_right[0]) / 2)
             y = math.floor((top_left[1] + board_bottom_right[1]) / 2)
             subprocess.Popen(f"adb -s localhost:5555 shell input tap {x} {y}", stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
+            time.sleep(2.0)
             if extra_timeout > 0:
                 time.sleep(extra_timeout)
         return True
     except Exception as ex:
+        log.debug(f"Not Found: {image_path}")
         return False
 
 def search_template(main_image, template):

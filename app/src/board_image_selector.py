@@ -6,6 +6,10 @@ import os
 from src import constants, custom_utils
 import customtkinter
 import cv2
+from src import log_utils
+
+log = log_utils.get_logger()
+
 
 class BoardIconSelector(tk.Toplevel):
      
@@ -140,9 +144,9 @@ class ExtraIconSelector(tk.Toplevel):
 
 def remove_icon(image_path):
     if os.path.exists(image_path):
-        # print(f"Teria removido {image_path}")
+        # log.debug(f"Teria removido {image_path}")
         os.remove(image_path)
-        print(f"Eliminado o Arquivo: {image_path}")
+        log.info(f"Eliminado o Arquivo: {image_path}")
 
 def save_new_icon(image, image_name, folder):
     if folder == "barrier":

@@ -5,6 +5,9 @@ from src.discord import bot_processor
 import cv2
 from io import BytesIO
 from typing import Any, Coroutine
+from src import log_utils
+
+log = log_utils.get_logger()
 
 class MyBot(commands.Bot):
     def __init__(self, *args, **kwargs):
@@ -34,7 +37,7 @@ class MyBot(commands.Bot):
 
     async def on_ready(self):
         self.target_user = await self.fetch_user(int(os.getenv("DISCORD_ID", "")))
-        print(f'Logged in as {self.user}!')
+        log.info(f'Logged in as {self.user}!')
 
     @commands.Cog.listener()
     async def on_message(self, message):

@@ -8,6 +8,9 @@ import customtkinter
 import cv2
 
 from src.classes import MatchResult
+from src import log_utils
+
+log = log_utils.get_logger()
 
 custom_downscale = (96,96)
 
@@ -135,9 +138,8 @@ class PokemonIconSelector(customtkinter.CTkToplevel):
 
 def remove_icon(image_path):
     if os.path.exists(image_path):
-        # print(f"Teria removido {image_path}")
         os.remove(image_path)
-        print(f"Eliminado o Arquivo: {image_path}")
+        log.info(f"Eliminado o Arquivo: {image_path}")
 
 def save_new_icon(image, image_name, is_barrier):
     if is_barrier:

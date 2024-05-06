@@ -10,6 +10,9 @@ from src.config_utils import read_config
 import src.board_utils
 import os
 import re
+from src import log_utils
+
+log = log_utils.get_logger()
 
 def find_matching_files(directory, prefix, suffix):
     directory_path = Path(directory)
@@ -151,7 +154,7 @@ def sort_by_class_attribute(obj_list, attribute_name, reverse=False):
         sorted_list = sorted(obj_list, key=lambda x: getattr(x, attribute_name), reverse=reverse)
         return sorted_list
     except AttributeError:
-        print(f"Attribute '{attribute_name}' not found in the class.")
+        log.error(f"Attribute '{attribute_name}' not found in the class.")
         return obj_list
 
 def merge_cv2_images(img1, img2, spacing=10):
@@ -388,7 +391,7 @@ def get_next_filename_number_on_start(folder_path, filename="test.png"):
 
 def verify_shuffle_file(file_path: Path):
     if not file_path.exists():
-        print(f"File {file_path.as_posix()} not found")
+        log.error(f"File {file_path.as_posix()} not found")
 
 
 def get_center_positions_list(left_position, right_position):
@@ -421,7 +424,7 @@ def get_center_positions_list(left_position, right_position):
 def capture_screen_screenshot():
     adb_board = read_config().get("adb_board")
     if adb_board:
-        return adb_utils.get_screenshot()
+        return adb_utils.get_full_screenshot()
     else:
         return pyautogui.screenshot()
 
@@ -430,7 +433,7 @@ def capture_board_screensot(save=True, return_type="cv2"):
     adb_board = read_config().get("adb_board")
     if adb_board:
         # adb_utils.get_screen_positions()
-        img = adb_utils.crop_board(adb_utils.get_screenshot())
+        img = adb_utils.crop_board(adb_utils.get_full_screenshot())
         if return_type == "cv2":
             return img
         else:
@@ -440,7 +443,7 @@ def capture_board_screensot(save=True, return_type="cv2"):
         x1 = src.board_utils.current_board.board_bottom_right[0] - src.board_utils.current_board.board_top_left[0]
         y0 = src.board_utils.current_board.board_top_left[1]
         y1 = src.board_utils.current_board.board_bottom_right[1] - src.board_utils.current_board.board_top_left[1]
-        # print(f"Screenshot at: {datetime.now()}")
+        # log.debug(f"Screenshot at: {datetime.now()}")
         img = pyautogui.screenshot(region=(x0, y0, x1, y1))
         if save:
             img.save(constants.LAST_BOARD_IMAGE_PATH)
@@ -512,4 +515,4 @@ def split_list_to_dict(complete_list, interest_list):
 # updated_matrix = list(map(list, zip(*updated_matrix)))
 
 # for row in updated_matrix:
-#     print(row)
+#     log.info(row)

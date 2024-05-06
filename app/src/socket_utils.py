@@ -1,6 +1,9 @@
 import socket
 from pathlib import Path
 from src import custom_utils
+from src import log_utils
+
+log = log_utils.get_logger()
 
 socket_port = None
 PREFERENCES_PATH = Path.joinpath(Path.home(), "Shuffle-Move", "config", "preferences.txt")
@@ -18,7 +21,7 @@ def load_socker_port():
                 return
     except:
         pass
-    print(f"No SOCKET_PORT found in {PREFERENCES_PATH.as_posix()}")
+    log.error(f"No SOCKET_PORT found in {PREFERENCES_PATH.as_posix()}")
     socket_port = 54321
     return
     
@@ -34,12 +37,12 @@ def loadNewBoard():
             s.sendall(b'loadNewBoard\n')
             result = s.recv(1024).decode('utf-8')
             if not result:
-                print(f"Socket connected on port {socket_port} but without any response.")
+                log.error(f"Socket connected on port {socket_port} but without any response.")
             else:
-                print(f"Shuffle Move Result: {result}")
+                log.info(f"Shuffle Move Result: {result}")
             return result
     except:
-        print(f"Cant connect to the socket on port {socket_port}, check if Shuffle Move is opened or if the port is being used by another program")
+        log.error(f"Cant connect to the socket on port {socket_port}, check if Shuffle Move is opened or if the port is being used by another program")
         return ""
 
 def ping_shuffle_move():
@@ -50,4 +53,4 @@ def ping_shuffle_move():
         s.sendall(b'ping\n')
 
         result = s.recv(1024).decode('utf-8')
-        print(result)
+        log.info(result)
