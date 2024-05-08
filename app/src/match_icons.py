@@ -10,18 +10,15 @@ from src.custom_utils import capture_board_screensot
 from src.embed import loaded_embedder
 from src import constants, custom_utils
 from src.config_utils import config_values
+from src.execution_variables import execution_variables
 from src import socket_utils, shuffle_config_files
 from src.classes import Icon, Match, Pokemon, MatchResult
 import statistics
 from datetime import datetime
-import screen_ocr
 from src import adb_utils
 import math
 
-center_poinst_list = custom_utils.get_center_positions_list(config_values.get("board_top_left"), config_values.get("board_bottom_right"))
-screenshot_region = (config_values.get("board_top_left")[0], 0, config_values.get("board_bottom_right")[0] - config_values.get("board_top_left")[0], 1080)
 fake_barrier_active = False
-ocr_reader = screen_ocr.Reader.create_quality_reader()
 
 custom_board_image = None
 last_pokemon_board_sequence: list[str] = []
@@ -184,9 +181,12 @@ def start_from_helper(pokemon_list: list[Pokemon], has_barriers, root=None, sour
     original_image = cv2.imread(constants.LAST_SCREEN_IMAGE_PATH)
     if not adb_utils.has_board_active(original_image):
         print("No Board Active")
-        adb_utils.check_hearts(original_image)
-        adb_utils.check_buttons_to_click(original_image)
         return MatchResult()
+    #    TODO fix bot part. Right now I click into the stage for each life.
+    #    print("No Board Active")
+    #    adb_utils.check_hearts(original_image)
+    #    adb_utils.check_buttons_to_click(original_image)
+    #    return MatchResult()
         
     for idx, cell in enumerate(cell_list):
         result = predict(cell, icons_list, has_barriers)
@@ -205,6 +205,18 @@ def start_from_helper(pokemon_list: list[Pokemon], has_barriers, root=None, sour
     if skip_shuffle_move:
         return MatchResult(match_list=match_list)
     # if pokemon_board_sequence != last_pokemon_board_sequence or source != "loop":
+    current_score = adb_utils.get_current_score(original_image)
+    moves_left = adb_utils.get_moves_left(original_image)
+    stage_name = adb_utils.get_current_stage(original_image)
+    if stage_name.isnumeric():
+        execution_variables.current_stage = stage_name
+    if stage_name == '037':
+        execution_variables.current_strategy = '037MeowthEarlyGame'
+        if int(moves_left) <= 2:
+            execution_variables.current_strategy = '037MeowthEndGame'
+        shuffle_config_files.update_gradingModes_file("self", False)
+
+    shuffle_config_files.update_preferences(current_score, moves_left)
     shuffle_config_files.create_board_files(sequence_names_list, original_complete_names_list, extra_supports_list, source)
     last_pokemon_board_sequence = pokemon_board_sequence
     result = socket_utils.loadNewBoard()
@@ -239,8 +251,10 @@ def start_from_bot(pokemon_list: list[Pokemon], has_barriers, image, current_sta
 def update_fog_match(result, icons_list, has_barriers, idx):
     # row, column = [int(coordinate) for coordinate in custom_utils.index_to_coordinates(idx)]
     row, column = custom_utils.index_to_coordinates(idx)
-    board_top_left = config_values.get("board_top_left")
-    board_bottom_right = config_values.get("board_bottom_right")
+    resolution = adb_utils.get_screen_resolution()
+    r = constants.RESOLUTIONS[resolution]["Board"]
+    board_top_left = (r[0], r[1])
+    board_bottom_right = (r[2], r[3])
 
     board_x = board_top_left[0]
     board_y = board_top_left[1]

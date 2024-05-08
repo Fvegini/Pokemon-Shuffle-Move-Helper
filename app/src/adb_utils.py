@@ -10,23 +10,30 @@ from src import custom_utils
 from src.config_utils import config_values
 import pyautogui
 import time
+import pytesseract
 
-pipe = subprocess.Popen("adb kill-server",stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
-output = str(pipe.stdout.read()) #type: ignore
-pipe = subprocess.Popen("adb connect localhost:5555",stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
-output = str(pipe.stdout.read()) #type: ignore
+#pipe = subprocess.Popen("adb kill-server",stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
+#output = str(pipe.stdout.read()) #type: ignore
+#pipe = subprocess.Popen("adb connect localhost:5555",stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
+#output = str(pipe.stdout.read()) #type: ignore
 thread_sleep_timer = None
 
+def get_screen_resolution():
+    pipe = subprocess.Popen("adb shell wm size",stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
+    return str(pipe.stdout.read())[17:26]
+
 def get_screenshot():
-    pipe = subprocess.Popen("adb -s localhost:5555 shell screencap -p", stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
+    pipe = subprocess.Popen("adb shell screencap -p", stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
     image_bytes = pipe.stdout.read().replace(b'\r\n', b'\n') #type: ignore
     img = cv2.imdecode(np.fromstring(image_bytes, np.uint8), cv2.IMREAD_COLOR) #type: ignore
     cv2.imwrite(constants.LAST_SCREEN_IMAGE_PATH, img)
     return img
 
 def crop_board(img):
-    board_top_left = config_values.get("board_top_left")
-    board_bottom_right = config_values.get("board_bottom_right")
+    resolution = get_screen_resolution()
+    r = constants.RESOLUTIONS[resolution]["Board"]
+    board_top_left = (r[0], r[1])
+    board_bottom_right = (r[2], r[3])
     img = img[board_top_left[1]:board_bottom_right[1], board_top_left[0]:board_bottom_right[0]].copy()
     cv2.imwrite(constants.LAST_BOARD_IMAGE_PATH, img)
     return img
@@ -35,8 +42,10 @@ def execute_play(result):
     try:
         adb_move = read_config().get("adb_move")
         if result and "0,0" not in result and "Wrong Board" not in result and adb_move:
-            board_top_left = config_values.get("board_top_left")
-            board_bottom_right = config_values.get("board_bottom_right")
+            resolution = get_screen_resolution()
+            r = constants.RESOLUTIONS[resolution]["Board"]
+            board_top_left = (r[0], r[1])
+            board_bottom_right = (r[2], r[3])
             
             board_x = board_top_left[0]
             board_y = board_top_left[1]
@@ -52,17 +61,17 @@ def execute_play(result):
 
             new_to_x, new_to_y = move_second_point(from_x, from_y, to_x, to_y, board_w/2.5, board_h/2.5)
 
-            subprocess.Popen("adb -s localhost:5555 shell input swipe %d %d %d %d %d" % (
+            subprocess.Popen("adb shell input swipe %d %d %d %d %d" % (
                 from_x, from_y, new_to_x, new_to_y, 250),
                 stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
 
 
-            # subprocess.Popen("adb -s localhost:5555 shell input swipe %d %d %d %d %d" % (
+            # subprocess.Popen("adb shell input swipe %d %d %d %d %d" % (
             #     from_x, from_y, new_to_x, new_to_y, 250),
             #     stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
 
             # print()
-            # subprocess.Popen("adb -s localhost:5555 shell input swipe %d %d %d %d %d" % (
+            # subprocess.Popen("adb shell input swipe %d %d %d %d %d" % (
             #     math.floor(board_x + (board_w * x0) + (board_w / 2)), 
             #     math.floor(board_y + (board_h * y0) + (board_h / 2)), 
             #     math.floor(board_x + (board_w * x1) + (board_w / 2)), 
@@ -70,19 +79,19 @@ def execute_play(result):
             #     250),
             #     stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
 
-            # subprocess.Popen(f"adb -s localhost:5555 shell motionevent DOWN 86, 963", stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
+            # subprocess.Popen(f"adb shell motionevent DOWN 86, 963", stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
         
 
 
-            # subprocess.Popen("adb -s localhost:5555 shell motionevent DOWN %d %d" % (
+            # subprocess.Popen("adb shell motionevent DOWN %d %d" % (
             #     math.floor(board_x + (board_w * x0) + (board_w / 2)), 
             #     math.floor(board_y + (board_h * y0) + (board_h / 2))),
             #     stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
-            # subprocess.Popen("adb -s localhost:5555 shell motionevent MOVE %d %d " % (
+            # subprocess.Popen("adb shell motionevent MOVE %d %d " % (
             #     math.floor(board_x + (board_w * x1) + (board_w / 2)), 
             #     math.floor(board_y + (board_h * y1) + (board_h / 2))),
             #     stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
-            # subprocess.Popen("adb -s localhost:5555 shell motionevent UP %d %d " % (
+            # subprocess.Popen("adb shell motionevent UP %d %d " % (
             #     math.floor(board_x + (board_w * x1) + (board_w / 2)), 
             #     math.floor(board_y + (board_h * y1) + (board_h / 2))),
             #     stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
@@ -118,33 +127,32 @@ def move_second_point(x0_initial, y0_initial, x1_initial, y1_initial, x_offset, 
 # x1_new, y1_new = move_second_point(x0_initial, y0_initial, x1_initial, y1_initial, x_offset, y_offset)
 # print(f"New point coordinates: ({x1_new}, {y1_new})")
 
-
+def check_if_close_to_same_color(pixel1, pixel2, threshold=10):
+  diff = np.subtract(pixel1, pixel2)
+  return np.all(np.abs(diff) < threshold)
 
 def check_hearts(original_image):
     global thread_sleep_timer
     try:
-        max_probability = 0.0
-        
-        for template_path in constants.CURRENT_HEARTS_LIST:
-            template_image = cv2.imread(template_path.as_posix())
-            top_left, _, probability = search_template(original_image, template_image)
-            if probability > max_probability:
-                max_probability = probability
-                best_image = template_path
+        resolution = get_screen_resolution()
+        r = constants.RESOLUTIONS[resolution]["Stage"]
+        img = original_image[r[1]:r[3], r[0]:r[2]].copy()
+        img = 255 - cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
-        if max_probability < 0.7:
+        hearts_number = pytesseract.image_to_string(img, lang='eng',config='--psm 6 --oem 3 -c tessedit_char_whitelist=0123456789').strip()
+        if not hearts_number.isnumeric():
             print(f"Current Hearts amount is Unknown")
             return
-        hearts_number = int(best_image.stem[-1])
+        hearts_number = int(hearts_number)
         print(f"Current Hearts amount is: {hearts_number}")
         if hearts_number == 0:
-            print("Hearts Ended, waiting for 3600 seconds")
-            thread_sleep_timer = 3600
-            time.sleep(3600)
+            r = constants.RESOLUTIONS[resolution]["HeartTimer"]
+            img = original_image[r[1]:r[3], r[0]:r[2]].copy()
+            hearts_timer = pytesseract.image_to_string(img, lang='eng',config='--psm 6 --oem 3 -c tessedit_char_whitelist=:0123456789').strip()
+            thread_sleep_timer = int(hearts_timer[:2]) * 60 + int(hearts_timer[3:]) + 5 #add 5s to heart timer to be safe
+            print(f"Hearts Ended, waiting for {thread_sleep_timer} seconds")
+            time.sleep(thread_sleep_timer)
             thread_sleep_timer = None
-        elif hearts_number >= 5:
-            print("Hearts maxed, small click test") #Try to skip the daily login bonus screen
-            subprocess.Popen(f"adb -s localhost:5555 shell input tap {top_left[0]} {top_left[1]}", stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
     except Exception as ex:
         print(f"Error checking hearts number: {ex}")
         return
@@ -171,7 +179,7 @@ def check_button(original_image, image_path, confidence=0.7, extra_timeout=0.0, 
         if click:
             x = math.floor((top_left[0] + board_bottom_right[0]) / 2)
             y = math.floor((top_left[1] + board_bottom_right[1]) / 2)
-            subprocess.Popen(f"adb -s localhost:5555 shell input tap {x} {y}", stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
+            subprocess.Popen(f"adb shell input tap {x} {y}", stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
             if extra_timeout > 0:
                 time.sleep(extra_timeout)
         return True
@@ -188,15 +196,39 @@ def search_template(main_image, template):
 
     return top_left, bottom_right, max_probability
 
+def get_current_stage(original_image):
+    resolution = get_screen_resolution()
+    r = constants.RESOLUTIONS[resolution]["Stage"]
+    original_image = original_image[r[1]:r[3], r[0]:r[2]].copy()
+    original_image = 255 - cv2.cvtColor(original_image, cv2.COLOR_BGR2GRAY)
+    v = pytesseract.image_to_string(original_image, lang='eng',config='--psm 6 --oem 3 -c tessedit_char_whitelist=0123456789SPEX').strip()
+    if v.isnumeric():
+        v = "{:03}".format(int(v))
+    return v
+
+def get_moves_left(original_image):
+    resolution = get_screen_resolution()
+    r = constants.RESOLUTIONS[resolution]["MovesLeft"]
+    original_image = original_image[r[1]:r[3], r[0]:r[2]].copy()
+    original_image = 255 - cv2.cvtColor(original_image, cv2.COLOR_BGR2GRAY)
+    return pytesseract.image_to_string(original_image, lang='eng',config='--psm 6 --oem 3 -c tessedit_char_whitelist=0123456789').strip()
+
+def get_current_score(original_image):
+    resolution = get_screen_resolution()
+    r = constants.RESOLUTIONS[resolution]["Score"]
+    original_image = original_image[r[1]:r[3], r[0]:r[2]].copy()
+    original_image = 255 - cv2.cvtColor(original_image, cv2.COLOR_BGR2GRAY)
+    return pytesseract.image_to_string(original_image, lang='eng',config='--psm 6 --oem 3 -c tessedit_char_whitelist=0123456789').strip()
+
 def has_board_active(original_image):
-    return check_button(original_image, constants.ACTIVE_BOARD_IMAGE, click=False)
+    return get_moves_left(original_image).isnumeric()
 
 def update_fog_image(cell_x0, cell_y0, cell_x1, cell_y1, board_w, board_h):
     center_x = math.floor((cell_x0 + cell_x1) / 2)
     center_y = math.floor((cell_y0 + cell_y1) / 2)
-    subprocess.Popen(f"adb -s localhost:5555 shell input swipe {center_x} {center_y} {center_x} {center_y} 1000", stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
+    subprocess.Popen(f"adb shell input swipe {center_x} {center_y} {center_x} {center_y} 1000", stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
     time.sleep(0.5)
-    pipe = subprocess.Popen("adb -s localhost:5555 shell screencap -p", stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
+    pipe = subprocess.Popen("adb shell screencap -p", stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
     image_bytes = pipe.stdout.read().replace(b'\r\n', b'\n') #type: ignore
     img = cv2.imdecode(np.fromstring(image_bytes, np.uint8), cv2.IMREAD_COLOR) #type: ignore
     

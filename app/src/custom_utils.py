@@ -419,10 +419,15 @@ def capture_board_screensot(save=True, return_type="cv2"):
         else:
             return custom_utils.cv2_to_pil(img)
     else:
-        x0 = config_values.get("board_top_left")[0]
-        x1 = config_values.get("board_bottom_right")[0] - config_values.get("board_top_left")[0]
-        y0 = config_values.get("board_top_left")[1]
-        y1 = config_values.get("board_bottom_right")[1] - config_values.get("board_top_left")[1]
+        resolution = adb_utils.get_screen_resolution()
+        r = constants.RESOLUTIONS[resolution]["Board"]
+        board_top_left = (r[0], r[1])
+        board_bottom_right = (r[2], r[3])
+
+        x0 = board_top_left[0]
+        x1 = board_bottom_right[0] - board_top_left[0]
+        y0 = board_top_left[1]
+        y1 = board_bottom_right[1] - board_top_left[1]
         # print(f"Screenshot at: {datetime.now()}")
         img = pyautogui.screenshot(region=(x0, y0, x1, y1))
         if save:
