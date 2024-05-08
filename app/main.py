@@ -565,11 +565,10 @@ class ImageSelectorApp():
             return MatchResult()
 
         with self.analysis_lock:
-            print("Iniciando o start_from_helper")
             pokemons_list = self.extract_pokemon_list()
             match_result = match_icons.start_from_helper(pokemons_list, self.has_barrier_var.get(), root=self, source=source, create_image=create_image, skip_shuffle_move=skip_shuffle_move, forced_board_image=forced_board_image)
             if match_result:
-                self.master.after(5000, self.control_loop_function)
+                self.master.after(500, self.control_loop_function)
             else:
                 self.master.after(5000, self.control_loop_function)
         return match_result

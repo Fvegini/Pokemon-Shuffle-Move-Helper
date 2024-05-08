@@ -62,7 +62,7 @@ def execute_play(result):
             new_to_x, new_to_y = move_second_point(from_x, from_y, to_x, to_y, board_w/2.5, board_h/2.5)
 
             subprocess.Popen("adb shell input swipe %d %d %d %d %d" % (
-                from_x, from_y, new_to_x, new_to_y, 250),
+                from_x, from_y, new_to_x, new_to_y, 300),
                 stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
 
 
@@ -134,21 +134,14 @@ def check_if_close_to_same_color(pixel1, pixel2, threshold=10):
 def check_hearts(original_image):
     global thread_sleep_timer
     try:
-        resolution = get_screen_resolution()
-        r = constants.RESOLUTIONS[resolution]["Stage"]
-        img = original_image[r[1]:r[3], r[0]:r[2]].copy()
-        img = 255 - cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-
-        hearts_number = pytesseract.image_to_string(img, lang='eng',config='--psm 6 --oem 3 -c tessedit_char_whitelist=0123456789').strip()
+        hearts_number = get_label(original_image, "Hearts")
         if not hearts_number.isnumeric():
             print(f"Current Hearts amount is Unknown")
             return
         hearts_number = int(hearts_number)
         print(f"Current Hearts amount is: {hearts_number}")
         if hearts_number == 0:
-            r = constants.RESOLUTIONS[resolution]["HeartTimer"]
-            img = original_image[r[1]:r[3], r[0]:r[2]].copy()
-            hearts_timer = pytesseract.image_to_string(img, lang='eng',config='--psm 6 --oem 3 -c tessedit_char_whitelist=:0123456789').strip()
+            hearts_timer = get_label(original_image, "HeartTimer")
             thread_sleep_timer = int(hearts_timer[:2]) * 60 + int(hearts_timer[3:]) + 5 #add 5s to heart timer to be safe
             print(f"Hearts Ended, waiting for {thread_sleep_timer} seconds")
             time.sleep(thread_sleep_timer)
@@ -159,14 +152,11 @@ def check_hearts(original_image):
     
 
 def check_buttons_to_click(original_image):
-    found_list = []
-    found_list.append(check_button(original_image, constants.CURRENT_STAGE_IMAGE))
-    found_list.append(check_button(original_image, constants.OK_BUTTON_IMAGE, extra_timeout=4))
-    found_list.append(check_button(original_image, constants.OK_BUTTON2_IMAGE, extra_timeout=4))
-    found_list.append(check_button(original_image, constants.CONTINUE_IMAGE_IMAGE))
-    found_list.append(check_button(original_image, constants.START_BUTTON_IMAGE))
-    found_list.append(check_button(original_image, constants.TO_MAP_BUTTON_IMAGE))
-    return any(found_list)
+    click_button_if_visible(original_image, "To Map", 1)
+    click_button_if_visible(original_image, "Continue")
+    click_button_if_visible(original_image, "Start!", 4)
+    click_button_if_visible(original_image, "No", 1)
+    click_stage_if_visible(original_image, "052") #Meowth
 
 
 def check_button(original_image, image_path, confidence=0.7, extra_timeout=0.0, click=True):
@@ -186,6 +176,41 @@ def check_button(original_image, image_path, confidence=0.7, extra_timeout=0.0, 
     except Exception as ex:
         return False
 
+def click_stage_if_visible(original_image, stage, extra_timeout=1.0):
+    resolution = get_screen_resolution()
+    r = constants.RESOLUTIONS[resolution]["StageSelectionArea"]
+    img = original_image[r[1]:r[3], r[0]:r[2]].copy()
+    template = cv2.imread(f"D:/Git/Shuffle-Move/src/main/resources/img/icons/{stage}.png")
+    image_gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    template_gray = cv2.cvtColor(template, cv2.COLOR_BGR2GRAY)
+
+    result = cv2.matchTemplate(image_gray, template_gray, cv2.TM_SQDIFF_NORMED)
+    # Find the minimum value and location of the match
+    min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(result)
+    # Get the top-left corner of the match
+    top_left = min_loc
+    # Get the width and height of the template
+    unk, width, height = template.shape[::-1]
+    if max_val < 0.7:
+        return
+    subprocess.Popen(f"adb shell input tap {r[0] + top_left[0] + math.floor(width/2)} {r[1] + top_left[1] + math.floor(height/2)}", stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
+    #cv2.rectangle(img, top_left, (top_left[0] + width, top_left[1] + height), (0, 0, 255), 5)
+    #cv2.imwrite(constants.LAST_SCREEN_IMAGE_PATH, img)
+    #cv2.imshow("", img)
+    if extra_timeout > 0:
+        time.sleep(extra_timeout)
+
+def click_button_if_visible(original_image, text, extra_timeout=1.0):
+    resolution = get_screen_resolution()
+    r = constants.RESOLUTIONS[resolution][text]
+    img = original_image[r[1]:r[3], r[0]:r[2]].copy()
+    img = 255 - cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    result = pytesseract.image_to_string(img, lang='eng',config='--psm 6 --oem 3 -c tessedit_char_whitelist="ABCDEFGHIJKLMNOPQRSTUVWXYZ! "').strip()
+    if result.upper() == text.upper():
+        subprocess.Popen(f"adb shell input tap {math.floor((r[0] + r[2])/2)} {math.floor((r[1] + r[3])/2)}", stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
+        time.sleep(extra_timeout)
+    
+
 def search_template(main_image, template):
     result = cv2.matchTemplate(main_image, template, cv2.TM_CCOEFF_NORMED)
 
@@ -197,31 +222,30 @@ def search_template(main_image, template):
     return top_left, bottom_right, max_probability
 
 def get_current_stage(original_image):
-    resolution = get_screen_resolution()
-    r = constants.RESOLUTIONS[resolution]["Stage"]
-    original_image = original_image[r[1]:r[3], r[0]:r[2]].copy()
-    original_image = 255 - cv2.cvtColor(original_image, cv2.COLOR_BGR2GRAY)
-    v = pytesseract.image_to_string(original_image, lang='eng',config='--psm 6 --oem 3 -c tessedit_char_whitelist=0123456789SPEX').strip()
+    v = get_label(original_image, "Stage")
     if v.isnumeric():
         v = "{:03}".format(int(v))
     return v
 
 def get_moves_left(original_image):
-    resolution = get_screen_resolution()
-    r = constants.RESOLUTIONS[resolution]["MovesLeft"]
-    original_image = original_image[r[1]:r[3], r[0]:r[2]].copy()
-    original_image = 255 - cv2.cvtColor(original_image, cv2.COLOR_BGR2GRAY)
-    return pytesseract.image_to_string(original_image, lang='eng',config='--psm 6 --oem 3 -c tessedit_char_whitelist=0123456789').strip()
+    return get_label(original_image, "MovesLeft")
 
 def get_current_score(original_image):
+    return get_label(original_image, "Score")
+
+def get_label(original_image, label):
     resolution = get_screen_resolution()
-    r = constants.RESOLUTIONS[resolution]["Score"]
-    original_image = original_image[r[1]:r[3], r[0]:r[2]].copy()
-    original_image = 255 - cv2.cvtColor(original_image, cv2.COLOR_BGR2GRAY)
-    return pytesseract.image_to_string(original_image, lang='eng',config='--psm 6 --oem 3 -c tessedit_char_whitelist=0123456789').strip()
+    r = constants.RESOLUTIONS[resolution][label]
+    img = original_image[r[1]:r[3], r[0]:r[2]].copy()
+    img = 255 - cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    #cv2.imshow("", img)
+    result = pytesseract.image_to_string(img, lang='eng',config='--psm 6 --oem 3 -c tessedit_char_whitelist=":0123456789SPEX"').strip()
+    return result
 
 def has_board_active(original_image):
-    return get_moves_left(original_image).isnumeric()
+    return get_moves_left(original_image).isnumeric() \
+        and get_current_score(original_image).isnumeric() \
+        and get_current_stage(original_image).isnumeric()
 
 def update_fog_image(cell_x0, cell_y0, cell_x1, cell_y1, board_w, board_h):
     center_x = math.floor((cell_x0 + cell_x1) / 2)

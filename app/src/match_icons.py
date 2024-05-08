@@ -173,20 +173,18 @@ def get_metrics(match_list):
 
 def start_from_helper(pokemon_list: list[Pokemon], has_barriers, root=None, source=None, create_image=False, skip_shuffle_move=False, forced_board_image=None) -> MatchResult:
     global last_pokemon_board_sequence
-    print("Starting a new check")
     icons_list = load_icon_classes(pokemon_list, has_barriers)
     match_list: List[Match] = []
     cell_list = make_cell_list(forced_board_image)
 
     original_image = cv2.imread(constants.LAST_SCREEN_IMAGE_PATH)
+    # adb_utils.click_stage_if_visible(original_image, "052")
     if not adb_utils.has_board_active(original_image):
-        print("No Board Active")
-        return MatchResult()
     #    TODO fix bot part. Right now I click into the stage for each life.
-    #    print("No Board Active")
-    #    adb_utils.check_hearts(original_image)
-    #    adb_utils.check_buttons_to_click(original_image)
-    #    return MatchResult()
+        print("No Board Active")
+        adb_utils.check_hearts(original_image)
+        adb_utils.check_buttons_to_click(original_image)
+        return MatchResult()
         
     for idx, cell in enumerate(cell_list):
         result = predict(cell, icons_list, has_barriers)

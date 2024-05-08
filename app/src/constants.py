@@ -62,7 +62,7 @@ ORANGE = [ 55, 143, 240]
 RESOLUTIONS = {
     "1440x3120": {
         # Stage Selection
-        "HeartTimer": (75, 190, 255, 250), #TODO. Use this
+        "HeartTimer": (75, 190, 255, 250),
         "Hearts": (355, 190, 480, 250),
         # Stage
         "Board": (20, 1540, 1415, 2935),
@@ -72,8 +72,13 @@ RESOLUTIONS = {
     },
     "1080x2160": {
         # Stage Selection
-        "HeartTimer": (75, 190, 255, 250), #TODO. Use this
+        "StageSelectionArea": (240, 400, 840, 1800),
+        "HeartTimer": (58, 112, 190, 155),
         "Hearts": (265, 112, 357, 155),
+        "Continue": (340, 1890, 740, 1970),
+        "Start!": (340, 1890, 740, 1970),
+        "No": (780, 1690, 990, 1760),
+        "To Map": (340, 1890, 740, 1970),
         # Stage
         "Board": (17, 968, 1064, 2015),
         "Stage": (35, 140, 240, 185),
