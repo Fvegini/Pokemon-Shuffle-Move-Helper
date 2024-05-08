@@ -623,6 +623,10 @@ class ImageSelectorApp():
             #     self.master.after(200, self.control_loop_function)
             # else:
             #     self.master.after(5000, self.control_loop_function)
+        if config_utils.config_values.get("timed_stage"):
+            log.debug("Timed, starting fast next play")
+            self.master.after(1, self.control_loop_function)
+        else:
             self.master.after(100, self.control_loop_function)
         return match_result
 

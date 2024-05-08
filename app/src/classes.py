@@ -81,7 +81,11 @@ class Match():
     def __init__(self, board_icon, embed, icon: Icon):
         self.name = icon.name
         self.board_icon = board_icon
-        cosine_tuples_list = [(loaded_embedder.cosine_similarity(embed, icon_image.embed), icon_image.image) for icon_image in icon.images_list]
+        cosine_tuples_list = []
+        try:
+            cosine_tuples_list = [(loaded_embedder.cosine_similarity(embed, icon_image.embed), icon_image.image) for icon_image in icon.images_list]
+        except:
+            pass
         if len(cosine_tuples_list) > 0:
             self.cosine_similarity, self.match_icon = max(cosine_tuples_list, key=lambda x: x[0])
         else:
@@ -89,6 +93,11 @@ class Match():
 
     def __repr__(self):
         return self.name
+
+    def __eq__(self, other):
+        if isinstance(other, str):
+            return self.name == other
+        return self.name == other.name
 
     def inspect_match(self):
         custom_utils.show_list_images([self.board_icon, self.match_icon])
@@ -119,6 +128,7 @@ class ShuffleBoard():
     original_complete_names_list: list[str]
     frozen_list: list[str]
     has_mega: bool
+    mega_name: str
     
     def __init__(self, match_sequence: List[Match], pokemon_list: List[Pokemon], icons_list: List[Icon]):
         self.match_sequence = match_sequence

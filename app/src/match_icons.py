@@ -22,6 +22,7 @@ last_pokemon_board_sequence: list[str] = []
 loaded_icons_cache: dict[str, Icon] = {}
 mega_activated_this_round = False
 metal_icon = Icon("Metal", Path("Metal.png"), False)
+metal_match = Match(None, None, metal_icon)
 last_execution_swiped = False
 fixed_tuple_positions = [("None", 7), ("None", 10)]
 
@@ -165,13 +166,13 @@ def start_from_helper(pokemon_list: list[Pokemon], has_barriers, root=None, sour
         return MatchResult(match_list=match_list)
     current_board = ShuffleBoard(match_list, pokemon_list, icons_list)
     shuffle_config_files.create_board_files(current_board, source)
-    if source != "manual" and not config_utils.config_values.get("fast_swipe") and (last_execution_swiped or combo_is_running):
+    if source != "manual" and not config_utils.config_values.get("fast_swipe") and not config_utils.config_values.get("timed_stage") and (last_execution_swiped or combo_is_running):
         last_execution_swiped = False
         if config_utils.config_values.get("tapper"):
             execute_tapper(current_board)
         return MatchResult()
     result = socket_utils.loadNewBoard()
-    swiped = adb_utils.execute_play(result)
+    swiped = adb_utils.execute_play(result, current_board, last_execution_swiped)
     if swiped:
         last_execution_swiped = True
     result_image = None
@@ -219,10 +220,11 @@ def match_cell_with_icons(icons_list, cell_list, has_barriers, combo_is_running=
             result = update_fog_match(result, icons_list, has_barriers, idx)
         match_list.append(result)
     if is_timed_stage:
-        mask_existant_matches(match_list)
+        mask_already_existant_matches(match_list)
     return match_list
 
-def mask_existant_matches(match_list: List[Match]) -> List[Match]:
+def mask_already_existant_matches(match_list: List[Match]) -> List[Match]:
+    match_list = custom_utils.replace_all_3_matches_indices(match_list, metal_match)
     return match_list
 
 def check_is_timed_stage():

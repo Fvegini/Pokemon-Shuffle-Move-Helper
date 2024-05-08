@@ -1,7 +1,7 @@
 from pathlib import Path
 import cv2
 import numpy as np
-from src.classes import Match
+from src.classes import Match, ShuffleBoard
 from typing import Any, List
 from src import adb_utils, constants, custom_utils
 from PIL import Image
@@ -302,8 +302,11 @@ def update_match_with_result(result, match_list: List[Match]):
         red = None
         blue = None
 
-def coordinates_to_index(row, column, width=6):
-    return ((int(row) - 1) * width) + (int(column) - 1)
+def coordinates_to_index(row, column, width=6, start_at_1=True):
+    if start_at_1:
+        return ((int(row) - 1) * width) + (int(column) - 1)
+    else:
+        return ((int(row)) * width) + (int(column))
 
 def index_to_coordinates(index, width=6):
     row = index // width + 1
@@ -452,37 +455,88 @@ def capture_board_screensot(save=True, return_type="cv2"):
         else:
             return img
         
-def remove_sequences(matrix):
-    rows = len(matrix)
-    cols = len(matrix[0])
-    sequence_found = True
+def replace_all_3_matches_indices(mylist: List[Match], replace_match):
+    matrix = np.array(mylist).reshape((6,6))
+    matrix_index_list = []
+    for i in range(6):
+        for j in range(6):
+            value = matrix[i][j]
+            if value is None:
+                continue
+            elif value == "Air":
+                matrix_index_list.extend([(i, j)])
+                continue
+            # Check horizontal
+            if j <= 3 and matrix[i][j + 1] == value and matrix[i][j + 2] == value:
+                matrix_index_list.extend([(i, j), (i, j + 1), (i, j + 2)])
+            # Check vertical
+            if i <= 3 and matrix[i + 1][j] == value and matrix[i + 2][j] == value:
+                matrix_index_list.extend([(i, j), (i + 1, j), (i + 2, j)])
+    matrix_index_list = list(set(matrix_index_list))
+    for matrix_index in matrix_index_list:
+        index = coordinates_to_index(matrix_index[0], matrix_index[1], start_at_1=False)
+        mylist[index] = replace_match
+    return mylist
 
-    while sequence_found:
-        sequence_found = False
+invalid_values = ["Wood", "Frozen", "Metal"]
 
-        # Check rows
-        for i in range(rows):
-            j = 0
-            while j < cols - 2:
-                if matrix[i][j] != 0 and matrix[i][j] == matrix[i][j+1] == matrix[i][j+2]:
-                    matrix[i][j] = matrix[i][j+1] = matrix[i][j+2] = 0
-                    sequence_found = True
-                    j += 3
-                else:
-                    j += 1
+def search_space_to_fit_mega(mylist: List[Match], target_value):
+    matrix = np.array(mylist).reshape((6,6))
+    cell_to_move_icon = None
+    cell_of_the_mega = None
+    cell_from_move_icon = None
+    for i in range(6):
+        if cell_to_move_icon:
+            break
+        for j in range(6):
+            if matrix[i][j] == target_value:
+                # Check horizontal combinations
+                if j <= 3:
+                    combination = [(i, j + 1), (i, j + 2)]
+                    if all(matrix[x][y] not in invalid_values for x, y in combination):
+                        cell_to_move_icon = combination[0]
+                        cell_of_the_mega = (i , j)
+                        break
+                if j >= 2:
+                    combination = [(i, j - 2), (i, j - 1)]
+                    if all(matrix[x][y] not in invalid_values for x, y in combination):
+                        cell_to_move_icon = combination[0]
+                        cell_of_the_mega = (i , j)
+                        break
+                if j >=1 and j <=5:
+                    combination = [(i, j - 1), (i, j + 1)]
+                    if all(matrix[x][y] not in invalid_values for x, y in combination):
+                        cell_to_move_icon = combination[0]
+                        cell_of_the_mega = (i , j)
+                        break
+                # Check vertical combinations
+                if i <= 3:
+                    combination = [(i, j), (i + 1, j), (i + 2, j)]
+                    if all(matrix[x][y] not in invalid_values for x, y in combination):
+                        cell_to_move_icon = combination[0]
+                        cell_of_the_mega = (i , j)
+                        break
+                if i >= 2:
+                    combination = [(i - 2, j), (i - 1, j), (i, j)]
+                    if all(matrix[x][y] not in invalid_values for x, y in combination):
+                        cell_to_move_icon = combination[0]
+                        cell_of_the_mega = (i , j)
+                        break
+                if i >=1 and i <=5:
+                    combination = [(i - 1, j), (i + 1, j)]
+                    if all(matrix[x][y] not in invalid_values for x, y in combination):
+                        cell_to_move_icon = combination[0]
+                        cell_of_the_mega = (i , j)
+                        break
+    for i in range(6):
+        if cell_from_move_icon:
+            break
+        for j in range(6):
+            if matrix[i][j] == target_value and (i, j) != cell_of_the_mega:
+                cell_from_move_icon = (i,j)
+                break
+    return cell_from_move_icon, cell_to_move_icon
 
-        # Check columns
-        for j in range(cols):
-            i = 0
-            while i < rows - 2:
-                if matrix[i][j] != 0 and matrix[i][j] == matrix[i+1][j] == matrix[i+2][j]:
-                    matrix[i][j] = matrix[i+1][j] = matrix[i+2][j] = 0
-                    sequence_found = True
-                    i += 3
-                else:
-                    i += 1
-
-    return matrix
 
 def split_list_to_dict(complete_list, interest_list):
     result_dict: dict[Any, List] = {key: [] for key in interest_list}
@@ -494,25 +548,11 @@ def split_list_to_dict(complete_list, interest_list):
         result_dict[string].append(idx)
     return result_dict
 
-# # Example usage
-# matrix = [
-#     [1, 2, 2, 2, 5, 6],
-#     [1, 2, 2, 2, 5, 6],
-#     [1, 2, 2, 2, 5, 6],
-#     [1, 2, 2, 2, 5, 6],
-#     [1, 2, 3, 4, 5, 6],
-#     [1, 2, 3, 4, 5, 6]
-# ]
-
-# updated_matrix = remove_sequences(matrix)
-
-# # Check columns after removing rows
-# updated_matrix = list(map(list, zip(*updated_matrix)))
-
-# updated_matrix = remove_sequences(updated_matrix)
-
-# # Revert the matrix back to original orientation
-# updated_matrix = list(map(list, zip(*updated_matrix)))
-
-# for row in updated_matrix:
-#     log.info(row)
+def find_slot_to_mega(current_board: ShuffleBoard):
+    from_matrix, to_matrix = search_space_to_fit_mega(current_board.match_sequence, current_board.mega_name)
+    from_row = from_matrix[0] + 1
+    from_column = from_matrix[1] + 1
+    to_row = to_matrix[0] + 1
+    to_column = to_matrix[1] + 1
+    formatted_result = f"{from_row},{from_column} -> {to_row},{to_column}:"
+    return formatted_result

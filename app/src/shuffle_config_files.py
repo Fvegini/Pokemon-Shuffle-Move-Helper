@@ -94,6 +94,7 @@ def create_board_files(current_board: ShuffleBoard, source=None, stage=None):
         mega_name = forced_mega_name
     else:
         mega_activated = MEGA_ACTIVATED
+    current_board.mega_name = mega_name
     update_board_file(names_list, frozen_list, mega_activated, stage)
     if execution_variables.has_modifications or source == "bot":
         update_teams_file(complete_names_list, mega_name, current_board.extra_supports_list, stage)
