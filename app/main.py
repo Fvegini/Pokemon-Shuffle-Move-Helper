@@ -620,10 +620,6 @@ class ImageSelectorApp():
             # log.debug("Iniciando o start_from_helper")
             pokemons_list = self.extract_pokemon_list()
             match_result = match_icons.start_from_helper(pokemons_list, self.frame3_1_top_1_2_var_control_barrier.get(), root=self, source=source, create_image=create_image, skip_shuffle_move=skip_shuffle_move, forced_board_image=forced_board_image)
-            # if not match_result:
-            #     self.master.after(200, self.control_loop_function)
-            # else:
-            #     self.master.after(5000, self.control_loop_function)
         if current_lock != self.analysis_lock:
             return match_result #Avoid problem with older timed threads keeping a parallel loop.
         if config_utils.config_values.get("timed_stage"):

@@ -2,6 +2,8 @@ from pathlib import Path
 
 
 BARRIER_PREFIX = "Barrier_"
+
+STAGE_FLANN_IMAGE_PATH = r"FLANN.png"
 LAST_BOARD_IMAGE_PATH = r"last_board.png"
 LAST_SCREEN_IMAGE_PATH = r"last_screen.png"
 IMAGES_BARRIER_PATH = r"assets\icons_barrier"
@@ -24,7 +26,9 @@ move_strategy = {
     "grading.noneorall": "None or All",
     "grading.megaprogress": "Mega Progress",
     "grading.coordinate": "Coordinates",
-    "WeekendMeowth": "WeekendMeowth"
+    "WeekendMeowth": "WeekendMeowth",
+    "037MeowthEarlyGame": "037MeowthEarlyGame",
+    "037MeowthEndGame": "037MeowthEndGame"
 }
 
 move_stages = {
@@ -47,11 +51,52 @@ move_stages = {
     "STEEL": "STEEL",
     "FAIRY": "FAIRY",
     "NONE": "NONE",
-    "SP_084": "MEOWTH COIN MANIA"
+    "SP_084": "MEOWTH COIN MANIA",
+    "037": "STAGE 37"
 }
 downscale_res = (128, 128)
 
+STAGE_TO_IMAGE = {
+    "STAGE 37": "052",
+    "STAGE 38": "453",
+    "STAGE 39": "222",
+}
 
+# This is a bad name. These will change from phone to phone
+# depending on how big the top status bar is etc.. These are just
+# hardcode values for my phones.
+RESOLUTIONS = {
+    "1440x3120": {
+        # Stage Selection
+        "StageSelectionArea": (320, 550, 1120, 2600),
+        "HeartTimer": (75, 190, 255, 250),
+        "Hearts": (355, 190, 480, 250),
+        "Continue": (420, 2770, 1020, 2870),
+        "Start!": (420, 2770, 1020, 2870),
+        "No": (1000, 2390, 1340, 2490),
+        "To Map": (420, 2770, 1020, 2870),
+        # Stage
+        "Board": (20, 1540, 1415, 2935),
+        "Stage": (45, 225, 320, 285),
+        "Score": (45, 385, 320, 450),
+        "MovesLeft": (45, 1285, 390, 1375),
+    },
+    "1080x2160": {
+        # Stage Selection
+        "StageSelectionArea": (240, 400, 840, 1800),
+        "HeartTimer": (58, 112, 190, 155),
+        "Hearts": (265, 112, 357, 155),
+        "Continue": (340, 1890, 740, 1970),
+        "Start!": (340, 1890, 740, 1970),
+        "No": (780, 1690, 990, 1760),
+        "To Map": (340, 1890, 740, 1970),
+        # Stage
+        "Board": (17, 968, 1064, 2015),
+        "Stage": (35, 140, 240, 185),
+        "Score": (35, 260, 240, 305),
+        "MovesLeft": (35, 775, 300, 845),
+    }
+}
 
 
 CURRENT_HEARTS_LIST = [

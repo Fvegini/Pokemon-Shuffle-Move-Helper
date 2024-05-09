@@ -14,6 +14,7 @@ MEGA_NOT_ACTIVATED = "0"
 MEGA_ACTIVATED = "99"
 
 pattern = re.compile(r'^\d+(,\d+){2,}')
+PREFERENCES_PATH = Path.joinpath(Path.home(), "Shuffle-Move", "config", "preferences.txt")
 BOARD_PATH = Path.joinpath(Path.home(), "Shuffle-Move", "config", "boards", "board.txt")
 TEAMS_DATA_PATH = Path.joinpath(Path.home(), "Shuffle-Move", "config", "teamsData.txt")
 GRADING_MODES_PATH = Path.joinpath(Path.home(), "Shuffle-Move", "config", "gradingModes.txt")
@@ -135,7 +136,22 @@ def update_current_stage(current_stage):
             break
     with open(BOARD_PATH, 'w') as file:
         file.writelines(lines)
-    return  
+    return
+
+def update_preferences(current_score=0, moves_left=0):
+    #INTEGER STAGE_CURRENT_SCORE 1111
+    with open(PREFERENCES_PATH, 'r') as file:
+        lines = file.readlines()
+    for i, line in enumerate(lines):
+        if line.startswith("INTEGER STAGE_CURRENT_SCORE"):
+            # Replace the line
+            lines[i] = f"INTEGER STAGE_CURRENT_SCORE {current_score}\n"
+        if line.startswith("INTEGER STAGE_MOVES_REMAINING"):
+            # Replace the line
+            lines[i] = f"INTEGER STAGE_MOVES_REMAINING {moves_left}\n"
+    with open(PREFERENCES_PATH, 'w') as file:
+        file.writelines(lines)
+    return 
 
 def update_board_file(names_list, frozen_list, mega_activated, stage):
     if not stage:
