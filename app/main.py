@@ -606,6 +606,7 @@ class ImageSelectorApp():
         return widget_list
 
     def execute_board_analysis(self, source=None, create_image=False, skip_shuffle_move=False, forced_board_image=None) -> MatchResult:
+        current_lock = self.analysis_lock
         if source == "manual":
             pokemons_list = self.extract_pokemon_list()
             match_result = match_icons.start_from_helper(pokemons_list, self.frame3_1_top_1_2_var_control_barrier.get(), root=self, source=source, create_image=create_image, skip_shuffle_move=skip_shuffle_move, forced_board_image=forced_board_image)
@@ -623,6 +624,8 @@ class ImageSelectorApp():
             #     self.master.after(200, self.control_loop_function)
             # else:
             #     self.master.after(5000, self.control_loop_function)
+        if current_lock != self.analysis_lock:
+            return match_result #Avoid problem with older timed threads keeping a parallel loop.
         if config_utils.config_values.get("timed_stage"):
             log.debug("Timed, starting fast next play")
             self.master.after(1, self.control_loop_function)
