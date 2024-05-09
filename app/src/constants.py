@@ -2,6 +2,8 @@ from pathlib import Path
 
 
 BARRIER_PREFIX = "Barrier_"
+
+STAGE_FLANN_IMAGE_PATH = r"FLANN.png"
 LAST_BOARD_IMAGE_PATH = r"last_board.png"
 LAST_SCREEN_IMAGE_PATH = r"last_screen.png"
 IMAGES_BARRIER_PATH = r"assets\icons_barrier"
@@ -54,7 +56,11 @@ move_stages = {
 }
 downscale_res = (128, 128)
 
-ORANGE = [ 55, 143, 240]
+STAGE_TO_IMAGE = {
+    "STAGE 37": "052",
+    "STAGE 38": "453",
+    "STAGE 39": "222",
+}
 
 # This is a bad name. These will change from phone to phone
 # depending on how big the top status bar is etc.. These are just
@@ -62,12 +68,17 @@ ORANGE = [ 55, 143, 240]
 RESOLUTIONS = {
     "1440x3120": {
         # Stage Selection
+        "StageSelectionArea": (320, 550, 1120, 2600),
         "HeartTimer": (75, 190, 255, 250),
         "Hearts": (355, 190, 480, 250),
+        "Continue": (420, 2770, 1020, 2870),
+        "Start!": (420, 2770, 1020, 2870),
+        "No": (1000, 2390, 1340, 2490),
+        "To Map": (420, 2770, 1020, 2870),
         # Stage
         "Board": (20, 1540, 1415, 2935),
-        "Stage": (45, 225, 315, 285),
-        "Score": (45, 385, 315, 445),
+        "Stage": (45, 225, 320, 285),
+        "Score": (45, 385, 320, 450),
         "MovesLeft": (45, 1285, 390, 1375),
     },
     "1080x2160": {

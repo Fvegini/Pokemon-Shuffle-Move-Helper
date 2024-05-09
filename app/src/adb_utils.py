@@ -62,7 +62,7 @@ def execute_play(result):
             new_to_x, new_to_y = move_second_point(from_x, from_y, to_x, to_y, board_w/2.5, board_h/2.5)
 
             subprocess.Popen("adb shell input swipe %d %d %d %d %d" % (
-                from_x, from_y, new_to_x, new_to_y, 300),
+                from_x, from_y, new_to_x, new_to_y, 350),
                 stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
 
 
@@ -152,63 +152,82 @@ def check_hearts(original_image):
     
 
 def check_buttons_to_click(original_image):
-    click_button_if_visible(original_image, "To Map", 1)
-    click_button_if_visible(original_image, "Continue")
-    click_button_if_visible(original_image, "Start!", 4)
-    click_button_if_visible(original_image, "No", 1)
-    click_stage_if_visible(original_image, "052") #Meowth
+    return not click_button_if_visible(original_image, "To Map") \
+        and not click_button_if_visible(original_image, "Continue") \
+        and not click_button_if_visible(original_image, "Start!", 4) \
+        and not click_button_if_visible(original_image, "No") \
+        and not click_stage_if_visible(original_image, "STAGE 37")
 
-
-def check_button(original_image, image_path, confidence=0.7, extra_timeout=0.0, click=True):
-    try:
-        template_image = cv2.imread(image_path)
-        top_left, board_bottom_right, probability = search_template(original_image, template_image)
-        if probability < confidence:
-            return
-        print(f"Found: {image_path}")
-        if click:
-            x = math.floor((top_left[0] + board_bottom_right[0]) / 2)
-            y = math.floor((top_left[1] + board_bottom_right[1]) / 2)
-            subprocess.Popen(f"adb shell input tap {x} {y}", stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
-            if extra_timeout > 0:
-                time.sleep(extra_timeout)
-        return True
-    except Exception as ex:
-        return False
 
 def click_stage_if_visible(original_image, stage, extra_timeout=1.0):
     resolution = get_screen_resolution()
     r = constants.RESOLUTIONS[resolution]["StageSelectionArea"]
-    img = original_image[r[1]:r[3], r[0]:r[2]].copy()
-    template = cv2.imread(f"D:/Git/Shuffle-Move/src/main/resources/img/icons/{stage}.png")
+    s = constants.STAGE_TO_IMAGE[stage]
+    img = original_image.copy()
+    img = img[r[1]:r[3], r[0]:r[2]]
+    template = cv2.imread(f"D:/Git/Shuffle-Move/src/main/resources/img/icons/{s}.png")
     image_gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     template_gray = cv2.cvtColor(template, cv2.COLOR_BGR2GRAY)
 
-    result = cv2.matchTemplate(image_gray, template_gray, cv2.TM_SQDIFF_NORMED)
-    # Find the minimum value and location of the match
-    min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(result)
-    # Get the top-left corner of the match
-    top_left = min_loc
-    # Get the width and height of the template
-    unk, width, height = template.shape[::-1]
-    if max_val < 0.7:
-        return
-    subprocess.Popen(f"adb shell input tap {r[0] + top_left[0] + math.floor(width/2)} {r[1] + top_left[1] + math.floor(height/2)}", stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
-    #cv2.rectangle(img, top_left, (top_left[0] + width, top_left[1] + height), (0, 0, 255), 5)
-    #cv2.imwrite(constants.LAST_SCREEN_IMAGE_PATH, img)
-    #cv2.imshow("", img)
+    sift = cv2.SIFT_create()
+    kp1, des1 = sift.detectAndCompute(template_gray,None)
+    kp2, des2 = sift.detectAndCompute(image_gray,None)
+
+    MIN_MATCH_COUNT = 10
+    FLANN_INDEX_KDTREE = 1
+    index_params = dict(algorithm = FLANN_INDEX_KDTREE, trees = 5)
+    search_params = dict(checks = 50)
+    flann = cv2.FlannBasedMatcher(index_params, search_params)
+    matches = flann.knnMatch(des1,des2,k=2)
+    # store all the good matches as per Lowe's ratio test.
+    good = []
+    for m,n in matches:
+        if m.distance < 0.7*n.distance:
+            good.append(m)
+    if len(good)<MIN_MATCH_COUNT:
+        print(f"Stage image not visible.")
+        return False
+    src_pts = np.float32([ kp1[m.queryIdx].pt for m in good ]).reshape(-1,1,2)
+    dst_pts = np.float32([ kp2[m.trainIdx].pt for m in good ]).reshape(-1,1,2)
+    M, mask = cv2.findHomography(src_pts, dst_pts, cv2.RANSAC,5.0)
+    h,w = template_gray.shape
+    pts = np.float32([ [0,0],[0,h-1],[w-1,h-1],[w-1,0] ]).reshape(-1,1,2)
+    dst = cv2.perspectiveTransform(pts,M)
+    box = np.int0(cv2.boxPoints(cv2.minAreaRect(np.int32(dst))))
+
+    # can comment out next 6 lines if dont wanna save image for debugging
+    template_gray = cv2.polylines(template_gray,[np.int32(dst)], True,(255, 0, 0), 3)
+    matchesMask = mask.ravel().tolist()
+    draw_params = dict(matchColor = (0,255,0), # draw matches in green color
+        singlePointColor = None,
+        matchesMask = matchesMask, # draw only inliers
+        flags = 2)
+    cv2.drawContours(image_gray,[box],0,(0,0,255),2)
+    img3 = cv2.drawMatches(template_gray,kp1,image_gray,kp2,good,None,**draw_params)
+    cv2.imwrite(constants.STAGE_FLANN_IMAGE_PATH, img3)
+
+
+    subprocess.Popen(f"adb shell input tap {r[0] + box[0][0] + math.floor(w/2)} {r[1] + box[0][1] + math.floor(h/2)}", stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
     if extra_timeout > 0:
         time.sleep(extra_timeout)
+    return True
 
-def click_button_if_visible(original_image, text, extra_timeout=1.0):
+def button_visible(original_image, text):
     resolution = get_screen_resolution()
     r = constants.RESOLUTIONS[resolution][text]
-    img = original_image[r[1]:r[3], r[0]:r[2]].copy()
+    img = original_image.copy()
+    img = img[r[1]:r[3], r[0]:r[2]]
     img = 255 - cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    #cv2.imshow("", img)
     result = pytesseract.image_to_string(img, lang='eng',config='--psm 6 --oem 3 -c tessedit_char_whitelist="ABCDEFGHIJKLMNOPQRSTUVWXYZ! "').strip()
-    if result.upper() == text.upper():
+    return (result.upper() == text.upper(), r)
+
+def click_button_if_visible(original_image, text, extra_timeout=1.0):
+    visible, r = button_visible(original_image, text)
+    if visible:
         subprocess.Popen(f"adb shell input tap {math.floor((r[0] + r[2])/2)} {math.floor((r[1] + r[3])/2)}", stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
         time.sleep(extra_timeout)
+    return visible
     
 
 def search_template(main_image, template):
@@ -236,14 +255,16 @@ def get_current_score(original_image):
 def get_label(original_image, label):
     resolution = get_screen_resolution()
     r = constants.RESOLUTIONS[resolution][label]
-    img = original_image[r[1]:r[3], r[0]:r[2]].copy()
+    img = original_image.copy()
+    img = img[r[1]:r[3], r[0]:r[2]]
     img = 255 - cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     #cv2.imshow("", img)
     result = pytesseract.image_to_string(img, lang='eng',config='--psm 6 --oem 3 -c tessedit_char_whitelist=":0123456789SPEX"').strip()
     return result
 
 def has_board_active(original_image):
-    return get_moves_left(original_image).isnumeric() \
+    return not button_visible(original_image, "No")[0] \
+        and get_moves_left(original_image).isnumeric() \
         and get_current_score(original_image).isnumeric() \
         and get_current_stage(original_image).isnumeric()
 

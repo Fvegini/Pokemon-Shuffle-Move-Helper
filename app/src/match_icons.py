@@ -178,9 +178,8 @@ def start_from_helper(pokemon_list: list[Pokemon], has_barriers, root=None, sour
     cell_list = make_cell_list(forced_board_image)
 
     original_image = cv2.imread(constants.LAST_SCREEN_IMAGE_PATH)
-    # adb_utils.click_stage_if_visible(original_image, "052")
+    #adb_utils.click_button_if_visible(original_image, "No")
     if not adb_utils.has_board_active(original_image):
-    #    TODO fix bot part. Right now I click into the stage for each life.
         print("No Board Active")
         adb_utils.check_hearts(original_image)
         adb_utils.check_buttons_to_click(original_image)
