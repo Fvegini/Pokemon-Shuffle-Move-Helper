@@ -95,27 +95,40 @@ RESOLUTIONS = {
         "Stage": (35, 140, 240, 185),
         "Score": (35, 260, 240, 305),
         "MovesLeft": (35, 775, 300, 845),
+    },
+    "1600x900": {
+        "CompleteScreen": (0, 0, 900, 1600),
+        "TopScreen": (0, 0, 900, 716),
+        "HeartTimer": (26, 52, 172, 111),
+        "Hearts": (223, 60, 319, 113),
+        "Continue": (271, 1463, 646, 1578),
+        "Start!": (271, 1463, 646, 1578),
+        "To Map": (271, 1463, 646, 1578),
+        "Next": (271, 1463, 646, 1578),
+        "No": (153, 646, 742, 826),
+        "NoOutOfTime": (646, 1343, 816, 1409), #Out of Time to Play
+        "Yes": (153, 646, 742, 826),
+        "StageMenu": (801, 27, 906, 162),
+        "Combo": (602, 46, 813, 136),
+        "CoinStage": (153, 646, 742, 826),
+        "CoinStageYes": (153, 646, 742, 826),
+        # "EscalationLevel": (558, 434, 841, 623),
+        # Stage
+        "Board": (14, 716, 892, 1591),
+        "Stage": (9, 179, 215, 233),
+        "Score": (9, 179, 215, 233),
+        "MovesLeft": (9, 179, 215, 233),
     }
 }
 
-
-CURRENT_HEARTS_LIST = [
-    Path(r"assets\adb\heart_9.png"),
-    Path(r"assets\adb\heart_5.png"),
-    Path(r"assets\adb\heart_4.png"),
-    Path(r"assets\adb\heart_3.png"),
-    Path(r"assets\adb\heart_2.png"),
-    Path(r"assets\adb\heart_1.png"),
-    Path(r"assets\adb\heart_0.png"),
-]
-
-CURRENT_STAGE_IMAGE = r"assets\adb\auto\01_current_stage.png"
+ADB_IMAGE_FOLDER = r"assets\adb"
+CURRENT_STAGE_IMAGE = r"assets\adb\current_stage.png"
 COMBO_IMAGE = r"assets\adb\combo.png"
 ACTIVE_BOARD_IMAGE = r"assets\adb\active_board.png"
-ADB_AUTO_FOLDER = r"assets\adb\auto"
-# CONTINUE_IMAGE_IMAGE = r"assets\adb\continue_image.png"
-# START_BUTTON_IMAGE = r"assets\adb\start_button.png"
-# OK_BUTTON_IMAGE = r"assets\adb\ok_button.png"
-# OK_BUTTON2_IMAGE = r"assets\adb\ok_button2.png"
-# TO_MAP_BUTTON_IMAGE = r"assets\adb\to_map_button.png"
+OK_BUTTON_IMAGE = r"assets\adb\ok_button.png"
+OK_BUTTON2_IMAGE = r"assets\adb\ok_button2.png"
+RETURN_FLAG_IMAGE = r"assets\adb\return_flag1.png"
+RETURN_FLAG2_IMAGE = r"assets\adb\return_flag2.png"
+ANGRY_ICON_IMAGE = r"assets\adb\angry_1.png"
+ANGRY_ICON2_IMAGE = r"assets\adb\angry_2.png"
 

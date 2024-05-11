@@ -10,43 +10,65 @@ from src import custom_utils
 import pyautogui
 import time
 import pytesseract
-from src.board_utils import current_board
+from src import screen_utils
+from src.screen_utils import get_screen
 from pathlib import Path
 from src import log_utils
+import re
 
 log = log_utils.get_logger()
+adb_shell_command = "adb shell"
+angry_mode_active = False
+time_pattern = re.compile(r"\b(\d{1,2})\s*:\s*(\d{1,2})\b")
 
-pipe = subprocess.Popen("adb kill-server",stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
-output = str(pipe.stdout.read()) #type: ignore
-pipe = subprocess.Popen("adb connect localhost:5555",stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
-output = str(pipe.stdout.read()) #type: ignore
+
+def configure_adb():
+    global adb_shell_command
+    pipe = subprocess.Popen(f"{adb_shell_command} wm size",stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
+    output = str(pipe.stdout.read()) #type: ignore
+    if output.startswith("b'Physical size"):
+        log.info(output)
+        return
+    else:
+        pipe = subprocess.Popen("adb kill-server",stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
+        output = str(pipe.stdout.read()) #type: ignore
+        pipe = subprocess.Popen("adb connect localhost:5555",stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
+        output = str(pipe.stdout.read()) #type: ignore
+        adb_shell_command = "adb -s localhost:5555 shell"
+        pipe = subprocess.Popen(f"{adb_shell_command} wm size",stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
+        output = str(pipe.stdout.read()) #type: ignore
+        log.info(output)
+        return
+
+def configure_screen():
+    global adb_shell_command
+    pipe = subprocess.Popen(f"{adb_shell_command} wm size",stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
+    response = str(pipe.stdout.read()).strip() #type: ignore
+    resolution = re.findall(r"\b\d{2,4}\s*x\s*\d{2,4}\b", response)[0]
+    screen_utils.update_screen(constants.RESOLUTIONS[resolution])
+    
+
+configure_adb()
+configure_screen()
 thread_sleep_timer = None
 hearts_loop_counter = 0
 last_button_clicked = None
 
 def get_screenshot():
-    pipe = subprocess.Popen("adb shell screencap -p", stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
+    global adb_shell_command
+    pipe = subprocess.Popen(f"{adb_shell_command} screencap -p", stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
     image_bytes = pipe.stdout.read().replace(b'\r\n', b'\n') #type: ignore
     img = cv2.imdecode(np.fromstring(image_bytes, np.uint8), cv2.IMREAD_COLOR) #type: ignore
     cv2.imwrite(constants.LAST_SCREEN_IMAGE_PATH, img)
     return img
 
-def get_screen_resolution():
-    pipe = subprocess.Popen("adb shell wm size",stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
-    return str(pipe.stdout.read())[17:26]
-
 def crop_board(img):
-    resolution = get_screen_resolution()
-    r = constants.RESOLUTIONS[resolution]["Board"]
-    board_top_left = (r[0], r[1])
-    board_bottom_right = (r[2], r[3])
-    img = img[board_top_left[1]:board_bottom_right[1], board_top_left[0]:board_bottom_right[0]].copy()
-    img = img[current_board.board_top_left[1]:current_board.board_bottom_right[1], current_board.board_top_left[0]:current_board.board_bottom_right[0]].copy()
-
+    img = img[get_screen().board_top_left[1]:get_screen().board_bottom_right[1], get_screen().board_top_left[0]:get_screen().board_bottom_right[0]].copy()
     cv2.imwrite(constants.LAST_BOARD_IMAGE_PATH, img)
     return img
 
 def execute_play(result, board_results, last_execution_swiped):
+    global adb_shell_command
     try:
         adb_move = config_utils.config_values.get("adb_move")
         if result and adb_move:
@@ -64,14 +86,16 @@ def execute_play(result, board_results, last_execution_swiped):
             if not wrong_board and not zero_result :
                 red_row, red_column, blue_row, blue_column = custom_utils.extract_result_position(result)
 
-                from_x = math.floor(current_board.board_x + (current_board.board_w * red_column) - (current_board.board_w / 2))
-                from_y = math.floor(current_board.board_y + (current_board.board_h * red_row) - (current_board.board_w / 2))
-                to_x = math.floor(current_board.board_x + (current_board.board_w * blue_column) - (current_board.board_w / 2))
-                to_y = math.floor(current_board.board_y + (current_board.board_h * blue_row) - (current_board.board_w / 2))
+                from_x = math.floor(get_screen().board_x + (get_screen().board_w * red_column) - (get_screen().board_w / 2))
+                from_y = math.floor(get_screen().board_y + (get_screen().board_h * red_row) - (get_screen().board_w / 2))
+                to_x = math.floor(get_screen().board_x + (get_screen().board_w * blue_column) - (get_screen().board_w / 2))
+                to_y = math.floor(get_screen().board_y + (get_screen().board_h * blue_row) - (get_screen().board_w / 2))
 
-                new_to_x, new_to_y = move_second_point(from_x, from_y, to_x, to_y, current_board.board_w/2.5, current_board.board_h/2.5)
+                #The Idea of this one is to move not to the center of the cell, but a little more to the "end" of it, to
+                #increase the chances that the swipe input will move to the correct cell and not one before it.
+                new_to_x, new_to_y = move_second_point(from_x, from_y, to_x, to_y, get_screen().board_w/2.5, get_screen().board_h/2.5)
 
-                subprocess.Popen(f"adb -s localhost:5555 shell input swipe {from_x} {from_y} {new_to_x} {new_to_y} 250", stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
+                subprocess.Popen(f"{adb_shell_command} input swipe {from_x} {from_y} {new_to_x} {new_to_y} 350", stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
                 time.sleep(1.0)
                 return True
     except Exception as ex:
@@ -96,165 +120,206 @@ def move_second_point(x0_initial, y0_initial, x1_initial, y1_initial, x_offset, 
 
     return math.floor(x1_new), math.floor(y1_new)
 
-# # Example usage
-# x0_initial, y0_initial = 3, 4  # Initial coordinates of the first point
-# x1_initial, y1_initial = 5, 6  # Initial coordinates of the second point
-# x_offset, y_offset = 2, -1  # Amounts to move in the x and y directions
-# x1_new, y1_new = move_second_point(x0_initial, y0_initial, x1_initial, y1_initial, x_offset, y_offset)
-# print(f"New point coordinates: ({x1_new}, {y1_new})")
-
 def check_if_close_to_same_color(pixel1, pixel2, threshold=10):
   diff = np.subtract(pixel1, pixel2)
   return np.all(np.abs(diff) < threshold)
 
 def check_hearts(original_image):
-    global thread_sleep_timer, hearts_loop_counter
+    global thread_sleep_timer, hearts_loop_counter, adb_shell_command
     try:
-        hearts_number = get_label(original_image, "Hearts")
+        hearts_number_unfiltered = get_label(original_image, "Hearts", '--psm 6 --oem 3 -c tessedit_char_whitelist="0123456789"')
+        hearts_number_str = re.sub(r'\D', '', hearts_number_unfiltered)
+        if hearts_number_str == "7":
+            hearts_timer = get_label(original_image, "HeartTimer")
+            minutes, seconds = process_time(hearts_timer)
+            if minutes or seconds:
+                hearts_number_str = "1"
         hearts_loop_counter+= 1
-        if not hearts_number.isnumeric():
+        if not hearts_number_str.isnumeric():
             log.debug(f"Current Hearts amount is Unknown")
             return
-        hearts_number = int(hearts_number)
+        hearts_number = int(hearts_number_str)
         log.debug(f"Current Hearts amount is: {hearts_number}")
-        if hearts_number == 0:
-            hearts_timer = get_label(original_image, "HeartTimer")
-            thread_sleep_timer = int(hearts_timer[:2]) * 60 + int(hearts_timer[3:]) + 5 #add 5s to heart timer to be safe
-            log.debug(f"Hearts Ended, waiting for {thread_sleep_timer} seconds")
-            time.sleep(thread_sleep_timer)
-            thread_sleep_timer = None
+        if not is_escalation_battle() and hearts_number == 0:
+            wait_until_next_heart(original_image)
         elif hearts_number >= 5 or hearts_loop_counter > 20:
             log.debug("Hearts maxed, small click test") #Try to skip the daily login bonus screen
-            subprocess.Popen(f"adb -s localhost:5555 shell input tap {top_left[0]} {top_left[1]}", stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
+            subprocess.Popen(f"{adb_shell_command} input tap {get_screen().get_position('Hearts')[0]} {get_screen().get_position('Hearts')[1]}", stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
+        elif is_escalation_battle() and is_angry_active():
+            if hearts_number == 0:
+                wait_until_next_heart(original_image)
+        elif is_escalation_battle() and hearts_number <= 1:
+            #The idea here is wait until has 1 life and 5 minutes waiting for the next.. then play the stage
+            #On the next cycle, if the angry mode is activated it will wait until the next life, play and repeat.
+            hearts_timer = get_label(original_image, "HeartTimer")
+            minutes, seconds = process_time(hearts_timer)
+            seconds_to_next_heart = int(minutes) * 60 + int(seconds) + 5
+            seconds_to_5_minutes_until_next_heart = seconds_to_next_heart - 540
+            time_to_wait = seconds_to_5_minutes_until_next_heart
+            if hearts_number == 0:
+                time_to_wait+= 1800
+            time_to_wait = max(time_to_wait, 0) # Avoid negative number when there's less than 5 minutes to next life.
+            thread_sleep_timer = int(time_to_wait)
+            log.debug(f"Hearts Ended, waiting for {thread_sleep_timer} seconds - ESCALATION BATTLE TEST")
+            time.sleep(thread_sleep_timer)
+            log.debug("Sleep ended, continuing")
+            thread_sleep_timer = None       
     except Exception as ex:
         log.debug(f"Error checking hearts number: {ex}")
         return
 
-# def check_buttons_to_click(original_image):
-#     global hearts_loop_counter, last_button_clicked
-#     original_image = get_full_screenshot()
-#     some_button_was_clicked = False
-#     for image in Path(constants.ADB_AUTO_FOLDER).glob("*.png"):
-#         image_path = image.as_posix()
-#         if "return" in image.stem and some_button_was_clicked:
-#             continue
-#         if last_button_clicked == image_path:
-#             last_button_clicked = None
-#             continue
-#         if check_button_and_click(original_image, image_path):
-#             hearts_loop_counter = 0
-#             last_button_clicked = image_path
-#             some_button_was_clicked = True
-#             original_image = get_full_screenshot()
-#     if not some_button_was_clicked:
-#         last_button_clicked = None
-#         log.debug("No buttons found to be clicked")
-#     return some_button_was_clicked 
-# 
-# def check_button_and_click(original_image, image_path, confidence=0.7, extra_timeout=2.0, click=True):
-#     try:
-#         template_image = cv2.imread(image_path)
-#         top_left, board_bottom_right, probability = search_template(original_image, template_image)
-#         if probability < confidence:
-#             top_left, board_bottom_right, probability = search_template(original_image, custom_utils.resize_cv2_with_scale(template_image,104))
-#             if probability < confidence:
-#                 log.debug(f"Not Found: {image_path}")
-#                 return False
-#             else:
-#                 log.debug(f"Found: {image_path} after rescaling")
-#         else:
-#             log.debug(f"Found: {image_path}")
-#         if click:
-#             x = math.floor((top_left[0] + board_bottom_right[0]) / 2)
-#             y = math.floor((top_left[1] + board_bottom_right[1]) / 2)
-#             subprocess.Popen(f"adb -s localhost:5555 shell input tap {x} {y}", stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
-#             time.sleep(1.7)
-#             if extra_timeout > 0:
-#                 time.sleep(extra_timeout)
-#         return True
-#     except Exception as ex:
-#         log.debug(f"Not Found: {image_path}")
-#         return False
+def process_time(mystring):
+    try:
+        return re.findall(time_pattern, mystring)[0]
+    except:
+        log.error(f"Hearts Timer problem, original string: {mystring}")
+        return None, None
+
+def is_angry_active():
+    global angry_mode_active
+    return angry_mode_active
+
+def wait_until_next_heart(original_image):
+    global thread_sleep_timer
+    hearts_timer = get_label(original_image, "HeartTimer")
+    thread_sleep_timer = int(hearts_timer[:2]) * 60 + int(hearts_timer[3:]) + 5 #add 5s to heart timer to be safe
+    log.debug(f"Hearts Ended, waiting for {thread_sleep_timer} seconds")
+    time.sleep(thread_sleep_timer)
+    thread_sleep_timer = None
+
+def is_escalation_battle():
+    return config_utils.config_values.get("escalation_battle")
 
 def check_buttons_to_click(original_image):
     global hearts_loop_counter
-    was_clicked = not click_button_if_visible(original_image, "To Map") \
-        and not click_button_if_visible(original_image, "Continue") \
-        and not click_button_if_visible(original_image, "Start!", 4) \
-        and not click_button_if_visible(original_image, "No") \
-        and not click_stage_if_visible(original_image, "STAGE 37")
+    was_clicked = False
+
+    if has_icon_match(original_image, constants.CURRENT_STAGE_IMAGE, extra_timeout=1, click=True):
+        was_clicked = True
+        original_image = get_screenshot()
+    if was_clicked and is_escalation_battle():
+        verify_angry_mode(original_image, double_try=True)
+    if has_text_match(original_image, "To Map"):
+        was_clicked = True
+        original_image = get_screenshot()
+    if has_text_match(original_image, "Continue"):
+        was_clicked = True
+        original_image = get_screenshot()    
+    if has_text_match(original_image, "Start!", 4):
+        was_clicked = True
+        original_image = get_screenshot()
+    if has_text_match(original_image, "Next", 4):
+        was_clicked = True
+        original_image = get_screenshot()
+    if has_text_match(original_image, "No"):
+        was_clicked = True
+        original_image = get_screenshot()
+    if config_utils.config_values.get("coin_stage"):
+        has_text_match(original_image, "CoinStage", custom_click="CoinStageYes", custom_search_text="need to spend")
+
     if not was_clicked:
+        return not has_icon_match(original_image, constants.OK_BUTTON_IMAGE, extra_timeout=1, click=True) \
+            and not has_icon_match(original_image, constants.OK_BUTTON2_IMAGE, extra_timeout=1, click=True) \
+            and not has_icon_match(original_image, constants.RETURN_FLAG_IMAGE, extra_timeout=1, click=True) \
+            and not has_icon_match(original_image, constants.RETURN_FLAG2_IMAGE, extra_timeout=1, click=True)
+    if was_clicked:
         hearts_loop_counter = 0
+    return
 
+def verify_angry_mode(original_image, double_try=False):
+    global angry_mode_active
+    is_angry = has_icon_match(original_image, constants.ANGRY_ICON_IMAGE) or has_icon_match(original_image, constants.ANGRY_ICON2_IMAGE)
+    if is_angry:
+        angry_mode_active = True
+        log.info("Angry Mode is ACTIVE")
+        return
+    elif double_try:
+        time.sleep(5)
+        original_image = get_screenshot()
+        is_angry = has_icon_match(original_image, constants.ANGRY_ICON_IMAGE) or has_icon_match(original_image, constants.ANGRY_ICON2_IMAGE)
+        if is_angry:
+            angry_mode_active = True
+            log.info("Angry Mode is ACTIVE")
+            return
+    return
+    
+def has_icon_match(original_image, icon_path, position="CompleteScreen", extra_timeout=1.0, click=True, min_point=10, debug=False):
+    global adb_shell_command
+    try:
+        r = get_screen().get_position(position)
+        img = original_image.copy()
+        img = img[r[1]:r[3], r[0]:r[2]]
+        template = cv2.imread(icon_path)
+        image_gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        template_gray = cv2.cvtColor(template, cv2.COLOR_BGR2GRAY)
+        sift = cv2.SIFT_create() #type: ignore
+        kp1, des1 = sift.detectAndCompute(template_gray,None)
+        kp2, des2 = sift.detectAndCompute(image_gray,None)
+        MIN_MATCH_COUNT = min_point
+        FLANN_INDEX_KDTREE = 1
+        index_params = dict(algorithm = FLANN_INDEX_KDTREE, trees = 5)
+        search_params = dict(checks = 50)
+        flann = cv2.FlannBasedMatcher(index_params, search_params) #type: ignore
+        matches = flann.knnMatch(des1,des2,k=2)
+        # store all the good matches as per Lowe's ratio test.
+        good = []
+        for m,n in matches:
+            if m.distance < 0.7*n.distance:
+                good.append(m)
+        if len(good)<MIN_MATCH_COUNT:
+            log.debug(f"Image not visible: {Path(icon_path).stem} - {len(good)} point found")
+            return False
+        log.debug(f"Image Found with points: {len(good)}")
+        src_pts = np.float32([ kp1[m.queryIdx].pt for m in good ]).reshape(-1,1,2) #type: ignore
+        dst_pts = np.float32([ kp2[m.trainIdx].pt for m in good ]).reshape(-1,1,2) #type: ignore
+        M, mask = cv2.findHomography(src_pts, dst_pts, cv2.RANSAC,5.0)
+        h,w = template_gray.shape
+        pts = np.float32([ [0,0],[0,h-1],[w-1,h-1],[w-1,0] ]).reshape(-1,1,2) #type: ignore
+        dst = cv2.perspectiveTransform(pts,M)
+        box = np.int0(cv2.boxPoints(cv2.minAreaRect(np.int32(dst)))) #type: ignore
 
-def click_stage_if_visible(original_image, stage, extra_timeout=1.0):
-    resolution = get_screen_resolution()
-    r = constants.RESOLUTIONS[resolution]["StageSelectionArea"]
-    s = constants.STAGE_TO_IMAGE[stage]
-    img = original_image.copy()
-    img = img[r[1]:r[3], r[0]:r[2]]
-    template = cv2.imread(f"D:/Git/Shuffle-Move/src/main/resources/img/icons/{s}.png")
-    image_gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    template_gray = cv2.cvtColor(template, cv2.COLOR_BGR2GRAY)
+        if debug:
+            template_gray = cv2.polylines(template_gray,[np.int32(dst)], True,(255, 0, 0), 3) #type: ignore
+            matchesMask = mask.ravel().tolist()
+            draw_params = dict(matchColor = (0,255,0), # draw matches in green color
+                singlePointColor = None,
+                matchesMask = matchesMask, # draw only inliers
+                flags = 2)
+            cv2.drawContours(image_gray,[box],0,(0,0,255),2)
+            img3 = cv2.drawMatches(template_gray,kp1,image_gray,kp2,good,None,**draw_params) #type: ignore
+            cv2.imwrite(constants.STAGE_FLANN_IMAGE_PATH, img3)
 
-    sift = cv2.SIFT_create()
-    kp1, des1 = sift.detectAndCompute(template_gray,None)
-    kp2, des2 = sift.detectAndCompute(image_gray,None)
-
-    MIN_MATCH_COUNT = 10
-    FLANN_INDEX_KDTREE = 1
-    index_params = dict(algorithm = FLANN_INDEX_KDTREE, trees = 5)
-    search_params = dict(checks = 50)
-    flann = cv2.FlannBasedMatcher(index_params, search_params)
-    matches = flann.knnMatch(des1,des2,k=2)
-    # store all the good matches as per Lowe's ratio test.
-    good = []
-    for m,n in matches:
-        if m.distance < 0.7*n.distance:
-            good.append(m)
-    if len(good)<MIN_MATCH_COUNT:
-        print(f"Stage image not visible.")
+        if click:
+            box_center_x = int((box[0][0] + box[2][0]) / 2)
+            box_center_y = int((box[0][1] + box[2][1]) / 2)
+            subprocess.Popen(f"{adb_shell_command} input tap {r[0] + box_center_x} {r[1] + box_center_y}", stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
+            if extra_timeout > 0:
+                time.sleep(extra_timeout)
+        return True
+    except:
         return False
-    src_pts = np.float32([ kp1[m.queryIdx].pt for m in good ]).reshape(-1,1,2)
-    dst_pts = np.float32([ kp2[m.trainIdx].pt for m in good ]).reshape(-1,1,2)
-    M, mask = cv2.findHomography(src_pts, dst_pts, cv2.RANSAC,5.0)
-    h,w = template_gray.shape
-    pts = np.float32([ [0,0],[0,h-1],[w-1,h-1],[w-1,0] ]).reshape(-1,1,2)
-    dst = cv2.perspectiveTransform(pts,M)
-    box = np.int0(cv2.boxPoints(cv2.minAreaRect(np.int32(dst))))
 
-    # can comment out next 6 lines if dont wanna save image for debugging
-    template_gray = cv2.polylines(template_gray,[np.int32(dst)], True,(255, 0, 0), 3)
-    matchesMask = mask.ravel().tolist()
-    draw_params = dict(matchColor = (0,255,0), # draw matches in green color
-        singlePointColor = None,
-        matchesMask = matchesMask, # draw only inliers
-        flags = 2)
-    cv2.drawContours(image_gray,[box],0,(0,0,255),2)
-    img3 = cv2.drawMatches(template_gray,kp1,image_gray,kp2,good,None,**draw_params)
-    cv2.imwrite(constants.STAGE_FLANN_IMAGE_PATH, img3)
-
-
-    subprocess.Popen(f"adb shell input tap {r[0] + box[0][0] + math.floor(w/2)} {r[1] + box[0][1] + math.floor(h/2)}", stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
-    if extra_timeout > 0:
-        time.sleep(extra_timeout)
-    return True
-
-def button_visible(original_image, text):
-    resolution = get_screen_resolution()
-    r = constants.RESOLUTIONS[resolution][text]
+def text_visible(original_image, text, custom_click=None, custom_search_text=None):
+    global adb_shell_command
+    r = get_screen().get_position(text)
     img = original_image.copy()
     img = img[r[1]:r[3], r[0]:r[2]]
     img = 255 - cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    #cv2.imshow("", img)
-    result = pytesseract.image_to_string(img, lang='eng',config='--psm 6 --oem 3 -c tessedit_char_whitelist="ABCDEFGHIJKLMNOPQRSTUVWXYZ! "').strip()
-    return (result.upper() == text.upper(), r)
+    result = pytesseract.image_to_string(img, lang='eng').strip()
+    result2 = pytesseract.image_to_string(img, lang='eng', config='--psm 6').strip()
+    log.debug(f"Text Found for {text}: {result} - alternative {result2}")
+    if custom_click:
+        r = get_screen().get_position(custom_click)
+    if custom_search_text:
+        return (custom_search_text.upper() in result.upper(), r)
+    return (text.upper() in result.upper(), r)
 
-def click_button_if_visible(original_image, text, extra_timeout=1.0):
-    visible, r = button_visible(original_image, text)
-    if visible:
-        subprocess.Popen(f"adb shell input tap {math.floor((r[0] + r[2])/2)} {math.floor((r[1] + r[3])/2)}", stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
-        time.sleep(extra_timeout)
+def has_text_match(original_image, text, extra_timeout=1.0, click=True, custom_click=None, custom_search_text=None):
+    visible, r = text_visible(original_image, text, custom_click, custom_search_text)
+    if visible and click:
+        subprocess.Popen(f"{adb_shell_command} input tap {math.floor((r[0] + r[2])/2)} {math.floor((r[1] + r[3])/2)}", stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
+        if extra_timeout:
+            time.sleep(extra_timeout)
     return visible
     
 
@@ -268,9 +333,6 @@ def search_template(main_image, template):
 
     return top_left, bottom_right, max_probability
 
-# def has_match(original_image, template_path):
-#     return check_button_and_click(original_image, template_path, click=False)
-
 def get_current_stage(original_image):
     v = get_label(original_image, "Stage")
     if v.isnumeric():
@@ -283,29 +345,23 @@ def get_moves_left(original_image):
 def get_current_score(original_image):
     return get_label(original_image, "Score")
 
-def get_label(original_image, label):
-    resolution = get_screen_resolution()
-    r = constants.RESOLUTIONS[resolution][label]
+def get_label(original_image, label, config=""):
+    r = get_screen().get_position(label)
     img = original_image.copy()
     img = img[r[1]:r[3], r[0]:r[2]]
     img = 255 - cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    #cv2.imshow("", img)
-    result = pytesseract.image_to_string(img, lang='eng',config='--psm 6 --oem 3 -c tessedit_char_whitelist=":0123456789SPEX"').strip()
+    result = pytesseract.image_to_string(img, lang='eng', config="").strip()
+    if not result:
+        result = pytesseract.image_to_string(img, lang='eng',config='--psm 6').strip()
     return result
-
-def has_board_active(original_image):
-    return not button_visible(original_image, "No")[0] \
-        and get_moves_left(original_image).isnumeric() \
-        and get_current_score(original_image).isnumeric() \
-        and get_current_stage(original_image).isnumeric()
 
 def update_fog_image(index):
     cell_x0, cell_y0, cell_x1, cell_y1 = get_coordinates_from_board_index(index)
     center_x = math.floor((cell_x0 + cell_x1) / 2)
     center_y = math.floor((cell_y0 + cell_y1) / 2)
-    subprocess.Popen(f"adb shell input swipe {center_x} {center_y} {center_x} {center_y} 1000", stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
+    subprocess.Popen(f"adb -s localhost:5555 shell input swipe {center_x} {center_y} {center_x} {center_y} 1000", stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
     time.sleep(0.5)
-    pipe = subprocess.Popen("adb shell screencap -p", stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
+    pipe = subprocess.Popen("adb -s localhost:5555 shell screencap -p", stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
     image_bytes = pipe.stdout.read().replace(b'\r\n', b'\n') #type: ignore
     img = cv2.imdecode(np.fromstring(image_bytes, np.uint8), cv2.IMREAD_COLOR) #type: ignore
     new_img = expand_rectangle_and_cut_from_image(img, cell_x0, cell_y0, cell_x1, cell_y1, 0, 0)
@@ -333,9 +389,9 @@ def click_on_board_index(index):
 def get_coordinates_from_board_index(idx):
     row, column = custom_utils.index_to_coordinates(idx)
 
-    cell_x0 =  math.floor(current_board.board_x + (current_board.board_w * (column - 1)))
-    cell_y0 =  math.floor(current_board.board_y + (current_board.board_h * (row - 1)))
-    cell_x1 =  math.floor(current_board.board_x + (current_board.board_w * (column)))
-    cell_y1 =  math.floor(current_board.board_y + (current_board.board_h * (row)))
+    cell_x0 =  math.floor(get_screen().board_x + (get_screen().board_w * (column - 1)))
+    cell_y0 =  math.floor(get_screen().board_y + (get_screen().board_h * (row - 1)))
+    cell_x1 =  math.floor(get_screen().board_x + (get_screen().board_w * (column)))
+    cell_y1 =  math.floor(get_screen().board_y + (get_screen().board_h * (row)))
     return cell_x0,cell_y0,cell_x1,cell_y1
     

@@ -2,20 +2,11 @@ from typing import List
 import cv2
 import numpy as np
 from pathlib import Path
-from src.adb_utils import get_coordinates_from_board_index
-from src.custom_utils import capture_board_screensot
 from src.embed import loaded_embedder
-from src import constants, custom_utils
-from src import config_utils
-from src.execution_variables import execution_variables
-from src import socket_utils, shuffle_config_files
-from src.classes import Icon, Match, Pokemon, MatchResult, ShuffleBoard
+from src import constants, custom_utils, config_utils, socket_utils, shuffle_config_files, adb_utils, log_utils
+from src.classes import Icon, Match, Pokemon, MatchResult, Board
 import statistics
-from datetime import datetime
-from src import adb_utils
-import math
-from src.board_utils import current_board
-from src import log_utils
+import time
 
 log = log_utils.get_logger()
 
@@ -30,6 +21,7 @@ metal_icon = Icon("Metal", Path("Metal.png"), False)
 metal_match = Match(None, None, metal_icon)
 last_execution_swiped = False
 fixed_tuple_positions = [("None", 7), ("None", 10)]
+stage_timer = None
 
 def load_icon_classes(values_to_execute: list[Pokemon], has_barriers):
     icons_list = []
@@ -132,7 +124,7 @@ def predict(original_image, icons_list, has_barriers) -> Match:
 
 def make_cell_list(forced_board_image=None):
     if forced_board_image is None:
-        img = capture_board_screensot()
+        img = custom_utils.capture_board_screensot()
         return custom_utils.make_cell_list_from_img(img)
     else:
         return custom_utils.make_cell_list_from_img(forced_board_image)
@@ -154,65 +146,32 @@ def start_from_helper(pokemon_list: list[Pokemon], has_barriers, root=None, sour
     original_image = cv2.imread(constants.LAST_SCREEN_IMAGE_PATH)
     current_screen_image = cv2.imread(constants.LAST_SCREEN_IMAGE_PATH)
     combo_is_running = False
-    if source != "manual":
-        if not is_on_stage(current_screen_image):
+    
+    if source == "loop":
+        if is_on_stage(current_screen_image):
+            combo_is_running = verify_active_combo(current_screen_image)
+        else:
             if should_auto_next_stage():
                 click_buttons(current_screen_image)
             else:
                 log.debug("Stage isn't active and next stage is disabled")
-            mega_activated_this_round = False
-            last_execution_swiped = False
             return MatchResult()
-        combo_is_running = verify_active_combo(current_screen_image)
     else:
         mega_activated_this_round = False
         last_execution_swiped = False
     match_list = match_cell_with_icons(icons_list, cell_list, has_barriers, combo_is_running)
-    #adb_utils.click_button_if_visible(original_image, "No")
-    if not adb_utils.has_board_active(original_image):
-        print("No Board Active")
-        adb_utils.check_hearts(original_image)
-        adb_utils.check_buttons_to_click(original_image)
-        return MatchResult()
-        
-    for idx, cell in enumerate(cell_list):
-        result = predict(cell, icons_list, has_barriers)
-        if result.name in ["Fog", "_Fog", "Pikachu_a"]:
-            result = update_fog_match(result, icons_list, has_barriers, idx)
-        match_list.append(result)
-
-    # new_list = match_list.copy()    
-    # new_list = custom_utils.sort_by_class_attribute(new_list, "cosine_similarity", False)
-    # metrics = get_metrics(new_list)
-    
-    extra_supports_list = [pokemon.name for pokemon in pokemon_list if pokemon.stage_added]
-    sequence_names_list = [match.name for match in match_list]
-    original_complete_names_list = [icon.name for icon in icons_list]
-    pokemon_board_sequence = [match.name for match in match_list]
     if skip_shuffle_move:
         return MatchResult(match_list=match_list)
-    current_board = ShuffleBoard(match_list, pokemon_list, icons_list)
-    shuffle_config_files.create_board_files(current_board, source)
-    if source != "manual" and not config_utils.config_values.get("fast_swipe") and not config_utils.config_values.get("timed_stage") and (last_execution_swiped or combo_is_running):
+    current_board = Board(match_list, pokemon_list, icons_list)
+    if not is_timed_stage():
+        current_board.moves_left = adb_utils.get_moves_left(original_image)
+        current_board.current_score = adb_utils.get_current_score(original_image)
+    shuffle_config_files.create_board_files(current_board, source, is_meowth_stage())
+    if source == "loop" and not config_utils.config_values.get("fast_swipe") and not config_utils.config_values.get("timed_stage") and (last_execution_swiped or combo_is_running):
         last_execution_swiped = False
         if config_utils.config_values.get("tapper"):
             execute_tapper(current_board)
         return MatchResult()
-    # if pokemon_board_sequence != last_pokemon_board_sequence or source != "loop":
-    current_score = adb_utils.get_current_score(original_image)
-    moves_left = adb_utils.get_moves_left(original_image)
-    stage_name = adb_utils.get_current_stage(original_image)
-    if stage_name.isnumeric():
-        execution_variables.current_stage = stage_name
-    if stage_name == '037':
-        execution_variables.current_strategy = '037MeowthEarlyGame'
-        if int(moves_left) <= 2:
-            execution_variables.current_strategy = '037MeowthEndGame'
-        shuffle_config_files.update_gradingModes_file("self", False)
-
-    shuffle_config_files.update_preferences(current_score, moves_left)
-    shuffle_config_files.create_board_files(sequence_names_list, original_complete_names_list, extra_supports_list, source)
-    last_pokemon_board_sequence = pokemon_board_sequence
     result = socket_utils.loadNewBoard()
     swiped = adb_utils.execute_play(result, current_board, last_execution_swiped)
     if swiped:
@@ -222,10 +181,11 @@ def start_from_helper(pokemon_list: list[Pokemon], has_barriers, root=None, sour
         result_image = custom_utils.make_match_image_comparison(result, match_list)
     return MatchResult(result=result, match_image=result_image, match_list=match_list)
 
-def verify_active_combo(current_screen_image):
-    return adb_utils.has_match(current_screen_image, constants.COMBO_IMAGE)
 
-def execute_tapper(current_board: ShuffleBoard):
+def verify_active_combo(current_screen_image):
+    return adb_utils.has_icon_match(current_screen_image, constants.COMBO_IMAGE, "Combo", extra_timeout=0, click=False)
+
+def execute_tapper(current_board: Board):
     global mega_activated_this_round
     if True or mega_activated_this_round or current_board.has_mega:
         log.debug("Executing crazy Tapper Logic")
@@ -249,19 +209,21 @@ def process_tap_match(match: Match, stage_added_list: list[str]):
     return match.name
 
 def click_buttons(current_screen_image):
+    if adb_utils.is_escalation_battle():
+        adb_utils.verify_angry_mode(current_screen_image)
     adb_utils.check_hearts(current_screen_image)
     adb_utils.check_buttons_to_click(current_screen_image)
 
 def match_cell_with_icons(icons_list, cell_list, has_barriers, combo_is_running=False) -> List[Match]:
     global last_execution_swiped
     match_list: List[Match] = []
-    is_timed_stage = check_is_timed_stage()
+    timed_stage = is_timed_stage()
     for idx, cell in enumerate(cell_list):
         result = predict(cell, icons_list, has_barriers)
-        if not is_timed_stage and not combo_is_running and not last_execution_swiped and result.name in ["Fog", "_Fog", "Pikachu_a"]:
+        if not timed_stage and not combo_is_running and not last_execution_swiped and result.name in ["Fog", "_Fog", "Pikachu_a"]:
             result = update_fog_match(result, icons_list, has_barriers, idx)
         match_list.append(result)
-    if is_timed_stage:
+    if timed_stage:
         mask_already_existant_matches(match_list)
     return match_list
 
@@ -269,11 +231,27 @@ def mask_already_existant_matches(match_list: List[Match]) -> List[Match]:
     match_list = custom_utils.replace_all_3_matches_indices(match_list, metal_match)
     return match_list
 
-def check_is_timed_stage():
+def is_timed_stage():
     return config_utils.config_values.get("timed_stage")
 
+def is_meowth_stage():
+    return config_utils.config_values.get("meowth_37")
+
 def is_on_stage(original_image):
-    return adb_utils.has_match(original_image, constants.ACTIVE_BOARD_IMAGE)
+    global stage_timer, mega_activated_this_round, last_execution_swiped
+    on_stage = adb_utils.has_icon_match(original_image, constants.ACTIVE_BOARD_IMAGE, "StageMenu", extra_timeout=0, click=False, min_point=6)
+    if on_stage:
+        adb_utils.angry_mode_active = False
+    if not on_stage:
+        mega_activated_this_round = False
+        last_execution_swiped = False
+        stage_timer = None
+    elif on_stage and stage_timer is None:
+        stage_timer = time.time()
+    elif on_stage and custom_utils.time_difference_in_seconds(stage_timer) > 60:
+        adb_utils.has_text_match(original_image, "NoOutOfTime", custom_search_text="No")
+        stage_timer = None
+    return on_stage
 
 def should_auto_next_stage():
     return config_utils.config_values.get("auto_next_stage")
@@ -285,7 +263,7 @@ def start_from_bot(pokemon_list: list[Pokemon], has_barriers, image, current_sta
     for cell in cell_list:
         result = predict(cell, icons_list, has_barriers)
         match_list.append(result)
-    current_board = ShuffleBoard(match_list, pokemon_list, icons_list)
+    current_board = Board(match_list, pokemon_list, icons_list)
     shuffle_config_files.create_board_files(current_board, source, current_stage)
     result = socket_utils.loadNewBoard()
     result_image = None
@@ -294,25 +272,6 @@ def start_from_bot(pokemon_list: list[Pokemon], has_barriers, image, current_sta
     return MatchResult(result=result, match_image=result_image, match_list=match_list)
 
 def update_fog_match(result, icons_list, has_barriers, idx):
-    # row, column = [int(coordinate) for coordinate in custom_utils.index_to_coordinates(idx)]
-    row, column = custom_utils.index_to_coordinates(idx)
-    resolution = adb_utils.get_screen_resolution()
-    r = constants.RESOLUTIONS[resolution]["Board"]
-    board_top_left = (r[0], r[1])
-    board_bottom_right = (r[2], r[3])
-
-    board_x = board_top_left[0]
-    board_y = board_top_left[1]
-    board_w = (board_bottom_right[0] - board_top_left[0]) / 6
-    board_h = (board_bottom_right[1] - board_top_left[1]) / 6
-
-    cell_x0 =  math.floor(board_x + (board_w * (column - 1)))
-    cell_y0 =  math.floor(board_y + (board_h * (row - 1)))
-    cell_x1 =  math.floor(board_x + (board_w * (column)))
-    cell_y1 =  math.floor(board_y + (board_h * (row)))
-
-    
-    new_img = adb_utils.update_fog_image(cell_x0, cell_y0, cell_x1, cell_y1, board_w, board_h)
     new_img = adb_utils.update_fog_image(idx)
     new_result = predict(new_img, icons_list, has_barriers)
     if new_result.name == "Fog":

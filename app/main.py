@@ -258,13 +258,13 @@ class ImageSelectorApp():
 
 
         self.frame3_1_top_3_1_var = tk.BooleanVar(value=config_utils.config_values.get("fast_swipe"))      
-        self.frame3_1_top_3_2_var = tk.BooleanVar(value=config_utils.config_values.get("placeholder1")) 
-        self.frame3_1_top_3_3_var = tk.BooleanVar(value=config_utils.config_values.get("placeholder2")) 
+        self.frame3_1_top_3_2_var = tk.BooleanVar(value=config_utils.config_values.get("escalation_battle")) 
+        self.frame3_1_top_3_3_var = tk.BooleanVar(value=config_utils.config_values.get("coin_stage")) 
         self.frame3_1_top_3_4_var = tk.BooleanVar(value=config_utils.config_values.get("placeholder3"))
         
         self.frame3_1_top_3_1_switch = customtkinter.CTkSwitch(frame3_1_top_3, variable=self.frame3_1_top_3_1_var, command=lambda: self.update_switch_config(self.frame3_1_top_3_1_var, "fast_swipe"), text="Fast Swipe", onvalue=True, offvalue=False)
-        self.frame3_1_top_3_2_switch = customtkinter.CTkSwitch(frame3_1_top_3, variable=self.frame3_1_top_3_2_var, command=lambda: self.update_switch_config(self.frame3_1_top_3_2_var, "placeholder1"), text="placeholder1", onvalue=True, offvalue=False)
-        self.frame3_1_top_3_3_switch = customtkinter.CTkSwitch(frame3_1_top_3, variable=self.frame3_1_top_3_3_var, command=lambda: self.update_switch_config(self.frame3_1_top_3_3_var, "placeholder2"), text="placeholder2", onvalue=True, offvalue=False)
+        self.frame3_1_top_3_2_switch = customtkinter.CTkSwitch(frame3_1_top_3, variable=self.frame3_1_top_3_2_var, command=lambda: self.update_switch_config(self.frame3_1_top_3_2_var, "escalation_battle"), text="Escalation Battle", onvalue=True, offvalue=False)
+        self.frame3_1_top_3_3_switch = customtkinter.CTkSwitch(frame3_1_top_3, variable=self.frame3_1_top_3_3_var, command=lambda: self.update_switch_config(self.frame3_1_top_3_3_var, "coin_stage"), text="Coin Cost Stage", onvalue=True, offvalue=False)
         self.frame3_1_top_3_4_switch = customtkinter.CTkSwitch(frame3_1_top_3, variable=self.frame3_1_top_3_4_var, command=lambda: self.update_switch_config(self.frame3_1_top_3_4_var, "placeholder3"), text="placeholder3", onvalue=True, offvalue=False)
         
 
@@ -399,10 +399,6 @@ class ImageSelectorApp():
             scale_factor = self.master.winfo_width() / width
             self.master.geometry(f"{int(width*scale_factor)}x{int(height*scale_factor)}+{x}+{y}")
         self.check_current_position()
-        if os.getenv("DEV_MODE") == "1":
-            log.debug("Dev Mode Activated")
-            self.force_update_mouse_buttons()
-
 
     def check_current_position(self):
         self.master.update()
@@ -582,15 +578,14 @@ class ImageSelectorApp():
         for i in range(0,6):
             img_list.append(custom_utils.capture_board_screensot(save=False, return_type="cv2"))
         for idx, screen in enumerate(img_list):
-            # cv2_board = cv2.cvtColor(np.array(screen), cv2.COLOR_RGB2BGR)
             IconRegister(root=self, title=idx, forced_board_image=screen)
 
     def open_create_register_screen(self, folder):
-        self.disable_loop()
+        # self.disable_loop()
         self.board_image_selector = BoardIconSelector(root=self, folder=folder)
     
     def open_remove_register_screen(self, action=None):
-        self.disable_loop()
+        # self.disable_loop()
         self.app_image_selector = PokemonIconSelector(root=self, action=action)
 
     def clear_icons_cache(self):
@@ -617,7 +612,6 @@ class ImageSelectorApp():
             return MatchResult()
 
         with self.analysis_lock:
-            # log.debug("Iniciando o start_from_helper")
             pokemons_list = self.extract_pokemon_list()
             match_result = match_icons.start_from_helper(pokemons_list, self.frame3_1_top_1_2_var_control_barrier.get(), root=self, source=source, create_image=create_image, skip_shuffle_move=skip_shuffle_move, forced_board_image=forced_board_image)
         if current_lock != self.analysis_lock:
@@ -637,6 +631,7 @@ class ImageSelectorApp():
             if self.analysis_lock.locked():
                 self.analysis_lock = threading.Lock()
                 adb_utils.thread_sleep_timer = None
+            log.info("Loop Mode Off")
             return
         else:
             self.execute_board_analysis_threaded(source="loop")
@@ -682,7 +677,8 @@ class ImageSelectorApp():
 
     def update_switch_config(self, swich_var, config_var_name):
         v = swich_var.get()
-        config_utils.update_config(config_var_name, v)    
+        config_utils.update_config(config_var_name, v)
+        execution_variables.has_modifications = True
 
     def reveal_or_hide_barrier_img(self):
         has_barrier = self.frame3_1_top_1_2_var_control_barrier.get()
@@ -761,24 +757,6 @@ class ImageSelectorApp():
     def load_team(self):
         self.disable_loop()
         load_from_shuffle.TeamLoader(root=self)
-
-    def force_update_mouse_buttons(self):
-        self.master.update()
-        # screen_width = self.master.winfo_screenwidth()
-        # if screen_width == 2560:
-        #     log.debug("Updating to Ultra Wide Positions")
-        #     match_icons.board_top_left = (364, 488)
-        #     match_icons.board_bottom_right = (914, 1031)
-        #     match_icons.center_poinst_list = custom_utils.get_center_positions_list(match_icons.board_top_left, match_icons.board_bottom_right)
-        # elif screen_width == 1920:
-        #     log.debug("Updating to Full HD Positions")
-        #     # match_icons.board_top_left = (208, 482)
-        #     # match_icons.board_bottom_right = (750, 1021)
-        #     match_icons.board_top_left = (826, 483)
-        #     match_icons.board_bottom_right = (1380, 1032)
-        #     match_icons.center_poinst_list = custom_utils.get_center_positions_list(match_icons.board_top_left, match_icons.board_bottom_right)
-        # else:
-        #     return
 
 def merge_pil_images(image1, image2):
     # Get the width and height of each image

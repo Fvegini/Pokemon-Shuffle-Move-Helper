@@ -89,7 +89,6 @@ class PokemonIconSelector(tk.Toplevel):
     def on_image_click(self, image_name):
         self.selected_image_name = image_name
         if self.action == "Remove_Barrier":
-            # remove_icon(Path(constants.IMAGES_BARRIER_PATH, image_name))
             ExtraIconSelector(root=self.root, selected_image = image_name, action=self.action)
         elif self.action == "Remove_Extra":
             ExtraIconSelector(root=self.root, selected_image = image_name, action=self.action)
@@ -144,7 +143,6 @@ class ExtraIconSelector(tk.Toplevel):
 
 def remove_icon(image_path):
     if os.path.exists(image_path):
-        # log.debug(f"Teria removido {image_path}")
         os.remove(image_path)
         log.info(f"Eliminado o Arquivo: {image_path}")
 

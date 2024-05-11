@@ -119,7 +119,7 @@ class MatchResult():
     def __bool__(self):
         return bool(self.result)
 
-class ShuffleBoard():
+class Board():
     
     match_sequence: List[Match]
     pokemon_board_sequence: List[str]
@@ -129,6 +129,8 @@ class ShuffleBoard():
     frozen_list: list[str]
     has_mega: bool
     mega_name: str
+    moves_left: int = 5
+    current_score: int = 0
     
     def __init__(self, match_sequence: List[Match], pokemon_list: List[Pokemon], icons_list: List[Icon]):
         self.match_sequence = match_sequence
@@ -139,12 +141,26 @@ class ShuffleBoard():
         self.frozen_list = []
         self.has_mega = False
 
-class Board():
+class Screen():
     
-    def __init__(self, board_top_left, board_bottom_right):
+    resolution_dict: dict
+    board_top_left: tuple
+    board_bottom_right: tuple
+    board_x: int
+    board_y: int
+    board_w: float
+    board_h: float
+    
+    def __init__(self, resolution_dict):
+        self.mydict = resolution_dict
+        board_top_left = resolution_dict.get("Board")[0:2]
+        board_bottom_right = resolution_dict.get("Board")[2:4]
         self.board_top_left = board_top_left
         self.board_bottom_right = board_bottom_right
         self.board_x = board_top_left[0]
         self.board_y = board_top_left[1]
         self.board_w = (board_bottom_right[0] - board_top_left[0]) / 6
         self.board_h = (board_bottom_right[1] - board_top_left[1]) / 6
+    
+    def get_position(self, position):
+        return self.mydict.get(position)

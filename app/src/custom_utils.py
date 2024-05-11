@@ -1,16 +1,17 @@
 from pathlib import Path
 import cv2
 import numpy as np
-from src.classes import Match, ShuffleBoard
+from src.classes import Match, Board
 from typing import Any, List
-from src import adb_utils, constants, custom_utils
+from src import adb_utils, constants, custom_utils, config_utils
 from PIL import Image
 import pyautogui
-from src.config_utils import read_config
-import src.board_utils
+import src.screen_utils
 import os
 import re
 from src import log_utils
+import time
+from src.screen_utils import get_screen
 
 log = log_utils.get_logger()
 
@@ -425,42 +426,29 @@ def get_center_positions_list(left_position, right_position):
 
 
 def capture_screen_screenshot():
-    adb_board = read_config().get("adb_board")
+    adb_board = config_utils.config_values.get("adb_board")
     if adb_board:
-        return adb_utils.get_full_screenshot()
+        return adb_utils.get_screenshot()
     else:
         return pyautogui.screenshot()
 
 
 def capture_board_screensot(save=True, return_type="cv2"):
-    adb_board = read_config().get("adb_board")
+    adb_board = config_utils.config_values.get("adb_board")
     if adb_board:
         # adb_utils.get_screen_positions()
-        img = adb_utils.crop_board(adb_utils.get_full_screenshot())
+        img = adb_utils.crop_board(adb_utils.get_screenshot())
         if return_type == "cv2":
             return img
         else:
             return custom_utils.cv2_to_pil(img)
     else:
-
-        x0 = src.board_utils.current_board.board_top_left[0]
-        x1 = src.board_utils.current_board.board_bottom_right[0] - src.board_utils.current_board.board_top_left[0]
-        y0 = src.board_utils.current_board.board_top_left[1]
-        y1 = src.board_utils.current_board.board_bottom_right[1] - src.board_utils.current_board.board_top_left[1]
+        x0 = get_screen().board_top_left[0]
+        x1 = get_screen().board_bottom_right[0] - get_screen().board_top_left[0]
+        y0 = get_screen().board_top_left[1]
+        y1 = get_screen().board_bottom_right[1] - get_screen().board_top_left[1]
         # log.debug(f"Screenshot at: {datetime.now()}")
         img = pyautogui.screenshot(region=(x0, y0, x1, y1))        
-
-        resolution = adb_utils.get_screen_resolution()
-        r = constants.RESOLUTIONS[resolution]["Board"]
-        board_top_left = (r[0], r[1])
-        board_bottom_right = (r[2], r[3])
-
-        x0 = board_top_left[0]
-        x1 = board_bottom_right[0] - board_top_left[0]
-        y0 = board_top_left[1]
-        y1 = board_bottom_right[1] - board_top_left[1]
-        # print(f"Screenshot at: {datetime.now()}")
-        img = pyautogui.screenshot(region=(x0, y0, x1, y1))
         if save:
             img.save(constants.LAST_BOARD_IMAGE_PATH)
         if return_type == "cv2":
@@ -561,7 +549,7 @@ def split_list_to_dict(complete_list, interest_list):
         result_dict[string].append(idx)
     return result_dict
 
-def find_slot_to_mega(current_board: ShuffleBoard):
+def find_slot_to_mega(current_board: Board):
     from_matrix, to_matrix = search_space_to_fit_mega(current_board.match_sequence, current_board.mega_name)
     from_row = from_matrix[0] + 1
     from_column = from_matrix[1] + 1
@@ -569,3 +557,15 @@ def find_slot_to_mega(current_board: ShuffleBoard):
     to_column = to_matrix[1] + 1
     formatted_result = f"{from_row},{from_column} -> {to_row},{to_column}:"
     return formatted_result
+
+def timer_decorator(func):
+    def wrapper(*args, **kwargs):
+        start_time = time.time()
+        result = func(*args, **kwargs)
+        end_time = time.time()
+        log.debug(f"Function '{func.__name__}' took {end_time - start_time:.2f} seconds to run.")
+        return result
+    return wrapper
+
+def time_difference_in_seconds(start_time):
+    return time.time() - start_time
