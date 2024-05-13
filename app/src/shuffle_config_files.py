@@ -3,7 +3,7 @@ from src import adb_utils, constants
 from src.custom_utils import verify_shuffle_file
 from src import custom_utils
 from src.discord import pokemon_names
-from src.execution_variables import execution_variables
+from src.execution_variables import current_run
 from src.classes import Pokemon, Board
 import re
 
@@ -68,7 +68,6 @@ def get_team_from_config_file_line(line, expand_megas):
     return final_team
 
 def create_board_files(current_board: Board, source=None, stage=None, is_meowth_stage=False):
-    global mega_activated_this_round
     names_list = []
     frozen_list = []
     mega_activated = MEGA_NOT_ACTIVATED
@@ -98,13 +97,13 @@ def create_board_files(current_board: Board, source=None, stage=None, is_meowth_
     current_board.mega_name = mega_name
     update_board_file(names_list, frozen_list, mega_activated, stage)
     update_preferences(current_board.current_score, current_board.moves_left)
-    if execution_variables.has_modifications or source == "bot":
+    if current_run.has_modifications or source == "bot":
         update_teams_file(complete_names_list, mega_name, current_board.extra_supports_list, stage)
         update_gradingModes_file(source, mega_activated, is_meowth_stage, current_board)
-        execution_variables.has_modifications = False
+        current_run.has_modifications = False
     elif is_meowth_stage:
         update_gradingModes_file(source, mega_activated, is_meowth_stage, current_board)
-    elif execution_variables.current_strategy == constants.GRADING_MEGA_PROGRESS:
+    elif current_run.current_strategy == constants.GRADING_MEGA_PROGRESS:
         update_gradingModes_file(source, mega_activated, is_meowth_stage, current_board)
     has_mega = mega_activated == MEGA_ACTIVATED
     current_board.has_mega = has_mega
@@ -158,7 +157,7 @@ def update_preferences(current_score=0, moves_left=5):
 
 def update_board_file(names_list, frozen_list, mega_activated, stage):
     if not stage:
-        stage = execution_variables.current_stage
+        stage = current_run.current_stage
     board_file_content = f"""STAGE {stage}
 MEGA_PROGRESS {mega_activated}
 STATUS NONE
@@ -192,7 +191,7 @@ def update_teams_file_with_pokemon_list(pokemon_list, stage_name):
 
 def update_teams_file(names_list, mega_name, extra_supports_list, stage):
     if not stage:
-        stage = execution_variables.current_stage
+        stage = current_run.current_stage
     move_string = f"TEAM {stage} {','.join(list(set(names_list)))} {KEYS_LIST} {mega_name} {','.join(list(set(extra_supports_list)))}\n"
     return update_teams_file_with_move_string(move_string, stage)
 
@@ -225,7 +224,7 @@ def update_gradingModes_file(source, mega_activated, is_meowth_stage, current_bo
         else:
             strategy = '037MeowthEarlyGame'
     else:
-        strategy = execution_variables.current_strategy
+        strategy = current_run.current_strategy
     if strategy == constants.GRADING_MEGA_PROGRESS and mega_activated == MEGA_ACTIVATED:
         strategy = constants.GRADING_TOTAL_SCORE
     prefix_to_replace = f"STRING CURRENT_MODE"

@@ -1,6 +1,6 @@
 from pathlib import Path
 from typing import List
-from src import constants, custom_utils
+from src import constants, file_utils
 from src.embed import loaded_embedder
 import numpy as np
 
@@ -68,11 +68,11 @@ class Icon():
             self.barrier_type = constants.BARRIER_TYPE_REAL
         matching_files = []
         for directory in directories:
-            matching_files.extend(custom_utils.find_matching_files(directory, self.original_path.stem, ".*"))
+            matching_files.extend(file_utils.find_matching_files(directory, self.original_path.stem, ".*"))
             if len(matching_files) == 0:
-                matching_files.extend(custom_utils.find_matching_files(directory, f"_{self.original_path.stem}", ".*"))
+                matching_files.extend(file_utils.find_matching_files(directory, f"_{self.original_path.stem}", ".*"))
         for image_path in matching_files:
-            image = custom_utils.open_and_resize_np_image(image_path, constants.downscale_res)
+            image = file_utils.open_and_resize_np_image(image_path, constants.downscale_res)
             self.images_list.append(CustomImage(image))
 
 
@@ -100,7 +100,7 @@ class Match():
         return self.name == other.name
 
     def inspect_match(self):
-        custom_utils.show_list_images([self.board_icon, self.match_icon])
+        file_utils.show_list_images([self.board_icon, self.match_icon])
         
 class MatchResult():
     

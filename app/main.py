@@ -9,10 +9,11 @@ from src import match_icons, shuffle_config_files
 from pathlib import Path
 from src.board_image_selector import BoardIconSelector, PokemonIconSelector
 from src import constants, custom_utils, load_from_shuffle, config_utils, mouse_utils
-from src.execution_variables import execution_variables
+from src.execution_variables import current_run
 import warnings
 from CTkToolTip import CTkToolTip
 from src.classes import MatchResult, Pokemon
+import src.file_utils
 from src.icon_register import IconRegister
 from src import embed
 from src import version
@@ -157,12 +158,12 @@ class ImageSelectorApp():
 
 
     def set_stage_var(self, choice):
-        execution_variables.current_stage = [k for k, v in constants.move_stages.items() if v == choice][0]
-        execution_variables.has_modifications = True
+        current_run.current_stage = [k for k, v in constants.move_stages.items() if v == choice][0]
+        current_run.has_modifications = True
 
     def set_strategy_var(self, choice):
-        execution_variables.current_strategy = [k for k, v in constants.move_strategy.items() if v == choice][0]
-        execution_variables.has_modifications = True
+        current_run.current_strategy = [k for k, v in constants.move_strategy.items() if v == choice][0]
+        current_run.has_modifications = True
 
     def create_tab_2(self):
         frame2_1 = customtkinter.CTkFrame(self.tab2, fg_color="transparent")
@@ -484,7 +485,7 @@ class ImageSelectorApp():
         if any([value for value in self.get_selected_images_widgets_list() if value[0].master.name == selected_file]):
             return
 
-        execution_variables.has_modifications = True
+        current_run.has_modifications = True
 
         # Display in the selected images panel
         selected_image_frame = customtkinter.CTkFrame(self.scrollable_frame)
@@ -561,8 +562,8 @@ class ImageSelectorApp():
         image_list = []
         barrier_image_list = []
         original_path = Path(image_path)
-        images_path_list = [original_path] + custom_utils.find_matching_files(constants.IMAGES_EXTRA_PATH, original_path.stem, ".png")
-        barrier_images_path_list = custom_utils.find_matching_files(constants.IMAGES_BARRIER_PATH, original_path.stem, ".png")
+        images_path_list = [original_path] + src.file_utils.find_matching_files(constants.IMAGES_EXTRA_PATH, original_path.stem, ".png")
+        barrier_images_path_list = src.file_utils.find_matching_files(constants.IMAGES_BARRIER_PATH, original_path.stem, ".png")
 
         for image_path in images_path_list:
             icon_image = Image.open(image_path)
@@ -604,7 +605,7 @@ class ImageSelectorApp():
 
     def clear_icons_cache(self):
         match_icons.loaded_icons_cache = {}
-        execution_variables.has_modifications = True
+        current_run.has_modifications = True
 
     def get_selected_images_widgets_list(self):
         widget_list = []
@@ -644,14 +645,14 @@ class ImageSelectorApp():
         if not self.frame3_1_top_1_1_var_control_loop.get():
             if self.analysis_lock.locked():
                 self.analysis_lock = threading.Lock()
-                adb_utils.thread_sleep_timer = None
+                current_run.thread_sleep_timer = 0
             log.info("Loop Mode Off")
             return
         else:
             self.execute_board_analysis_threaded(source="loop")
-            if adb_utils.thread_sleep_timer:
-                log.debug(f"Thread is locked for {adb_utils.thread_sleep_timer} seconds, waiting to return the loop.")
-                self.master.after(adb_utils.thread_sleep_timer * 1000, self.control_loop_function)                
+            if current_run.thread_sleep_timer:
+                log.debug(f"Thread is locked for {current_run.thread_sleep_timer} seconds, waiting to return the loop.")
+                self.master.after(current_run.thread_sleep_timer * 1000, self.control_loop_function)                
                 return
 
     def extract_pokemon_list(self):
@@ -692,7 +693,7 @@ class ImageSelectorApp():
     def update_switch_config(self, swich_var, config_var_name):
         v = swich_var.get()
         config_utils.update_config(config_var_name, v)
-        execution_variables.has_modifications = True
+        current_run.has_modifications = True
 
     def reveal_or_hide_barrier_img(self):
         has_barrier = self.frame3_1_top_1_2_var_control_barrier.get()
@@ -754,10 +755,10 @@ class ImageSelectorApp():
 
             current_team, stage_name = shuffle_config_files.get_current_stage_and_team()
 
-            execution_variables.current_stage = stage_name
-            execution_variables.current_strategy = constants.GRADING_TOTAL_SCORE
-            self.stage_combobox.set(constants.move_stages.get(execution_variables.current_stage))
-            self.strategy_combobox.set(constants.move_strategy.get(execution_variables.current_strategy))
+            current_run.current_stage = stage_name
+            current_run.current_strategy = constants.GRADING_TOTAL_SCORE
+            self.stage_combobox.set(constants.move_stages.get(current_run.current_stage))
+            self.strategy_combobox.set(constants.move_strategy.get(current_run.current_strategy))
             for pokemon in current_team:
                 if pokemon.name in load_from_shuffle.exception_list:
                     pokemon.name = f"_{pokemon.name}"

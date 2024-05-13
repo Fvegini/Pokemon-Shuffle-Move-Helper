@@ -7,6 +7,7 @@ from src import constants, custom_utils
 import customtkinter
 import cv2
 from src import log_utils
+import src.file_utils
 
 log = log_utils.get_logger()
 
@@ -115,9 +116,9 @@ class ExtraIconSelector(tk.Toplevel):
         col_index = 0
 
         if self.action == "Remove_Extra":
-            images_path = custom_utils.find_matching_files(constants.IMAGES_EXTRA_PATH, Path(self.selected_image).stem, ".png")
+            images_path = src.file_utils.find_matching_files(constants.IMAGES_EXTRA_PATH, Path(self.selected_image).stem, ".png")
         else:
-            images_path = custom_utils.find_matching_files(constants.IMAGES_BARRIER_PATH, Path(self.selected_image).stem, ".png")
+            images_path = src.file_utils.find_matching_files(constants.IMAGES_BARRIER_PATH, Path(self.selected_image).stem, ".png")
 
         for image_path in images_path:
             image_path = Path(image_path)

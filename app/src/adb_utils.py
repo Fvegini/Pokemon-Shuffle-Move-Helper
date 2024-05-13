@@ -2,6 +2,7 @@ import subprocess
 import math
 import cv2
 from src import constants
+from src.execution_variables import current_run
 import numpy as np
 import subprocess
 import math
@@ -17,14 +18,8 @@ from src import log_utils
 import re
 
 log = log_utils.get_logger()
-adb_shell_command = "adb shell"
-angry_mode_active = False
-time_pattern = re.compile(r"\b(\d{1,2})\s*:\s*(\d{1,2})\b")
-
-
 def configure_adb():
-    global adb_shell_command
-    pipe = subprocess.Popen(f"{adb_shell_command} wm size",stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
+    pipe = subprocess.Popen(f"{current_run.adb_shell_command} wm size",stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
     output = str(pipe.stdout.read()) #type: ignore
     if output.startswith("b'Physical size"):
         log.info(output)
@@ -34,15 +29,14 @@ def configure_adb():
         output = str(pipe.stdout.read()) #type: ignore
         pipe = subprocess.Popen("adb connect localhost:5555",stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
         output = str(pipe.stdout.read()) #type: ignore
-        adb_shell_command = "adb -s localhost:5555 shell"
-        pipe = subprocess.Popen(f"{adb_shell_command} wm size",stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
+        current_run.adb_shell_command = "adb -s localhost:5555 shell"
+        pipe = subprocess.Popen(f"{current_run.adb_shell_command} wm size",stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
         output = str(pipe.stdout.read()) #type: ignore
         log.info(output)
         return
 
 def configure_screen():
-    global adb_shell_command
-    pipe = subprocess.Popen(f"{adb_shell_command} wm size",stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
+    pipe = subprocess.Popen(f"{current_run.adb_shell_command} wm size",stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
     response = str(pipe.stdout.read()).strip() #type: ignore
     resolution = re.findall(r"\b\d{2,4}\s*x\s*\d{2,4}\b", response)[0]
     screen_utils.update_screen(constants.RESOLUTIONS[resolution])
@@ -51,12 +45,10 @@ def configure_screen():
 configure_adb()
 configure_screen()
 thread_sleep_timer = None
-hearts_loop_counter = 0
 last_button_clicked = None
 
 def get_screenshot():
-    global adb_shell_command
-    pipe = subprocess.Popen(f"{adb_shell_command} screencap -p", stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
+    pipe = subprocess.Popen(f"{current_run.adb_shell_command} screencap -p", stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
     image_bytes = pipe.stdout.read().replace(b'\r\n', b'\n') #type: ignore
     img = cv2.imdecode(np.fromstring(image_bytes, np.uint8), cv2.IMREAD_COLOR) #type: ignore
     cv2.imwrite(constants.LAST_SCREEN_IMAGE_PATH, img)
@@ -67,15 +59,14 @@ def crop_board(img):
     cv2.imwrite(constants.LAST_BOARD_IMAGE_PATH, img)
     return img
 
-def execute_play(result, board_results, last_execution_swiped):
-    global adb_shell_command
+def execute_play(result, board_results):
     try:
         adb_move = config_utils.config_values.get("adb_move")
         if result and adb_move:
             timed_play = custom_utils.is_timed_stage()
             wrong_board = "Wrong Board" in result
             zero_result = "0,0" in result
-            if timed_play and (wrong_board or zero_result) and not last_execution_swiped:
+            if timed_play and (wrong_board or zero_result) and not current_run.last_execution_swiped:
                 log.debug("Runing find_slot_to_mega crazy function")
                 new_result = custom_utils.find_slot_to_mega(board_results)
                 log.debug(f"Changing result from: {result}")
@@ -95,7 +86,7 @@ def execute_play(result, board_results, last_execution_swiped):
                 #increase the chances that the swipe input will move to the correct cell and not one before it.
                 new_to_x, new_to_y = move_second_point(from_x, from_y, to_x, to_y, get_screen().board_w/2.5, get_screen().board_h/2.5)
 
-                subprocess.Popen(f"{adb_shell_command} input swipe {from_x} {from_y} {new_to_x} {new_to_y} 350", stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
+                subprocess.Popen(f"{current_run.adb_shell_command} input swipe {from_x} {from_y} {new_to_x} {new_to_y} 350", stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
                 time.sleep(1.0)
                 return True
     except Exception as ex:
@@ -123,8 +114,10 @@ def check_if_close_to_same_color(pixel1, pixel2, threshold=10):
   return np.all(np.abs(diff) < threshold)
 
 def check_hearts(original_image):
-    global thread_sleep_timer, hearts_loop_counter, adb_shell_command
     try:
+        if custom_utils.is_coin_stage():
+            log.debug("Coin Stagem skipping Hearts check")
+            return
         hearts_number_unfiltered = get_label(original_image, "Hearts", '--psm 6 --oem 3 -c tessedit_char_whitelist="0123456789"')
         hearts_number_str = re.sub(r'\D', '', hearts_number_unfiltered)
         if hearts_number_str == "7":
@@ -132,7 +125,7 @@ def check_hearts(original_image):
             minutes, seconds = process_time(hearts_timer)
             if minutes or seconds:
                 hearts_number_str = "1"
-        hearts_loop_counter+= 1
+        current_run.hearts_loop_counter+= 1
         if not hearts_number_str.isnumeric():
             log.debug(f"Current Hearts amount is Unknown")
             return
@@ -140,9 +133,9 @@ def check_hearts(original_image):
         log.debug(f"Current Hearts amount is: {hearts_number}")
         if not is_escalation_battle() and hearts_number == 0:
             wait_until_next_heart(original_image)
-        elif hearts_number >= 5 or hearts_loop_counter > 20:
+        elif hearts_number >= 5 or current_run.hearts_loop_counter > 20:
             log.debug("Hearts maxed, small click test") #Try to skip the daily login bonus screen
-            subprocess.Popen(f"{adb_shell_command} input tap {get_screen().get_position('Hearts')[0]} {get_screen().get_position('Hearts')[1]}", stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
+            subprocess.Popen(f"{current_run.adb_shell_command} input tap {get_screen().get_position('Hearts')[0]} {get_screen().get_position('Hearts')[1]}", stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
         elif is_escalation_battle() and is_angry_active():
             if hearts_number == 0:
                 wait_until_next_heart(original_image)
@@ -161,36 +154,33 @@ def check_hearts(original_image):
             log.debug(f"Hearts Ended, waiting for {thread_sleep_timer} seconds - ESCALATION BATTLE TEST")
             time.sleep(thread_sleep_timer)
             log.debug("Sleep ended, continuing")
-            thread_sleep_timer = None       
+            current_run.thread_sleep_timer = 0
     except Exception as ex:
         log.debug(f"Error checking hearts number: {ex}")
         return
 
 def process_time(mystring):
     try:
-        return re.findall(time_pattern, mystring)[0]
+        return re.findall(custom_utils.time_pattern, mystring)[0]
     except:
         log.error(f"Hearts Timer problem, original string: {mystring}")
         return None, None
 
 def is_angry_active():
-    global angry_mode_active
-    return angry_mode_active
+    return current_run.angry_mode_active
 
 def wait_until_next_heart(original_image):
-    global thread_sleep_timer
     hearts_timer = get_label(original_image, "HeartTimer")
     minutes, seconds = process_time(hearts_timer)
-    thread_sleep_timer = int(minutes) * 60 + int(seconds) + 5
-    log.debug(f"Hearts Ended, waiting for {thread_sleep_timer} seconds")
-    time.sleep(thread_sleep_timer)
-    thread_sleep_timer = None
+    current_run.thread_sleep_timer = int(minutes) * 60 + int(seconds) + 5
+    log.debug(f"Hearts Ended, waiting for {current_run.thread_sleep_timer} seconds")
+    time.sleep(current_run.thread_sleep_timer)
+    current_run.thread_sleep_timer = 0
 
 def is_escalation_battle():
     return config_utils.config_values.get("escalation_battle")
 
-def check_buttons_to_click(original_image, non_stage_count):
-    global hearts_loop_counter
+def check_buttons_to_click(original_image):
     was_clicked = False
     
     if custom_utils.is_timed_stage():
@@ -198,10 +188,15 @@ def check_buttons_to_click(original_image, non_stage_count):
     else:
         timeout_increase = 0
 
-    if non_stage_count > 60:
+    if current_run.non_stage_count > 5:
+        current_run.non_stage_count = 0
+        click_ok_buttons(original_image, timeout_increase)
         click_return_buttons(original_image, timeout_increase)
 
-    if has_icon_match(original_image, constants.CURRENT_STAGE_IMAGE, extra_timeout=1+timeout_increase, click=True):
+    current_stage_image_path = constants.CURRENT_STAGE_IMAGE
+    if custom_utils.custom_utils.is_meowth_stage():
+        current_stage_image_path = constants.MEOWTH_STAGE_IMAGE
+    if has_icon_match(original_image, current_stage_image_path, extra_timeout=1+timeout_increase, click=True):
         was_clicked = True
         original_image = get_screenshot()
     if was_clicked and is_escalation_battle():
@@ -212,14 +207,14 @@ def check_buttons_to_click(original_image, non_stage_count):
     if has_text_match(original_image, "Continue", extra_timeout=1+timeout_increase):
         was_clicked = True
         original_image = get_screenshot()
-    if has_text_match(original_image, "Start!", 4):
+    if has_text_match(original_image, "Start!", 1):
         was_clicked = True
         original_image = get_screenshot()
-    if has_text_match(original_image, "Next", 4):
+    if has_text_match(original_image, "Next", extra_timeout=1):
         was_clicked = True
         original_image = get_screenshot()
-    if config_utils.config_values.get("coin_stage"):
-        if has_text_match(original_image, "CoinStage", custom_click="CoinStageYes", custom_search_text="need to spend"):
+    if custom_utils.is_coin_stage():
+        if has_text_match(original_image, "CoinStage", custom_click="CoinStageYes", extra_timeout=1, custom_search_text="need to spend"):
             was_clicked = True
             original_image = get_screenshot()
     if has_text_match(original_image, "No", extra_timeout=1+timeout_increase):
@@ -228,22 +223,30 @@ def check_buttons_to_click(original_image, non_stage_count):
     if has_text_match(original_image, "No2", extra_timeout=1+timeout_increase, custom_search_text="No"):
         was_clicked = True
         original_image = get_screenshot()
+    if click_ok_buttons(original_image, timeout_increase):
+        was_clicked = True
+        original_image = get_screenshot()
+    if has_text_match(original_image, "Close", extra_timeout=1+timeout_increase):
+        was_clicked = True
+        original_image = get_screenshot()   
+        
     if not was_clicked:
         return click_return_buttons(original_image, timeout_increase)
     if was_clicked:
         hearts_loop_counter = 0
     return
 
-def click_return_buttons(original_image, timeout_increase):
+def click_ok_buttons(original_image, timeout_increase):
     return not has_icon_match(original_image, constants.OK_BUTTON_IMAGE, extra_timeout=1+timeout_increase, click=True) \
-                and not has_icon_match(original_image, constants.OK_BUTTON2_IMAGE, extra_timeout=1+timeout_increase, click=True) \
-                and not has_icon_match(original_image, constants.RETURN_FLAG_IMAGE, extra_timeout=1+timeout_increase, click=True) \
-                and not has_icon_match(original_image, constants.RETURN_FLAG2_IMAGE, extra_timeout=1+timeout_increase, click=True)
+            and not has_icon_match(original_image, constants.OK_BUTTON2_IMAGE, extra_timeout=1+timeout_increase, click=True)
+
+def click_return_buttons(original_image, timeout_increase):
+    return not has_icon_match(original_image, constants.RETURN_FLAG_IMAGE, extra_timeout=1+timeout_increase, click=True) \
+            and not has_icon_match(original_image, constants.RETURN_FLAG2_IMAGE, extra_timeout=1+timeout_increase, click=True)
 def verify_angry_mode(original_image, double_try=False):
-    global angry_mode_active
     is_angry = has_icon_match(original_image, constants.ANGRY_ICON_IMAGE) or has_icon_match(original_image, constants.ANGRY_ICON2_IMAGE)
     if is_angry:
-        angry_mode_active = True
+        current_run.angry_mode_active = True
         log.info("Angry Mode is ACTIVE")
         return
     elif double_try:
@@ -251,13 +254,12 @@ def verify_angry_mode(original_image, double_try=False):
         original_image = get_screenshot()
         is_angry = has_icon_match(original_image, constants.ANGRY_ICON_IMAGE) or has_icon_match(original_image, constants.ANGRY_ICON2_IMAGE)
         if is_angry:
-            angry_mode_active = True
+            current_run.angry_mode_active = True
             log.info("Angry Mode is ACTIVE")
             return
     return
     
-def has_icon_match(original_image, icon_path, position="CompleteScreen", extra_timeout=1.0, click=True, min_point=10, debug=False):
-    global adb_shell_command
+def has_icon_match(original_image, icon_path, position="CompleteScreen", extra_timeout=1.0, click=True, min_point=10, debug=False, double_checked=False):
     try:
         r = get_screen().get_position(position)
         img = original_image.copy()
@@ -310,10 +312,12 @@ def has_icon_match(original_image, icon_path, position="CompleteScreen", extra_t
             debug_image_path.parent.mkdir(parents=True, exist_ok=True)
             cv2.imwrite(debug_image_path.as_posix(), final_img)
 
-        if click:
+        if click and not double_checked:
+            return has_icon_match(get_screenshot(), icon_path, position, extra_timeout, click, min_point, debug, double_checked=True) #Add a double-check with a new ScreenShot before the click
+        elif click and double_checked:
             box_center_x = int((box[0][0] + box[2][0]) / 2)
             box_center_y = int((box[0][1] + box[2][1]) / 2)
-            subprocess.Popen(f"{adb_shell_command} input tap {r[0] + box_center_x} {r[1] + box_center_y}", stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
+            subprocess.Popen(f"{current_run.adb_shell_command} input tap {r[0] + box_center_x} {r[1] + box_center_y}", stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
             if extra_timeout > 0:
                 time.sleep(extra_timeout)
         return True
@@ -321,7 +325,6 @@ def has_icon_match(original_image, icon_path, position="CompleteScreen", extra_t
         return False
 
 def text_visible(original_image, text, custom_click=None, custom_search_text=None):
-    global adb_shell_command
     r = get_screen().get_position(text)
     img = original_image.copy()
     img = img[r[1]:r[3], r[0]:r[2]]
@@ -341,10 +344,9 @@ def text_visible(original_image, text, custom_click=None, custom_search_text=Non
             log.debug(f"Text Found for {text}: {result.strip()} - alternative {result2.strip()}")
     return found_text, postition
 
-def has_text_match(original_image, text, extra_timeout=1.0, click=True, custom_click=None, custom_search_text=None):
+def has_text_match(original_image, text, extra_timeout=1.0, click=True, custom_click=None, custom_search_text=None, double_checked=False):
     visible, r = text_visible(original_image, text, custom_click, custom_search_text)
     if visible and click:
-
         debug_image_path = Path(constants.ADB_IMAGE_FOLDER, "debug", f"{text}.png")
         if not debug_image_path.exists():
             final_img = original_image.copy()
@@ -352,7 +354,10 @@ def has_text_match(original_image, text, extra_timeout=1.0, click=True, custom_c
             debug_image_path.parent.mkdir(parents=True, exist_ok=True)
             cv2.imwrite(debug_image_path.as_posix(), final_img)
 
-        subprocess.Popen(f"{adb_shell_command} input tap {math.floor((r[0] + r[2])/2)} {math.floor((r[1] + r[3])/2)}", stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
+        if not double_checked:
+            has_text_match(get_screenshot(), text, extra_timeout, click, custom_click, custom_search_text, double_checked=True)
+        else:
+            subprocess.Popen(f"{current_run.adb_shell_command} input tap {math.floor((r[0] + r[2])/2)} {math.floor((r[1] + r[3])/2)}", stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
         if extra_timeout:
             time.sleep(extra_timeout)
     return visible

@@ -114,6 +114,7 @@ RESOLUTIONS = {
         "Combo": (602, 46, 813, 136),
         "CoinStage": (153, 646, 742, 826),
         "CoinStageYes": (118, 1041, 225, 1093),
+        "Close": (348, 1033, 544, 1096),
         # "EscalationLevel": (558, 434, 841, 623),
         # Stage
         "Board": (14, 716, 892, 1591),
@@ -126,6 +127,7 @@ RESOLUTIONS = {
 
 ADB_IMAGE_FOLDER = r"assets\adb"
 CURRENT_STAGE_IMAGE = r"assets\adb\current_stage.png"
+MEOWTH_STAGE_IMAGE = r"assets\adb\meowth_037.png"
 COMBO_IMAGE = r"assets\adb\combo.png"
 ACTIVE_BOARD_IMAGE = r"assets\adb\active_board.png"
 OK_BUTTON_IMAGE = r"assets\adb\ok_button.png"
