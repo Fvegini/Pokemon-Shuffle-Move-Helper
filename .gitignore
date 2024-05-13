@@ -16,3 +16,4 @@ main.exe
 *.json
 teste.ipynb
 *.zip
+assets/adb/debug

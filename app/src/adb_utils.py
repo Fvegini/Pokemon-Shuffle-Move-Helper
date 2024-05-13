@@ -414,9 +414,9 @@ def update_fog_image(index):
     cell_x0, cell_y0, cell_x1, cell_y1 = get_coordinates_from_board_index(index)
     center_x = math.floor((cell_x0 + cell_x1) / 2)
     center_y = math.floor((cell_y0 + cell_y1) / 2)
-    subprocess.Popen(f"adb -s localhost:5555 shell input swipe {center_x} {center_y} {center_x} {center_y} 1000", stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
+    subprocess.Popen(f"{current_run.adb_shell_command} shell input swipe {center_x} {center_y} {center_x} {center_y} 1000", stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
     time.sleep(0.5)
-    pipe = subprocess.Popen("adb -s localhost:5555 shell screencap -p", stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
+    pipe = subprocess.Popen(f"{current_run.adb_shell_command} shell screencap -p", stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
     image_bytes = pipe.stdout.read().replace(b'\r\n', b'\n') #type: ignore
     img = cv2.imdecode(np.fromstring(image_bytes, np.uint8), cv2.IMREAD_COLOR) #type: ignore
     new_img = expand_rectangle_and_cut_from_image(img, cell_x0, cell_y0, cell_x1, cell_y1, 0, 0)
@@ -437,7 +437,7 @@ def click_on_board_index(index):
     cell_x0, cell_y0, cell_x1, cell_y1 = get_coordinates_from_board_index(index)
     center_x = math.floor((cell_x0 + cell_x1) / 2)
     center_y = math.floor((cell_y0 + cell_y1) / 2)
-    subprocess.Popen(f"adb -s localhost:5555 shell input tap {center_x} {center_y}", stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
+    subprocess.Popen(f"{current_run.adb_shell_command} shell input tap {center_x} {center_y}", stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
     time.sleep(0.1)
     return center_x, center_y
 
