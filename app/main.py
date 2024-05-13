@@ -141,6 +141,21 @@ class ImageSelectorApp():
         customtkinter.CTkLabel(frame1_2_top_2, text="Stage Type").pack(side=tk.BOTTOM, anchor=tk.E)
         customtkinter.CTkLabel(frame1_2_top_2, text="Move Strategy").pack(side=tk.BOTTOM, anchor=tk.E)
 
+        frame1_3 = customtkinter.CTkFrame(self.tab1, fg_color="transparent")
+        frame1_3_top = customtkinter.CTkFrame(frame1_3, fg_color="transparent")
+        frame1_3_bottom = customtkinter.CTkFrame(frame1_3, fg_color="transparent")
+        frame1_3.pack(side=tk.LEFT, expand=False, fill=tk.Y, anchor=tk.W)
+        frame1_3_top.pack(side=tk.TOP)
+        frame1_3_bottom.pack(side=tk.BOTTOM)
+        ttk.Separator(self.tab1, orient='vertical').pack(side=tk.LEFT, fill='y', anchor=tk.W)
+        
+        customtkinter.CTkLabel(frame1_3_bottom, text="View").pack(side=tk.BOTTOM, anchor=tk.S)
+
+        btn1_3_1 = customtkinter.CTkButton(frame1_3_top, text="Hide Main App", command=lambda: self.show_or_hide_widget(self.appview, expand=1, fill=tk.X, pady=0, padx=0, anchor="nw"), image=icon, **self.tab_button_style)        
+        btn1_3_1.pack(side=tk.LEFT)
+
+
+
     def set_stage_var(self, choice):
         execution_variables.current_stage = [k for k, v in constants.move_stages.items() if v == choice][0]
         execution_variables.has_modifications = True
@@ -260,12 +275,12 @@ class ImageSelectorApp():
         self.frame3_1_top_3_1_var = tk.BooleanVar(value=config_utils.config_values.get("fast_swipe"))      
         self.frame3_1_top_3_2_var = tk.BooleanVar(value=config_utils.config_values.get("escalation_battle")) 
         self.frame3_1_top_3_3_var = tk.BooleanVar(value=config_utils.config_values.get("coin_stage")) 
-        self.frame3_1_top_3_4_var = tk.BooleanVar(value=config_utils.config_values.get("placeholder3"))
+        self.frame3_1_top_3_4_var = tk.BooleanVar(value=config_utils.config_values.get("survival_mode"))
         
         self.frame3_1_top_3_1_switch = customtkinter.CTkSwitch(frame3_1_top_3, variable=self.frame3_1_top_3_1_var, command=lambda: self.update_switch_config(self.frame3_1_top_3_1_var, "fast_swipe"), text="Fast Swipe", onvalue=True, offvalue=False)
         self.frame3_1_top_3_2_switch = customtkinter.CTkSwitch(frame3_1_top_3, variable=self.frame3_1_top_3_2_var, command=lambda: self.update_switch_config(self.frame3_1_top_3_2_var, "escalation_battle"), text="Escalation Battle", onvalue=True, offvalue=False)
         self.frame3_1_top_3_3_switch = customtkinter.CTkSwitch(frame3_1_top_3, variable=self.frame3_1_top_3_3_var, command=lambda: self.update_switch_config(self.frame3_1_top_3_3_var, "coin_stage"), text="Coin Cost Stage", onvalue=True, offvalue=False)
-        self.frame3_1_top_3_4_switch = customtkinter.CTkSwitch(frame3_1_top_3, variable=self.frame3_1_top_3_4_var, command=lambda: self.update_switch_config(self.frame3_1_top_3_4_var, "placeholder3"), text="placeholder3", onvalue=True, offvalue=False)
+        self.frame3_1_top_3_4_switch = customtkinter.CTkSwitch(frame3_1_top_3, variable=self.frame3_1_top_3_4_var, command=lambda: self.update_switch_config(self.frame3_1_top_3_4_var, "survival_mode"), text="Survival Mode", onvalue=True, offvalue=False)
         
 
         self.frame3_1_top_3_1_switch.pack(side=tk.TOP, anchor=tk.W, padx=5)
@@ -330,7 +345,6 @@ class ImageSelectorApp():
         frame3_4_top_2 = customtkinter.CTkFrame(frame3_4_top, fg_color="transparent")
         frame3_4_top_1.pack(side=tk.LEFT)
         frame3_4_top_2.pack(side=tk.LEFT)
-        
         
         customtkinter.CTkComboBox(frame3_4_top_1, values=constants.move_stages.values(),
                                      command=self.set_stage_var, variable=self.stage_combobox_var, state="readonly", **self.tab_comboboxmenu_style).pack(side=tk.BOTTOM)
@@ -757,6 +771,13 @@ class ImageSelectorApp():
     def load_team(self):
         self.disable_loop()
         load_from_shuffle.TeamLoader(root=self)
+        
+    def show_or_hide_widget(self, widget, *args, **kwargs):
+        if widget.winfo_viewable():
+            widget.pack_forget()
+        else:
+            widget.pack(**kwargs)
+
 
 def merge_pil_images(image1, image2):
     # Get the width and height of each image

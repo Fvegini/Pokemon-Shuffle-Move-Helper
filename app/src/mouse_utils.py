@@ -4,6 +4,7 @@ import cv2
 import numpy as np
 import pyautogui
 from src import match_icons, config_utils, custom_utils, constants, screen_utils
+from src.adb_utils import get_label_with_tuple
 from pathlib import Path
 from src import log_utils
 
@@ -150,6 +151,7 @@ class IconCaptureApp():
             log.info(f"top_left: {top_left}")
             log.info(f"bottom_right: {bottom_right}")
             log.info(f"{top_left + bottom_right}")
+            log.info(f"Label: {get_label_with_tuple(self.original_frame, (top_left + bottom_right))}")
            
             cropped_image = self.original_frame[top_left[1]:bottom_right[1], top_left[0]:bottom_right[0]]
             

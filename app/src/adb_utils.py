@@ -72,7 +72,7 @@ def execute_play(result, board_results, last_execution_swiped):
     try:
         adb_move = config_utils.config_values.get("adb_move")
         if result and adb_move:
-            timed_play = config_utils.config_values.get("timed_stage")
+            timed_play = custom_utils.is_timed_stage()
             wrong_board = "Wrong Board" in result
             zero_result = "0,0" in result
             if timed_play and (wrong_board or zero_result) and not last_execution_swiped:
@@ -103,8 +103,6 @@ def execute_play(result, board_results, last_execution_swiped):
     return False
 
 def move_second_point(x0_initial, y0_initial, x1_initial, y1_initial, x_offset, y_offset):
-    # Calculate the difference in position of the first point
-
     x1_new = x1_initial
     y1_new = y1_initial
 
@@ -182,7 +180,8 @@ def is_angry_active():
 def wait_until_next_heart(original_image):
     global thread_sleep_timer
     hearts_timer = get_label(original_image, "HeartTimer")
-    thread_sleep_timer = int(hearts_timer[:2]) * 60 + int(hearts_timer[3:]) + 5 #add 5s to heart timer to be safe
+    minutes, seconds = process_time(hearts_timer)
+    thread_sleep_timer = int(minutes) * 60 + int(seconds) + 5
     log.debug(f"Hearts Ended, waiting for {thread_sleep_timer} seconds")
     time.sleep(thread_sleep_timer)
     thread_sleep_timer = None
@@ -190,42 +189,56 @@ def wait_until_next_heart(original_image):
 def is_escalation_battle():
     return config_utils.config_values.get("escalation_battle")
 
-def check_buttons_to_click(original_image):
+def check_buttons_to_click(original_image, non_stage_count):
     global hearts_loop_counter
     was_clicked = False
+    
+    if custom_utils.is_timed_stage():
+        timeout_increase = 3
+    else:
+        timeout_increase = 0
 
-    if has_icon_match(original_image, constants.CURRENT_STAGE_IMAGE, extra_timeout=1, click=True):
+    if non_stage_count > 60:
+        click_return_buttons(original_image, timeout_increase)
+
+    if has_icon_match(original_image, constants.CURRENT_STAGE_IMAGE, extra_timeout=1+timeout_increase, click=True):
         was_clicked = True
         original_image = get_screenshot()
     if was_clicked and is_escalation_battle():
         verify_angry_mode(original_image, double_try=True)
-    if has_text_match(original_image, "To Map"):
+    if has_text_match(original_image, "To Map", extra_timeout=1+timeout_increase):
         was_clicked = True
         original_image = get_screenshot()
-    if has_text_match(original_image, "Continue"):
+    if has_text_match(original_image, "Continue", extra_timeout=1+timeout_increase):
         was_clicked = True
-        original_image = get_screenshot()    
+        original_image = get_screenshot()
     if has_text_match(original_image, "Start!", 4):
         was_clicked = True
         original_image = get_screenshot()
     if has_text_match(original_image, "Next", 4):
         was_clicked = True
         original_image = get_screenshot()
-    if has_text_match(original_image, "No"):
+    if config_utils.config_values.get("coin_stage"):
+        if has_text_match(original_image, "CoinStage", custom_click="CoinStageYes", custom_search_text="need to spend"):
+            was_clicked = True
+            original_image = get_screenshot()
+    if has_text_match(original_image, "No", extra_timeout=1+timeout_increase):
         was_clicked = True
         original_image = get_screenshot()
-    if config_utils.config_values.get("coin_stage"):
-        has_text_match(original_image, "CoinStage", custom_click="CoinStageYes", custom_search_text="need to spend")
-
+    if has_text_match(original_image, "No2", extra_timeout=1+timeout_increase, custom_search_text="No"):
+        was_clicked = True
+        original_image = get_screenshot()
     if not was_clicked:
-        return not has_icon_match(original_image, constants.OK_BUTTON_IMAGE, extra_timeout=1, click=True) \
-            and not has_icon_match(original_image, constants.OK_BUTTON2_IMAGE, extra_timeout=1, click=True) \
-            and not has_icon_match(original_image, constants.RETURN_FLAG_IMAGE, extra_timeout=1, click=True) \
-            and not has_icon_match(original_image, constants.RETURN_FLAG2_IMAGE, extra_timeout=1, click=True)
+        return click_return_buttons(original_image, timeout_increase)
     if was_clicked:
         hearts_loop_counter = 0
     return
 
+def click_return_buttons(original_image, timeout_increase):
+    return not has_icon_match(original_image, constants.OK_BUTTON_IMAGE, extra_timeout=1+timeout_increase, click=True) \
+                and not has_icon_match(original_image, constants.OK_BUTTON2_IMAGE, extra_timeout=1+timeout_increase, click=True) \
+                and not has_icon_match(original_image, constants.RETURN_FLAG_IMAGE, extra_timeout=1+timeout_increase, click=True) \
+                and not has_icon_match(original_image, constants.RETURN_FLAG2_IMAGE, extra_timeout=1+timeout_increase, click=True)
 def verify_angry_mode(original_image, double_try=False):
     global angry_mode_active
     is_angry = has_icon_match(original_image, constants.ANGRY_ICON_IMAGE) or has_icon_match(original_image, constants.ANGRY_ICON2_IMAGE)
@@ -269,7 +282,7 @@ def has_icon_match(original_image, icon_path, position="CompleteScreen", extra_t
         if len(good)<MIN_MATCH_COUNT:
             log.debug(f"Image not visible: {Path(icon_path).stem} - {len(good)} point found")
             return False
-        log.debug(f"Image Found with points: {len(good)}")
+        log.debug(f"Image Found with points: {Path(icon_path).stem} - {len(good)}")
         src_pts = np.float32([ kp1[m.queryIdx].pt for m in good ]).reshape(-1,1,2) #type: ignore
         dst_pts = np.float32([ kp2[m.trainIdx].pt for m in good ]).reshape(-1,1,2) #type: ignore
         M, mask = cv2.findHomography(src_pts, dst_pts, cv2.RANSAC,5.0)
@@ -289,6 +302,14 @@ def has_icon_match(original_image, icon_path, position="CompleteScreen", extra_t
             img3 = cv2.drawMatches(template_gray,kp1,image_gray,kp2,good,None,**draw_params) #type: ignore
             cv2.imwrite(constants.STAGE_FLANN_IMAGE_PATH, img3)
 
+        debug_image_path = Path(constants.ADB_IMAGE_FOLDER, "debug", Path(icon_path).name)
+        if not debug_image_path.exists():
+            new_box = box + np.array([r[0], r[1]])
+            final_img = original_image.copy()
+            cv2.drawContours(final_img,[new_box],0,(0,0,255),4)
+            debug_image_path.parent.mkdir(parents=True, exist_ok=True)
+            cv2.imwrite(debug_image_path.as_posix(), final_img)
+
         if click:
             box_center_x = int((box[0][0] + box[2][0]) / 2)
             box_center_y = int((box[0][1] + box[2][1]) / 2)
@@ -307,16 +328,30 @@ def text_visible(original_image, text, custom_click=None, custom_search_text=Non
     img = 255 - cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     result = pytesseract.image_to_string(img, lang='eng').strip()
     result2 = pytesseract.image_to_string(img, lang='eng', config='--psm 6').strip()
-    log.debug(f"Text Found for {text}: {result} - alternative {result2}")
     if custom_click:
         r = get_screen().get_position(custom_click)
     if custom_search_text:
-        return (custom_search_text.upper() in result.upper(), r)
-    return (text.upper() in result.upper(), r)
+        found_text, postition = (custom_search_text.upper() in result.upper(), r)
+    else:
+        found_text, postition = (text.upper() in result.upper(), r)
+    if found_text:
+        if custom_search_text:
+            log.debug(f"Text Found for {custom_search_text} -> {result.strip()} - alternative {result2.strip()}")
+        else:
+            log.debug(f"Text Found for {text}: {result.strip()} - alternative {result2.strip()}")
+    return found_text, postition
 
 def has_text_match(original_image, text, extra_timeout=1.0, click=True, custom_click=None, custom_search_text=None):
     visible, r = text_visible(original_image, text, custom_click, custom_search_text)
     if visible and click:
+
+        debug_image_path = Path(constants.ADB_IMAGE_FOLDER, "debug", f"{text}.png")
+        if not debug_image_path.exists():
+            final_img = original_image.copy()
+            cv2.rectangle(final_img, (r[0], r[1]), (r[2], r[3]), (0, 0, 255), 4)
+            debug_image_path.parent.mkdir(parents=True, exist_ok=True)
+            cv2.imwrite(debug_image_path.as_posix(), final_img)
+
         subprocess.Popen(f"{adb_shell_command} input tap {math.floor((r[0] + r[2])/2)} {math.floor((r[1] + r[3])/2)}", stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
         if extra_timeout:
             time.sleep(extra_timeout)
@@ -339,6 +374,12 @@ def get_current_stage(original_image):
         v = "{:03}".format(int(v))
     return v
 
+def get_current_stage2(original_image):
+    v = get_label(original_image, "StageName")
+    if v.isnumeric():
+        v = "{:03}".format(int(v))
+    return v
+
 def get_moves_left(original_image):
     return get_label(original_image, "MovesLeft")
 
@@ -347,6 +388,9 @@ def get_current_score(original_image):
 
 def get_label(original_image, label, config=""):
     r = get_screen().get_position(label)
+    return get_label_with_tuple(original_image, r, config)
+
+def get_label_with_tuple(original_image, r, config=""):
     img = original_image.copy()
     img = img[r[1]:r[3], r[0]:r[2]]
     img = 255 - cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)

@@ -22,6 +22,7 @@ metal_match = Match(None, None, metal_icon)
 last_execution_swiped = False
 fixed_tuple_positions = [("None", 7), ("None", 10)]
 stage_timer = None
+non_stage_count = 0
 
 def load_icon_classes(values_to_execute: list[Pokemon], has_barriers):
     icons_list = []
@@ -163,10 +164,14 @@ def start_from_helper(pokemon_list: list[Pokemon], has_barriers, root=None, sour
     if skip_shuffle_move:
         return MatchResult(match_list=match_list)
     current_board = Board(match_list, pokemon_list, icons_list)
-    if not is_timed_stage():
+    if not custom_utils.is_timed_stage():
         current_board.moves_left = adb_utils.get_moves_left(original_image)
-        current_board.current_score = adb_utils.get_current_score(original_image)
-    shuffle_config_files.create_board_files(current_board, source, is_meowth_stage())
+        if is_meowth_stage():
+            current_board.current_score = adb_utils.get_current_score(original_image)
+        if custom_utils.is_survival_mode():
+            current_board.stage_name = adb_utils.get_current_stage2(original_image)
+        # current_board.current_score = adb_utils.get_current_score(original_image)
+    shuffle_config_files.create_board_files(current_board, source, is_meowth_stage=is_meowth_stage())
     if source == "loop" and not config_utils.config_values.get("fast_swipe") and not config_utils.config_values.get("timed_stage") and (last_execution_swiped or combo_is_running):
         last_execution_swiped = False
         if config_utils.config_values.get("tapper"):
@@ -209,15 +214,17 @@ def process_tap_match(match: Match, stage_added_list: list[str]):
     return match.name
 
 def click_buttons(current_screen_image):
+    global non_stage_count
+    non_stage_count+= 1
     if adb_utils.is_escalation_battle():
         adb_utils.verify_angry_mode(current_screen_image)
     adb_utils.check_hearts(current_screen_image)
-    adb_utils.check_buttons_to_click(current_screen_image)
+    adb_utils.check_buttons_to_click(current_screen_image, non_stage_count)
 
 def match_cell_with_icons(icons_list, cell_list, has_barriers, combo_is_running=False) -> List[Match]:
     global last_execution_swiped
     match_list: List[Match] = []
-    timed_stage = is_timed_stage()
+    timed_stage = custom_utils.is_timed_stage()
     for idx, cell in enumerate(cell_list):
         result = predict(cell, icons_list, has_barriers)
         if not timed_stage and not combo_is_running and not last_execution_swiped and result.name in ["Fog", "_Fog", "Pikachu_a"]:
@@ -231,17 +238,15 @@ def mask_already_existant_matches(match_list: List[Match]) -> List[Match]:
     match_list = custom_utils.replace_all_3_matches_indices(match_list, metal_match)
     return match_list
 
-def is_timed_stage():
-    return config_utils.config_values.get("timed_stage")
-
 def is_meowth_stage():
     return config_utils.config_values.get("meowth_37")
 
 def is_on_stage(original_image):
-    global stage_timer, mega_activated_this_round, last_execution_swiped
+    global stage_timer, mega_activated_this_round, last_execution_swiped, non_stage_count
     on_stage = adb_utils.has_icon_match(original_image, constants.ACTIVE_BOARD_IMAGE, "StageMenu", extra_timeout=0, click=False, min_point=6)
     if on_stage:
         adb_utils.angry_mode_active = False
+        non_stage_count = 0
     if not on_stage:
         mega_activated_this_round = False
         last_execution_swiped = False

@@ -131,6 +131,7 @@ class Board():
     mega_name: str
     moves_left: int = 5
     current_score: int = 0
+    stage_name: str = ""
     
     def __init__(self, match_sequence: List[Match], pokemon_list: List[Pokemon], icons_list: List[Icon]):
         self.match_sequence = match_sequence

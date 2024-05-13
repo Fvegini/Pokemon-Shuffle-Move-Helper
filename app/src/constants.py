@@ -52,7 +52,8 @@ move_stages = {
     "FAIRY": "FAIRY",
     "NONE": "NONE",
     "SP_084": "MEOWTH COIN MANIA",
-    "037": "STAGE 37"
+    "037": "STAGE 37",
+    "SURVIVAL_MODE": "SURVIVAL MODE"
 }
 downscale_res = (128, 128)
 
@@ -106,18 +107,20 @@ RESOLUTIONS = {
         "To Map": (271, 1463, 646, 1578),
         "Next": (271, 1463, 646, 1578),
         "No": (153, 646, 742, 826),
+        "No2": (681, 1040, 781, 1093), #This No appears when you click no start without hearts on a stage
         "NoOutOfTime": (646, 1343, 816, 1409), #Out of Time to Play
         "Yes": (153, 646, 742, 826),
         "StageMenu": (801, 27, 906, 162),
         "Combo": (602, 46, 813, 136),
         "CoinStage": (153, 646, 742, 826),
-        "CoinStageYes": (153, 646, 742, 826),
+        "CoinStageYes": (118, 1041, 225, 1093),
         # "EscalationLevel": (558, 434, 841, 623),
         # Stage
         "Board": (14, 716, 892, 1591),
-        "Stage": (9, 179, 215, 233),
-        "Score": (9, 179, 215, 233),
-        "MovesLeft": (9, 179, 215, 233),
+        "Stage": (34, 87, 202, 125),
+        "StageName": (581, 546, 890, 586),
+        "Score": (32, 187, 200, 222),
+        "MovesLeft": (39, 551, 240, 620),
     }
 }
 

@@ -5,7 +5,7 @@ from src import constants, custom_utils
 from pathlib import Path
 from src.execution_variables import execution_variables
 exception_list = ["Empty", "Coin", "Metal", "Wood", "Fog"]
-stages_fixed_list = ['BUG', 'DARK', 'DRAGON', 'ELECTRIC', 'FAIRY', 'FIGHTING', 'FIRE', 'FLYING', 'GHOST', 'GRASS', 'GROUND', 'ICE', 'MEOWTH COIN MANIA', 'NONE', 'NORMAL', 'POISON', 'PSYCHIC', 'ROCK', 'STEEL', 'WATER', 'SP_084', 'MEOWTH COIN MANIA']
+stages_fixed_list = ['BUG', 'DARK', 'DRAGON', 'ELECTRIC', 'FAIRY', 'FIGHTING', 'FIRE', 'FLYING', 'GHOST', 'GRASS', 'GROUND', 'ICE', 'MEOWTH COIN MANIA', 'NONE', 'NORMAL', 'POISON', 'PSYCHIC', 'ROCK', 'STEEL', 'WATER', 'SP_084', 'MEOWTH COIN MANIA', "SURVIVAL_MODE", '037']
 stages_set = set(stages_fixed_list)
 
 class TeamData():
@@ -33,6 +33,7 @@ class TeamLoader(tk.Toplevel):
             lines = file.readlines()
 
         self.teams: list[TeamData] = []
+        tmp_teams: list[TeamData] = []
         for line in lines:
             parts = line.strip().split()
             if not parts[0] == "TEAM":
@@ -54,12 +55,17 @@ class TeamLoader(tk.Toplevel):
                 icons.append(mega_name)
             except:
                 pass
-            self.teams.append(TeamData(team_name, icons, stage_added))
+            # self.teams.append(TeamData(team_name, icons, stage_added))
+            tmp_teams.append(TeamData(team_name, icons, stage_added))
             if team_name == "SP_084":
-                self.teams.append(TeamData("MEOWTH COIN MANIA", icons))
+                # self.teams.append(TeamData("MEOWTH COIN MANIA", icons))
+                tmp_teams.append(TeamData("MEOWTH COIN MANIA", icons))
             
-        self.teams.sort(key=lambda x: stages_fixed_list.index(x.stage))
-
+        tmp_teams.sort(key=lambda x: stages_fixed_list.index(x.stage))
+        for stage_name in stages_fixed_list:
+            if not any([team for team in tmp_teams if stage_name == team.stage]):
+                tmp_teams.append(TeamData(stage_name, ["_Wood","_Metal"], []))
+        self.teams.extend(tmp_teams)
         # self.teams = sorted(self.teams, key=custom_sort)
 
         # Create the main Tkinter window

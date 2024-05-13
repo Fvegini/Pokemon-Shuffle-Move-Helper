@@ -569,3 +569,10 @@ def timer_decorator(func):
 
 def time_difference_in_seconds(start_time):
     return time.time() - start_time
+
+
+def is_timed_stage():
+    return config_utils.config_values.get("timed_stage")
+
+def is_survival_mode():
+    return config_utils.config_values.get("survival_mode")
