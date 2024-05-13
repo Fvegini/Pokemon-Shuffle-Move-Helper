@@ -125,9 +125,13 @@ RESOLUTIONS = {
     }
 }
 
+SURVIVAL_MODE_STAGE_NAME = "SURVIVAL_MODE"
+
+SURVIVAL_MODE_TXT = r"assets\survival_list.txt"
 ADB_IMAGE_FOLDER = r"assets\adb"
 CURRENT_STAGE_IMAGE = r"assets\adb\current_stage.png"
 MEOWTH_STAGE_IMAGE = r"assets\adb\meowth_037.png"
+SURVIVAL_MODE_STAGE_IMAGE = r"assets\adb\survival_mode.png"
 COMBO_IMAGE = r"assets\adb\combo.png"
 ACTIVE_BOARD_IMAGE = r"assets\adb\active_board.png"
 OK_BUTTON_IMAGE = r"assets\adb\ok_button.png"

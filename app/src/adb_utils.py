@@ -194,8 +194,10 @@ def check_buttons_to_click(original_image):
         click_return_buttons(original_image, timeout_increase)
 
     current_stage_image_path = constants.CURRENT_STAGE_IMAGE
-    if custom_utils.custom_utils.is_meowth_stage():
+    if custom_utils.is_meowth_stage():
         current_stage_image_path = constants.MEOWTH_STAGE_IMAGE
+    elif custom_utils.is_survival_mode():
+        current_stage_image_path = constants.SURVIVAL_MODE_STAGE_IMAGE
     if has_icon_match(original_image, current_stage_image_path, extra_timeout=1+timeout_increase, click=True):
         was_clicked = True
         original_image = get_screenshot()
@@ -217,6 +219,10 @@ def check_buttons_to_click(original_image):
         if has_text_match(original_image, "CoinStage", custom_click="CoinStageYes", extra_timeout=1, custom_search_text="need to spend"):
             was_clicked = True
             original_image = get_screenshot()
+    if custom_utils.is_survival_mode():
+        if has_text_match(original_image, "CoinStage", custom_click="CoinStageYes", extra_timeout=1, custom_search_text="challenging survival"):
+            was_clicked = True
+            original_image = get_screenshot()  
     if has_text_match(original_image, "No", extra_timeout=1+timeout_increase):
         was_clicked = True
         original_image = get_screenshot()

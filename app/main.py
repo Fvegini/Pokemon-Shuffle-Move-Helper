@@ -5,7 +5,7 @@ from typing import Any
 import customtkinter
 from PIL import Image
 import keyboard
-from src import match_icons, shuffle_config_files
+from src import match_icons, screen_utils, shuffle_config_files
 from pathlib import Path
 from src.board_image_selector import BoardIconSelector, PokemonIconSelector
 from src import constants, custom_utils, load_from_shuffle, config_utils, mouse_utils

@@ -5,7 +5,7 @@ from src import constants, custom_utils
 from pathlib import Path
 from src.execution_variables import current_run
 exception_list = ["Empty", "Coin", "Metal", "Wood", "Fog"]
-stages_fixed_list = ['BUG', 'DARK', 'DRAGON', 'ELECTRIC', 'FAIRY', 'FIGHTING', 'FIRE', 'FLYING', 'GHOST', 'GRASS', 'GROUND', 'ICE', 'MEOWTH COIN MANIA', 'NONE', 'NORMAL', 'POISON', 'PSYCHIC', 'ROCK', 'STEEL', 'WATER', 'SP_084', 'MEOWTH COIN MANIA', "SURVIVAL_MODE", '037']
+stages_fixed_list = ['BUG', 'DARK', 'DRAGON', 'ELECTRIC', 'FAIRY', 'FIGHTING', 'FIRE', 'FLYING', 'GHOST', 'GRASS', 'GROUND', 'ICE', 'MEOWTH COIN MANIA', 'NONE', 'NORMAL', 'POISON', 'PSYCHIC', 'ROCK', 'STEEL', 'WATER', 'SP_084', 'MEOWTH COIN MANIA', constants.SURVIVAL_MODE_STAGE_NAME, '037']
 stages_set = set(stages_fixed_list)
 
 class TeamData():
@@ -112,6 +112,10 @@ class TeamLoader(tk.Toplevel):
         selected_index = self.listbox.curselection()
         if selected_index:
             current_run.current_stage = self.teams[selected_index[0]].stage
+            if current_run.current_stage == constants.SURVIVAL_MODE_STAGE_NAME:
+                new_pokemon_list = custom_utils.load_file_as_list(constants.SURVIVAL_MODE_TXT)
+                self.teams[selected_index[0]].stage_added.extend(new_pokemon_list)
+                self.teams[selected_index[0]].icons.extend(new_pokemon_list)
             if current_run.current_stage == "MEOWTH COIN MANIA":
                 current_run.current_stage = "SP_084"
             if current_run.current_stage == "SP_084":

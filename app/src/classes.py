@@ -92,7 +92,7 @@ class Match():
             self.cosine_similarity, self.match_icon = (0, None)
 
     def __repr__(self):
-        return self.name
+        return f"{self.name} - {self.cosine_similarity}"
 
     def __eq__(self, other):
         if isinstance(other, str):

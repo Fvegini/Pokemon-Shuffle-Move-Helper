@@ -1,6 +1,5 @@
 from pathlib import Path
 from src import adb_utils, constants
-from src.custom_utils import verify_shuffle_file
 from src import custom_utils
 from src.discord import pokemon_names
 from src.execution_variables import current_run
@@ -14,14 +13,17 @@ MEGA_NOT_ACTIVATED = "0"
 MEGA_ACTIVATED = "99"
 
 pattern = re.compile(r'^\d+(,\d+){2,}')
+
 PREFERENCES_PATH = Path.joinpath(Path.home(), "Shuffle-Move", "config", "preferences.txt")
 BOARD_PATH = Path.joinpath(Path.home(), "Shuffle-Move", "config", "boards", "board.txt")
 TEAMS_DATA_PATH = Path.joinpath(Path.home(), "Shuffle-Move", "config", "teamsData.txt")
 GRADING_MODES_PATH = Path.joinpath(Path.home(), "Shuffle-Move", "config", "gradingModes.txt")
+STAGES_PATH = Path.joinpath(Path.home(), "Shuffle-Move", "config", "stages_mobile.txt")
 
-verify_shuffle_file(BOARD_PATH)
-verify_shuffle_file(TEAMS_DATA_PATH)
-verify_shuffle_file(GRADING_MODES_PATH)
+stages_dict: dict[str, str] = {}
+custom_utils.verify_shuffle_file(BOARD_PATH)
+custom_utils.verify_shuffle_file(TEAMS_DATA_PATH)
+custom_utils.verify_shuffle_file(GRADING_MODES_PATH)
 
 def get_current_stage_and_team(expand_megas=False):
 
@@ -95,6 +97,9 @@ def create_board_files(current_board: Board, source=None, stage=None, is_meowth_
     else:
         mega_activated = MEGA_ACTIVATED
     current_board.mega_name = mega_name
+    
+    if custom_utils.is_survival_mode():
+        stage = get_stage_name(current_board.stage_name)
     update_board_file(names_list, frozen_list, mega_activated, stage)
     update_preferences(current_board.current_score, current_board.moves_left)
     if current_run.has_modifications or source == "bot":
@@ -108,6 +113,32 @@ def create_board_files(current_board: Board, source=None, stage=None, is_meowth_
     has_mega = mega_activated == MEGA_ACTIVATED
     current_board.has_mega = has_mega
     return
+
+def get_stage_name(stage_name):
+    global stages_dict
+    if len(stages_dict) == 0:
+        stages_dict = load_stages_dict()
+    exact_value = stages_dict.get(stage_name)
+    if exact_value:
+        return exact_value
+    similar_key = custom_utils.find_similar_key(stage_name, stages_dict)
+    if similar_key:
+        return stages_dict.get(similar_key)
+    else:
+        return "NONE"
+
+    
+
+def load_stages_dict():
+    stage_dict = {}
+    with open(STAGES_PATH, 'r') as file:
+        for line in file:
+            if line.startswith('STAGE'):
+                words = line.strip().split()
+                if len(words) >= 3:
+                    key, value = words[2], words[1]
+                    stage_dict[key] = value
+    return stage_dict
 
 def process_pokemon_names_list(original_names_list):
     names_list = []
@@ -209,10 +240,14 @@ def update_teams_file_with_move_string(move_string, stage_name):
             found = True
             break
     if not found:
-        lines[-1] = move_string
+        lines.append(move_string)
     # Write the modified content back to the file
     with open(TEAMS_DATA_PATH, 'w') as file:
         file.writelines(lines)
+    if custom_utils.custom_utils.is_survival_mode() and stage_name != constants.SURVIVAL_MODE_STAGE_NAME:
+        new_stage_name = constants.SURVIVAL_MODE_STAGE_NAME
+        new_move_string = move_string.replace(team_stage_string, f"TEAM {new_stage_name}")
+        update_teams_file_with_move_string(new_move_string, new_stage_name)
     return move_string
 
 def update_gradingModes_file(source, mega_activated, is_meowth_stage, current_board):

@@ -12,6 +12,7 @@ import re
 from src import log_utils
 import time
 from src.screen_utils import get_screen
+from thefuzz import fuzz
 
 log = log_utils.get_logger()
 
@@ -106,10 +107,6 @@ def get_taskbar_size():
 def show_img(cv2_img):
     cv2.imshow("", cv2_img)
     
-
-
-
-
 
 def sort_by_class_attribute(obj_list, attribute_name, reverse=False):
     try:
@@ -536,6 +533,22 @@ def find_slot_to_mega(current_board: Board):
     formatted_result = f"{from_row},{from_column} -> {to_row},{to_column}:"
     return formatted_result
 
+def load_file_as_list(file_path):
+    with open(file_path, 'r') as file:
+        lines = file.readlines()
+        lines = [line.strip() for line in lines]
+    return lines
+
+def find_similar_key(ocr_key, dictionary):
+    max_ratio = -1
+    closest_key = None
+    for key in dictionary.keys():
+        ratio = fuzz.ratio(ocr_key, key)
+        if ratio > max_ratio:
+            max_ratio = ratio
+            closest_key = key
+    return closest_key
+
 def timer_decorator(func):
     def wrapper(*args, **kwargs):
         start_time = time.time()
@@ -554,7 +567,6 @@ def is_timed_stage():
 
 def is_survival_mode():
     return config_utils.config_values.get("survival_mode")
-
 
 def is_meowth_stage():
     return config_utils.config_values.get("meowth_37")

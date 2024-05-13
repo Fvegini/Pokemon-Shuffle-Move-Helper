@@ -4,7 +4,7 @@ import numpy as np
 from pathlib import Path
 from src.custom_utils import is_meowth_stage
 from src.embed import loaded_embedder
-from src import constants, custom_utils, config_utils, socket_utils, shuffle_config_files, adb_utils, log_utils
+from src import constants, custom_utils, config_utils, socket_utils, shuffle_config_files, adb_utils, log_utils, file_utils
 from src.execution_variables import current_run
 from src.classes import Icon, Match, Pokemon, MatchResult, Board
 import statistics
@@ -14,17 +14,6 @@ log = log_utils.get_logger()
 
 loaded_icons_cache: dict[str, Icon] = {}
 fixed_tuple_positions = [("None", 7), ("None", 10)]
-
-# fake_barrier_active = False
-# custom_board_image = None
-# last_pokemon_board_sequence: list[str] = []
-
-# mega_activated_this_round = False
-
-
-# last_execution_swiped = False
-
-# non_stage_count = 0
 
 def load_icon_classes(values_to_execute: list[Pokemon], has_barriers):
     icons_list = []
@@ -39,7 +28,7 @@ def load_icon_classes(values_to_execute: list[Pokemon], has_barriers):
             new_icon = Icon(pokemon.name, pokemon.path, False)
             icons_list.append(new_icon)
             loaded_icons_cache[new_icon.name] = new_icon
-        if has_barriers:
+        if has_barriers and not current_run.fake_barrier_active:
             pokemon_barrier_name = f"{constants.BARRIER_PREFIX}{pokemon.name}"
             if pokemon_barrier_name in loaded_icons_cache:
                 icons_list.append(loaded_icons_cache.get(pokemon_barrier_name))
@@ -67,24 +56,7 @@ def change_filename_in_path(original_path, new_filename="", suffix="", prefix=""
             return custom_path.with_name(f"{prefix}{filename_without_extension}{custom_path.suffix}")
     
 
-def add_barrier_layer(original_image, custom_border=None):
-    layer = np.zeros_like(original_image)
-
-    # Fill the layer with a color (white in this example)
-    layer[:] = (255, 255, 240)  # White color
-    alpha = 0.6
-
-    image = cv2.addWeighted(original_image, 1 - alpha, layer, alpha, 0)
-    
-    if custom_border:
-        final_image = cut_borders(image, custom_border)
-    else:
-        final_image = cut_borders(image)
-
-    final_image = custom_utils.resize_cv2_image(final_image, constants.downscale_res)
-    return final_image
-
-def cut_borders(image, border_size=15):
+def cut_borders(image, border_size=5):
     # Get image dimensions
     height, width = image.shape[:2]
 
@@ -102,19 +74,50 @@ def cut_borders(image, border_size=15):
 
 def compare_with_list(original_image, icons_list: List[Icon], has_barriers):
     embed = loaded_embedder.create_embed_from_np(original_image)
-    if has_barriers:
-        fake_barrier_img = custom_utils.resize_cv2_image(cut_borders(original_image), constants.downscale_res)
-    best_cosine = None
+    best_match = None
     full_match_list_tmp = []
     for icon in icons_list:
-        if not icon.barrier_type == constants.BARRIER_TYPE_FAKE:
-            match = Match(original_image, embed, icon)
-        else: 
-            match = Match(fake_barrier_img, embed, icon)
+        match = Match(original_image, embed, icon)
         full_match_list_tmp.append(match)
-        if not best_cosine or best_cosine.cosine_similarity < match.cosine_similarity:
-            best_cosine = match
-    return best_cosine
+        if not best_match or best_match.cosine_similarity < match.cosine_similarity:
+            best_match = match
+    if has_barriers and current_run.fake_barrier_active:
+        fake_barrier_img = custom_utils.resize_cv2_image(cut_borders(original_image), constants.downscale_res)
+        is_frozen = has_white_border(fake_barrier_img)
+        if is_frozen:
+            best_match.name = f"{constants.BARRIER_PREFIX}{best_match.name}" #type: ignore
+    return best_match
+
+def has_white_border(image, threshold=190, border_size=10, debug=False):
+    # height, width = image.shape[:2]
+    if debug:
+        top_border_img = image[:border_size, :]
+        bottom_border_img = image[-border_size:, :]
+        left_border_img = image[:, :border_size]
+        right_border_img = image[:, -border_size:]
+
+        top_border_mean = np.mean(top_border_img)
+        bottom_border_mean = np.mean(bottom_border_img)
+        left_border_mean = np.mean(left_border_img)
+        right_border_mean = np.mean(right_border_img)
+        
+        log.debug(top_border_mean, bottom_border_mean, left_border_mean, right_border_mean)
+        
+        file_utils.show_cv2_as_pil(top_border_img)
+        file_utils.show_cv2_as_pil(bottom_border_img)
+        file_utils.show_cv2_as_pil(left_border_img)
+        file_utils.show_cv2_as_pil(right_border_img)
+
+    top_border = np.mean(image[:border_size, :])  > threshold
+    bottom_border = np.mean(image[-border_size:, :]) > threshold
+    left_border = np.mean(image[:, :border_size]) > threshold
+    right_border = np.mean(image[:, -border_size:]) > threshold
+
+    return [top_border, bottom_border, left_border, right_border].count(True) >= 3 
+
+
+
+
 
 def calculate_percentage_difference(num1, num2):
     average = (num1 + num2) / 2
@@ -207,6 +210,7 @@ def execute_tapper(current_board: Board):
         for icon, index in list_of_tuples[:5]:
             x, y = adb_utils.click_on_board_index(index)
             log.debug(f"Tapped on {icon} at {x}, {y}")
+        return
 
 def has_mega_match_active(current_board: Board):
     return custom_utils.has_match_of_3(current_board.match_sequence, f"Mega_{current_board.mega_name}")
