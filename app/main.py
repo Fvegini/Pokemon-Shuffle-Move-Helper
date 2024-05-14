@@ -103,6 +103,7 @@ class ImageSelectorApp():
         btn1_1_1 = customtkinter.CTkButton(frame1_1_top, text="Board Position", command=lambda: self.show_board_position_selector_app(), image=icon, **self.tab_button_style)
         btn1_1_2 = customtkinter.CTkButton(frame1_1_top, text="Select Current Stage", command=lambda: self.show_select_current_stage(), image=icon, **self.tab_button_style)
         btn1_1_3 = customtkinter.CTkButton(frame1_1_top, text="Add Auto Click Icon", command=lambda: self.show_add_auto_click_icon(), image=icon, **self.tab_button_style)
+        btn1_1_4 = customtkinter.CTkButton(frame1_1_top, text="Reload ADB", command=lambda: adb_utils.update_adb_connection(True), image=icon, **self.tab_button_style)
 
         CTkToolTip(btn1_1_1, delay=0.5, message="Configure Shuffle Move Board Position")
         CTkToolTip(btn1_1_2, delay=0.5, message="Configure Current Stage for the Auto loop")
@@ -111,6 +112,7 @@ class ImageSelectorApp():
         btn1_1_1.pack(side=tk.LEFT)
         btn1_1_2.pack(side=tk.LEFT)
         btn1_1_3.pack(side=tk.LEFT)
+        btn1_1_4.pack(side=tk.LEFT)
 
         frame1_2 = customtkinter.CTkFrame(self.tab1, fg_color="transparent")
         frame1_2_top = customtkinter.CTkFrame(frame1_2, fg_color="transparent")

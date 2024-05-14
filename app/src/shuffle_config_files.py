@@ -254,7 +254,7 @@ def update_gradingModes_file(source, mega_activated, is_meowth_stage, current_bo
     if source == "bot":
         strategy = constants.GRADING_TOTAL_SCORE
     elif is_meowth_stage:
-        if int(current_board.moves_left) <= 2:
+        if current_board.moves_left.isnumeric() and int(current_board.moves_left) <= 2:
             strategy = '037MeowthEndGame'
         else:
             strategy = '037MeowthEarlyGame'

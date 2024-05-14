@@ -18,37 +18,37 @@ from src import log_utils
 import re
 
 log = log_utils.get_logger()
-def configure_adb():
-    pipe = subprocess.Popen(f"{current_run.adb_shell_command} wm size",stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
+
+
+def update_adb_connection(reconfigure_screen):
+    pipe = adb_run_screen_size()
     output = str(pipe.stdout.read()) #type: ignore
     if output.startswith("b'Physical size"):
         log.info(output)
-        return
     else:
         pipe = subprocess.Popen("adb kill-server",stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
         output = str(pipe.stdout.read()) #type: ignore
         pipe = subprocess.Popen("adb connect localhost:5555",stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
         output = str(pipe.stdout.read()) #type: ignore
         current_run.adb_shell_command = "adb -s localhost:5555 shell"
-        pipe = subprocess.Popen(f"{current_run.adb_shell_command} wm size",stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
+        pipe = adb_run_screen_size()
         output = str(pipe.stdout.read()) #type: ignore
         log.info(output)
-        return
+    if reconfigure_screen:
+        configure_screen()
 
 def configure_screen():
-    pipe = subprocess.Popen(f"{current_run.adb_shell_command} wm size",stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
-    response = str(pipe.stdout.read()).strip() #type: ignore
-    resolution = re.findall(r"\b\d{2,4}\s*x\s*\d{2,4}\b", response)[0]
-    screen_utils.update_screen(constants.RESOLUTIONS[resolution])
+    try:
+        pipe = subprocess.Popen(f"{current_run.adb_shell_command} wm size",stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
+        response = str(pipe.stdout.read()).strip() #type: ignore
+        resolution = re.findall(r"\b\d{2,4}\s*x\s*\d{2,4}\b", response)[0]
+        screen_utils.update_screen(constants.RESOLUTIONS[resolution])
+    except Exception as ex:
+        log.error(f"Couldn't load screen resolution: {ex}")
+        pass
     
-
-configure_adb()
-configure_screen()
-thread_sleep_timer = None
-last_button_clicked = None
-
 def get_screenshot():
-    pipe = subprocess.Popen(f"{current_run.adb_shell_command} screencap -p", stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
+    pipe = adb_run_screenshot()
     image_bytes = pipe.stdout.read().replace(b'\r\n', b'\n') #type: ignore
     img = cv2.imdecode(np.fromstring(image_bytes, np.uint8), cv2.IMREAD_COLOR) #type: ignore
     cv2.imwrite(constants.LAST_SCREEN_IMAGE_PATH, img)
@@ -85,8 +85,7 @@ def execute_play(result, board_results):
                 #The Idea of this one is to move not to the center of the cell, but a little more to the "end" of it, to
                 #increase the chances that the swipe input will move to the correct cell and not one before it.
                 new_to_x, new_to_y = move_second_point(from_x, from_y, to_x, to_y, get_screen().board_w/2.5, get_screen().board_h/2.5)
-
-                subprocess.Popen(f"{current_run.adb_shell_command} input swipe {from_x} {from_y} {new_to_x} {new_to_y} 350", stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
+                adb_run_swipe(from_x, from_y, new_to_x, new_to_y, 350)
                 time.sleep(1.0)
                 return True
     except Exception as ex:
@@ -150,9 +149,9 @@ def check_hearts(original_image):
             if hearts_number == 0:
                 time_to_wait+= 1800
             time_to_wait = max(time_to_wait, 0) # Avoid negative number when there's less than 5 minutes to next life.
-            thread_sleep_timer = int(time_to_wait)
-            log.debug(f"Hearts Ended, waiting for {thread_sleep_timer} seconds - ESCALATION BATTLE TEST")
-            time.sleep(thread_sleep_timer)
+            current_run.thread_sleep_timer = int(time_to_wait)
+            log.debug(f"Hearts Ended, waiting for {current_run.thread_sleep_timer} seconds - ESCALATION BATTLE TEST")
+            time.sleep(current_run.thread_sleep_timer)
             log.debug("Sleep ended, continuing")
             current_run.thread_sleep_timer = 0
     except Exception as ex:
@@ -198,7 +197,7 @@ def check_buttons_to_click(original_image):
         current_stage_image_path = constants.MEOWTH_STAGE_IMAGE
     elif custom_utils.is_survival_mode():
         current_stage_image_path = constants.SURVIVAL_MODE_STAGE_IMAGE
-    if has_icon_match(original_image, current_stage_image_path, extra_timeout=1+timeout_increase, click=True):
+    if has_icon_match(original_image, current_stage_image_path, extra_timeout=1+timeout_increase, click=True, min_point=40):
         was_clicked = True
         original_image = get_screenshot()
     if was_clicked and is_escalation_battle():
@@ -414,9 +413,9 @@ def update_fog_image(index):
     cell_x0, cell_y0, cell_x1, cell_y1 = get_coordinates_from_board_index(index)
     center_x = math.floor((cell_x0 + cell_x1) / 2)
     center_y = math.floor((cell_y0 + cell_y1) / 2)
-    subprocess.Popen(f"{current_run.adb_shell_command} shell input swipe {center_x} {center_y} {center_x} {center_y} 1000", stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
+    adb_run_swipe(center_x, center_y, center_x, center_y, 1000)
     time.sleep(0.5)
-    pipe = subprocess.Popen(f"{current_run.adb_shell_command} shell screencap -p", stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
+    pipe = adb_run_screenshot()
     image_bytes = pipe.stdout.read().replace(b'\r\n', b'\n') #type: ignore
     img = cv2.imdecode(np.fromstring(image_bytes, np.uint8), cv2.IMREAD_COLOR) #type: ignore
     new_img = expand_rectangle_and_cut_from_image(img, cell_x0, cell_y0, cell_x1, cell_y1, 0, 0)
@@ -437,7 +436,7 @@ def click_on_board_index(index):
     cell_x0, cell_y0, cell_x1, cell_y1 = get_coordinates_from_board_index(index)
     center_x = math.floor((cell_x0 + cell_x1) / 2)
     center_y = math.floor((cell_y0 + cell_y1) / 2)
-    subprocess.Popen(f"{current_run.adb_shell_command} shell input tap {center_x} {center_y}", stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
+    subprocess.Popen(f"{current_run.adb_shell_command} input tap {center_x} {center_y}", stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
     time.sleep(0.1)
     return center_x, center_y
 
@@ -450,3 +449,41 @@ def get_coordinates_from_board_index(idx):
     cell_y1 =  math.floor(get_screen().board_y + (get_screen().board_h * (row)))
     return cell_x0,cell_y0,cell_x1,cell_y1
     
+
+def adb_run_swipe(from_x, from_y, to_x, to_y, delay, skip_on_error=False):
+    try:
+        return subprocess.Popen(f"{current_run.adb_shell_command} input swipe {from_x} {from_y} {to_x} {to_y} {delay}", stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
+    except:
+        if skip_on_error:
+            return
+        update_adb_connection(reconfigure_screen=True)
+        adb_run_swipe(from_x, from_y, to_x, to_y, delay, skip_on_error=True)    
+
+def adb_run_tap(x ,y, skip_on_error=False):
+    try:
+        return subprocess.Popen(f"{current_run.adb_shell_command} input tap {x} {y}", stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
+    except:
+        if skip_on_error:
+            return
+        update_adb_connection(reconfigure_screen=True)
+        adb_run_tap(x ,y, skip_on_error=True)    
+    
+def adb_run_screenshot(skip_on_error=False):
+    try:
+        return subprocess.Popen(f"{current_run.adb_shell_command} screencap -p", stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
+    except:
+        if skip_on_error:
+            return
+        update_adb_connection(reconfigure_screen=True)
+        adb_run_screenshot(skip_on_error=True)    
+
+def adb_run_screen_size(skip_on_error=False):
+    try:
+        return subprocess.Popen(f"{current_run.adb_shell_command} wm size",stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
+    except:
+        if skip_on_error:
+            log.debug("Couldn't find ADB active connection")
+        update_adb_connection(reconfigure_screen=True)
+        adb_run_screen_size(skip_on_error=True)
+
+update_adb_connection(reconfigure_screen=True)

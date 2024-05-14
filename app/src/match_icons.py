@@ -192,7 +192,7 @@ def start_from_helper(pokemon_list: list[Pokemon], has_barriers, root=None, sour
 
 
 def  verify_active_combo(current_screen_image):
-    return adb_utils.has_icon_match(current_screen_image, constants.COMBO_IMAGE, "Combo", extra_timeout=0, click=False)
+    return adb_utils.has_icon_match(current_screen_image, constants.COMBO_IMAGE, "Combo", extra_timeout=0, click=False, min_point=30)
 
 def execute_tapper(current_board: Board):
     if True or current_run.mega_activated_this_round or current_board.has_mega:
@@ -200,7 +200,7 @@ def execute_tapper(current_board: Board):
         if not has_mega_match_active(current_board):
             return
         log.debug("Executing crazy Tapper Logic")
-        interest_list = ["Frozen", "Metal", "Fog", "Wood"]
+        interest_list = ["Frozen", "Metal", "Fog", "Stage_Added", "Wood"]
         final_sequence = [process_tap_match(match, current_board.extra_supports_list) for match in current_board.match_sequence]
         tapper_dict = custom_utils.split_list_to_dict(final_sequence, interest_list)
         tapper_dict["Frozen"] = [idx for idx, value in enumerate(current_board.frozen_list) if value == 'true' and final_sequence[idx] != "None"]
@@ -246,7 +246,7 @@ def mask_already_existant_matches(match_list: List[Match]) -> List[Match]:
     return match_list
 
 def is_on_stage(original_image):
-    on_stage = adb_utils.has_icon_match(original_image, constants.ACTIVE_BOARD_IMAGE, "StageMenu", extra_timeout=0, click=False, min_point=6)
+    on_stage = adb_utils.has_icon_match(original_image, constants.ACTIVE_BOARD_IMAGE, "StageMenu", extra_timeout=0, click=False, min_point=8)
     if on_stage:
         current_run.angry_mode_active = False
         current_run.non_stage_count = 0

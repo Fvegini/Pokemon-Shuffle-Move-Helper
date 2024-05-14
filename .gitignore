@@ -17,3 +17,6 @@ main.exe
 teste.ipynb
 *.zip
 assets/adb/debug
+local_build_script.bat
+assets/adb/current_stage.png
+assets/adb/new.png

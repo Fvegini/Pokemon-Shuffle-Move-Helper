@@ -1,7 +1,7 @@
 from src.classes import Screen
 
 
-current_screen: Screen
+current_screen: Screen = Screen()
 
 def update_screen(current_resolution_dict):
     global current_screen

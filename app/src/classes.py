@@ -152,10 +152,13 @@ class Screen():
     board_w: float
     board_h: float
     
-    def __init__(self, resolution_dict):
+    def __init__(self, resolution_dict={}):
         self.mydict = resolution_dict
-        board_top_left = resolution_dict.get("Board")[0:2]
-        board_bottom_right = resolution_dict.get("Board")[2:4]
+        board = resolution_dict.get("Board")
+        if not board:
+            board = (0, 0, 0, 0)
+        board_top_left = board[0:2]
+        board_bottom_right = board[2:4]
         self.board_top_left = board_top_left
         self.board_bottom_right = board_bottom_right
         self.board_x = board_top_left[0]
