@@ -5,14 +5,15 @@ from typing import Any
 import customtkinter
 from PIL import Image
 import keyboard
-from src import match_icons, shuffle_config_files
+from src import match_icons, screen_utils, shuffle_config_files
 from pathlib import Path
 from src.board_image_selector import BoardIconSelector, PokemonIconSelector
 from src import constants, custom_utils, load_from_shuffle, config_utils, mouse_utils
-from src.execution_variables import execution_variables
+from src.execution_variables import current_run
 import warnings
 from CTkToolTip import CTkToolTip
 from src.classes import MatchResult, Pokemon
+import src.file_utils
 from src.icon_register import IconRegister
 from src import embed
 from src import version
@@ -141,13 +142,28 @@ class ImageSelectorApp():
         customtkinter.CTkLabel(frame1_2_top_2, text="Stage Type").pack(side=tk.BOTTOM, anchor=tk.E)
         customtkinter.CTkLabel(frame1_2_top_2, text="Move Strategy").pack(side=tk.BOTTOM, anchor=tk.E)
 
+        frame1_3 = customtkinter.CTkFrame(self.tab1, fg_color="transparent")
+        frame1_3_top = customtkinter.CTkFrame(frame1_3, fg_color="transparent")
+        frame1_3_bottom = customtkinter.CTkFrame(frame1_3, fg_color="transparent")
+        frame1_3.pack(side=tk.LEFT, expand=False, fill=tk.Y, anchor=tk.W)
+        frame1_3_top.pack(side=tk.TOP)
+        frame1_3_bottom.pack(side=tk.BOTTOM)
+        ttk.Separator(self.tab1, orient='vertical').pack(side=tk.LEFT, fill='y', anchor=tk.W)
+        
+        customtkinter.CTkLabel(frame1_3_bottom, text="View").pack(side=tk.BOTTOM, anchor=tk.S)
+
+        btn1_3_1 = customtkinter.CTkButton(frame1_3_top, text="Hide Main App", command=lambda: self.show_or_hide_widget(self.appview, expand=1, fill=tk.X, pady=0, padx=0, anchor="nw"), image=icon, **self.tab_button_style)        
+        btn1_3_1.pack(side=tk.LEFT)
+
+
+
     def set_stage_var(self, choice):
-        execution_variables.current_stage = [k for k, v in constants.move_stages.items() if v == choice][0]
-        execution_variables.has_modifications = True
+        current_run.current_stage = [k for k, v in constants.move_stages.items() if v == choice][0]
+        current_run.has_modifications = True
 
     def set_strategy_var(self, choice):
-        execution_variables.current_strategy = [k for k, v in constants.move_strategy.items() if v == choice][0]
-        execution_variables.has_modifications = True
+        current_run.current_strategy = [k for k, v in constants.move_strategy.items() if v == choice][0]
+        current_run.has_modifications = True
 
     def create_tab_2(self):
         frame2_1 = customtkinter.CTkFrame(self.tab2, fg_color="transparent")
@@ -258,14 +274,14 @@ class ImageSelectorApp():
 
 
         self.frame3_1_top_3_1_var = tk.BooleanVar(value=config_utils.config_values.get("fast_swipe"))      
-        self.frame3_1_top_3_2_var = tk.BooleanVar(value=config_utils.config_values.get("placeholder1")) 
-        self.frame3_1_top_3_3_var = tk.BooleanVar(value=config_utils.config_values.get("placeholder2")) 
-        self.frame3_1_top_3_4_var = tk.BooleanVar(value=config_utils.config_values.get("placeholder3"))
+        self.frame3_1_top_3_2_var = tk.BooleanVar(value=config_utils.config_values.get("escalation_battle")) 
+        self.frame3_1_top_3_3_var = tk.BooleanVar(value=config_utils.config_values.get("coin_stage")) 
+        self.frame3_1_top_3_4_var = tk.BooleanVar(value=config_utils.config_values.get("survival_mode"))
         
         self.frame3_1_top_3_1_switch = customtkinter.CTkSwitch(frame3_1_top_3, variable=self.frame3_1_top_3_1_var, command=lambda: self.update_switch_config(self.frame3_1_top_3_1_var, "fast_swipe"), text="Fast Swipe", onvalue=True, offvalue=False)
-        self.frame3_1_top_3_2_switch = customtkinter.CTkSwitch(frame3_1_top_3, variable=self.frame3_1_top_3_2_var, command=lambda: self.update_switch_config(self.frame3_1_top_3_2_var, "placeholder1"), text="placeholder1", onvalue=True, offvalue=False)
-        self.frame3_1_top_3_3_switch = customtkinter.CTkSwitch(frame3_1_top_3, variable=self.frame3_1_top_3_3_var, command=lambda: self.update_switch_config(self.frame3_1_top_3_3_var, "placeholder2"), text="placeholder2", onvalue=True, offvalue=False)
-        self.frame3_1_top_3_4_switch = customtkinter.CTkSwitch(frame3_1_top_3, variable=self.frame3_1_top_3_4_var, command=lambda: self.update_switch_config(self.frame3_1_top_3_4_var, "placeholder3"), text="placeholder3", onvalue=True, offvalue=False)
+        self.frame3_1_top_3_2_switch = customtkinter.CTkSwitch(frame3_1_top_3, variable=self.frame3_1_top_3_2_var, command=lambda: self.update_switch_config(self.frame3_1_top_3_2_var, "escalation_battle"), text="Escalation Battle", onvalue=True, offvalue=False)
+        self.frame3_1_top_3_3_switch = customtkinter.CTkSwitch(frame3_1_top_3, variable=self.frame3_1_top_3_3_var, command=lambda: self.update_switch_config(self.frame3_1_top_3_3_var, "coin_stage"), text="Coin Cost Stage", onvalue=True, offvalue=False)
+        self.frame3_1_top_3_4_switch = customtkinter.CTkSwitch(frame3_1_top_3, variable=self.frame3_1_top_3_4_var, command=lambda: self.update_switch_config(self.frame3_1_top_3_4_var, "survival_mode"), text="Survival Mode", onvalue=True, offvalue=False)
         
 
         self.frame3_1_top_3_1_switch.pack(side=tk.TOP, anchor=tk.W, padx=5)
@@ -330,7 +346,6 @@ class ImageSelectorApp():
         frame3_4_top_2 = customtkinter.CTkFrame(frame3_4_top, fg_color="transparent")
         frame3_4_top_1.pack(side=tk.LEFT)
         frame3_4_top_2.pack(side=tk.LEFT)
-        
         
         customtkinter.CTkComboBox(frame3_4_top_1, values=constants.move_stages.values(),
                                      command=self.set_stage_var, variable=self.stage_combobox_var, state="readonly", **self.tab_comboboxmenu_style).pack(side=tk.BOTTOM)
@@ -399,10 +414,6 @@ class ImageSelectorApp():
             scale_factor = self.master.winfo_width() / width
             self.master.geometry(f"{int(width*scale_factor)}x{int(height*scale_factor)}+{x}+{y}")
         self.check_current_position()
-        if os.getenv("DEV_MODE") == "1":
-            log.debug("Dev Mode Activated")
-            self.force_update_mouse_buttons()
-
 
     def check_current_position(self):
         self.master.update()
@@ -474,7 +485,7 @@ class ImageSelectorApp():
         if any([value for value in self.get_selected_images_widgets_list() if value[0].master.name == selected_file]):
             return
 
-        execution_variables.has_modifications = True
+        current_run.has_modifications = True
 
         # Display in the selected images panel
         selected_image_frame = customtkinter.CTkFrame(self.scrollable_frame)
@@ -551,8 +562,8 @@ class ImageSelectorApp():
         image_list = []
         barrier_image_list = []
         original_path = Path(image_path)
-        images_path_list = [original_path] + custom_utils.find_matching_files(constants.IMAGES_EXTRA_PATH, original_path.stem, ".png")
-        barrier_images_path_list = custom_utils.find_matching_files(constants.IMAGES_BARRIER_PATH, original_path.stem, ".png")
+        images_path_list = [original_path] + src.file_utils.find_matching_files(constants.IMAGES_EXTRA_PATH, original_path.stem, ".png")
+        barrier_images_path_list = src.file_utils.find_matching_files(constants.IMAGES_BARRIER_PATH, original_path.stem, ".png")
 
         for image_path in images_path_list:
             icon_image = Image.open(image_path)
@@ -582,20 +593,19 @@ class ImageSelectorApp():
         for i in range(0,6):
             img_list.append(custom_utils.capture_board_screensot(save=False, return_type="cv2"))
         for idx, screen in enumerate(img_list):
-            # cv2_board = cv2.cvtColor(np.array(screen), cv2.COLOR_RGB2BGR)
             IconRegister(root=self, title=idx, forced_board_image=screen)
 
     def open_create_register_screen(self, folder):
-        self.disable_loop()
+        # self.disable_loop()
         self.board_image_selector = BoardIconSelector(root=self, folder=folder)
     
     def open_remove_register_screen(self, action=None):
-        self.disable_loop()
+        # self.disable_loop()
         self.app_image_selector = PokemonIconSelector(root=self, action=action)
 
     def clear_icons_cache(self):
         match_icons.loaded_icons_cache = {}
-        execution_variables.has_modifications = True
+        current_run.has_modifications = True
 
     def get_selected_images_widgets_list(self):
         widget_list = []
@@ -617,13 +627,8 @@ class ImageSelectorApp():
             return MatchResult()
 
         with self.analysis_lock:
-            # log.debug("Iniciando o start_from_helper")
             pokemons_list = self.extract_pokemon_list()
             match_result = match_icons.start_from_helper(pokemons_list, self.frame3_1_top_1_2_var_control_barrier.get(), root=self, source=source, create_image=create_image, skip_shuffle_move=skip_shuffle_move, forced_board_image=forced_board_image)
-            # if not match_result:
-            #     self.master.after(200, self.control_loop_function)
-            # else:
-            #     self.master.after(5000, self.control_loop_function)
         if current_lock != self.analysis_lock:
             return match_result #Avoid problem with older timed threads keeping a parallel loop.
         if config_utils.config_values.get("timed_stage"):
@@ -640,13 +645,14 @@ class ImageSelectorApp():
         if not self.frame3_1_top_1_1_var_control_loop.get():
             if self.analysis_lock.locked():
                 self.analysis_lock = threading.Lock()
-                adb_utils.thread_sleep_timer = None
+                current_run.thread_sleep_timer = 0
+            log.info("Loop Mode Off")
             return
         else:
             self.execute_board_analysis_threaded(source="loop")
-            if adb_utils.thread_sleep_timer:
-                log.debug(f"Thread is locked for {adb_utils.thread_sleep_timer} seconds, waiting to return the loop.")
-                self.master.after(adb_utils.thread_sleep_timer * 1000, self.control_loop_function)                
+            if current_run.thread_sleep_timer:
+                log.debug(f"Thread is locked for {current_run.thread_sleep_timer} seconds, waiting to return the loop.")
+                self.master.after(current_run.thread_sleep_timer * 1000, self.control_loop_function)                
                 return
 
     def extract_pokemon_list(self):
@@ -686,7 +692,8 @@ class ImageSelectorApp():
 
     def update_switch_config(self, swich_var, config_var_name):
         v = swich_var.get()
-        config_utils.update_config(config_var_name, v)    
+        config_utils.update_config(config_var_name, v)
+        current_run.has_modifications = True
 
     def reveal_or_hide_barrier_img(self):
         has_barrier = self.frame3_1_top_1_2_var_control_barrier.get()
@@ -748,10 +755,10 @@ class ImageSelectorApp():
 
             current_team, stage_name = shuffle_config_files.get_current_stage_and_team()
 
-            execution_variables.current_stage = stage_name
-            execution_variables.current_strategy = constants.GRADING_TOTAL_SCORE
-            self.stage_combobox.set(constants.move_stages.get(execution_variables.current_stage))
-            self.strategy_combobox.set(constants.move_strategy.get(execution_variables.current_strategy))
+            current_run.current_stage = stage_name
+            current_run.current_strategy = constants.GRADING_TOTAL_SCORE
+            self.stage_combobox.set(constants.move_stages.get(current_run.current_stage))
+            self.strategy_combobox.set(constants.move_strategy.get(current_run.current_strategy))
             for pokemon in current_team:
                 if pokemon.name in load_from_shuffle.exception_list:
                     pokemon.name = f"_{pokemon.name}"
@@ -765,24 +772,13 @@ class ImageSelectorApp():
     def load_team(self):
         self.disable_loop()
         load_from_shuffle.TeamLoader(root=self)
+        
+    def show_or_hide_widget(self, widget, *args, **kwargs):
+        if widget.winfo_viewable():
+            widget.pack_forget()
+        else:
+            widget.pack(**kwargs)
 
-    def force_update_mouse_buttons(self):
-        self.master.update()
-        # screen_width = self.master.winfo_screenwidth()
-        # if screen_width == 2560:
-        #     log.debug("Updating to Ultra Wide Positions")
-        #     match_icons.board_top_left = (364, 488)
-        #     match_icons.board_bottom_right = (914, 1031)
-        #     match_icons.center_poinst_list = custom_utils.get_center_positions_list(match_icons.board_top_left, match_icons.board_bottom_right)
-        # elif screen_width == 1920:
-        #     log.debug("Updating to Full HD Positions")
-        #     # match_icons.board_top_left = (208, 482)
-        #     # match_icons.board_bottom_right = (750, 1021)
-        #     match_icons.board_top_left = (826, 483)
-        #     match_icons.board_bottom_right = (1380, 1032)
-        #     match_icons.center_poinst_list = custom_utils.get_center_positions_list(match_icons.board_top_left, match_icons.board_bottom_right)
-        # else:
-        #     return
 
 def merge_pil_images(image1, image2):
     # Get the width and height of each image

@@ -7,6 +7,7 @@ from src import constants, custom_utils
 import customtkinter
 import cv2
 from src import log_utils
+import src.file_utils
 
 log = log_utils.get_logger()
 
@@ -89,7 +90,6 @@ class PokemonIconSelector(tk.Toplevel):
     def on_image_click(self, image_name):
         self.selected_image_name = image_name
         if self.action == "Remove_Barrier":
-            # remove_icon(Path(constants.IMAGES_BARRIER_PATH, image_name))
             ExtraIconSelector(root=self.root, selected_image = image_name, action=self.action)
         elif self.action == "Remove_Extra":
             ExtraIconSelector(root=self.root, selected_image = image_name, action=self.action)
@@ -116,9 +116,9 @@ class ExtraIconSelector(tk.Toplevel):
         col_index = 0
 
         if self.action == "Remove_Extra":
-            images_path = custom_utils.find_matching_files(constants.IMAGES_EXTRA_PATH, Path(self.selected_image).stem, ".png")
+            images_path = src.file_utils.find_matching_files(constants.IMAGES_EXTRA_PATH, Path(self.selected_image).stem, ".png")
         else:
-            images_path = custom_utils.find_matching_files(constants.IMAGES_BARRIER_PATH, Path(self.selected_image).stem, ".png")
+            images_path = src.file_utils.find_matching_files(constants.IMAGES_BARRIER_PATH, Path(self.selected_image).stem, ".png")
 
         for image_path in images_path:
             image_path = Path(image_path)
@@ -144,7 +144,6 @@ class ExtraIconSelector(tk.Toplevel):
 
 def remove_icon(image_path):
     if os.path.exists(image_path):
-        # log.debug(f"Teria removido {image_path}")
         os.remove(image_path)
         log.info(f"Eliminado o Arquivo: {image_path}")
 

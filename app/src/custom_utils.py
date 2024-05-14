@@ -1,25 +1,20 @@
 from pathlib import Path
 import cv2
 import numpy as np
-from src.classes import Match, ShuffleBoard
+from src.classes import Match, Board
 from typing import Any, List
-from src import adb_utils, constants, custom_utils
+from src import adb_utils, constants, custom_utils, config_utils, file_utils
 from PIL import Image
 import pyautogui
-from src.config_utils import read_config
-import src.board_utils
+import src.screen_utils
 import os
 import re
 from src import log_utils
+import time
+from src.screen_utils import get_screen
+from thefuzz import fuzz
 
 log = log_utils.get_logger()
-
-def find_matching_files(directory, prefix, suffix):
-    directory_path = Path(directory)
-    search_pattern1 = f"{prefix}_[0-9]*{suffix}"
-    search_pattern2 = f"{prefix}{suffix}"
-    matching_files = list(directory_path.glob(search_pattern1)) + list(directory_path.glob(search_pattern2))
-    return matching_files
 
 def resize_cv2_image(image, target_size):
     try:
@@ -68,12 +63,7 @@ def resize_and_save_np_image(image_path, np_image, image_size):
     else:
         cv2.imwrite(image_path.as_posix(), resized)
 
-def open_and_resize_np_image(image_path, image_size):
-    if type(image_path) == str:
-        image_path = Path(image_path)
-    np_img = open_cv2_image(image_path.as_posix())
-    np_img = resize_cv2_image(np_img, image_size)
-    return np_img
+
 
 def open_cv2_image(image_path):
     np_img = cv2.imread(image_path)
@@ -92,8 +82,7 @@ def cv2_to_pil(cv2_image, image_size=None):
 def pil_to_cv2(pil_image):
     return cv2.cvtColor(np.array(pil_image), cv2.COLOR_RGB2BGR)
 
-def show_cv2_as_pil(cv2_image):
-    Image.fromarray(cv2.cvtColor(cv2_image, cv2.COLOR_RGB2BGR)).show()
+
 
 def get_taskbar_size():
     try:
@@ -113,40 +102,11 @@ def get_taskbar_size():
     except:
         return 0
     
-def show_list_images(images):
-    concatenated_image = concatenate_list_images(images)
-    show_cv2_as_pil(concatenated_image)
 
-def concatenate_list_images(images, blank_space=40):
-    max_height = max(image.shape[0] for image in images)
-
-    blank_square = create_blank_square(max_height, blank_space)
-    # Create new images with the maximum height
-    
-    new_images_test = insert_in_middle(images, blank_square)
-    new_images = [np.zeros((max_height, image.shape[1], 3), dtype=np.uint8) for image in new_images_test]
-
-    # Copy the content of the original images to the new images
-    for i, image in enumerate(new_images_test):
-        new_images[i][:image.shape[0], :, :] = image
-
-    # Concatenate all images side by side
-    return np.concatenate(new_images, axis=1)
 
 def show_img(cv2_img):
     cv2.imshow("", cv2_img)
     
-def create_blank_square(height, width):
-    return np.ones((height, width, 3), dtype=np.uint8) * 255
-
-def insert_in_middle(lst, new_value):
-    new_list = []
-    for index, item in enumerate(lst):
-        new_list.append(item)
-        if index+1 < len(lst):
-            new_list.append(new_value)
-    return new_list
-
 
 def sort_by_class_attribute(obj_list, attribute_name, reverse=False):
     try:
@@ -261,7 +221,7 @@ def make_match_image_comparison(result, match_list: List[Match]):
         final_image1 = concatenate_cv2_list_as_full_grid([match.board_icon for match in match_list])
         final_image2 = concatenate_cv2_list_as_full_grid([match.match_icon for match in match_list])
 
-        return concatenate_list_images([final_image1, final_image2])
+        return file_utils.concatenate_list_images([final_image1, final_image2])
     except:
         return None
 
@@ -425,36 +385,52 @@ def get_center_positions_list(left_position, right_position):
 
 
 def capture_screen_screenshot():
-    adb_board = read_config().get("adb_board")
+    adb_board = config_utils.config_values.get("adb_board")
     if adb_board:
-        return adb_utils.get_full_screenshot()
+        return adb_utils.get_screenshot()
     else:
         return pyautogui.screenshot()
 
 
 def capture_board_screensot(save=True, return_type="cv2"):
-    adb_board = read_config().get("adb_board")
+    adb_board = config_utils.config_values.get("adb_board")
     if adb_board:
         # adb_utils.get_screen_positions()
-        img = adb_utils.crop_board(adb_utils.get_full_screenshot())
+        img = adb_utils.crop_board(adb_utils.get_screenshot())
         if return_type == "cv2":
             return img
         else:
             return custom_utils.cv2_to_pil(img)
     else:
-        x0 = src.board_utils.current_board.board_top_left[0]
-        x1 = src.board_utils.current_board.board_bottom_right[0] - src.board_utils.current_board.board_top_left[0]
-        y0 = src.board_utils.current_board.board_top_left[1]
-        y1 = src.board_utils.current_board.board_bottom_right[1] - src.board_utils.current_board.board_top_left[1]
+        x0 = get_screen().board_top_left[0]
+        x1 = get_screen().board_bottom_right[0] - get_screen().board_top_left[0]
+        y0 = get_screen().board_top_left[1]
+        y1 = get_screen().board_bottom_right[1] - get_screen().board_top_left[1]
         # log.debug(f"Screenshot at: {datetime.now()}")
-        img = pyautogui.screenshot(region=(x0, y0, x1, y1))
+        img = pyautogui.screenshot(region=(x0, y0, x1, y1))        
         if save:
             img.save(constants.LAST_BOARD_IMAGE_PATH)
         if return_type == "cv2":
             return custom_utils.pil_to_cv2(img)
         else:
             return img
-        
+
+def has_match_of_3(mylist, target):
+    matrix = np.array(mylist).reshape((6,6))
+    # Check rows
+    for row in matrix:
+        for i in range(len(row) - 2):
+            if row[i] == target and row[i+1] == target and row[i+2] == target:
+                return True
+
+    # Check columns
+    for i in range(len(matrix) - 2):
+        for j in range(len(matrix[0])):
+            if matrix[i][j] == target and matrix[i+1][j] == target and matrix[i+2][j] == target:
+                return True
+
+    return False
+
 def replace_all_3_matches_indices(mylist: List[Match], replace_match):
     matrix = np.array(mylist).reshape((6,6))
     matrix_index_list = []
@@ -548,7 +524,7 @@ def split_list_to_dict(complete_list, interest_list):
         result_dict[string].append(idx)
     return result_dict
 
-def find_slot_to_mega(current_board: ShuffleBoard):
+def find_slot_to_mega(current_board: Board):
     from_matrix, to_matrix = search_space_to_fit_mega(current_board.match_sequence, current_board.mega_name)
     from_row = from_matrix[0] + 1
     from_column = from_matrix[1] + 1
@@ -556,3 +532,53 @@ def find_slot_to_mega(current_board: ShuffleBoard):
     to_column = to_matrix[1] + 1
     formatted_result = f"{from_row},{from_column} -> {to_row},{to_column}:"
     return formatted_result
+
+def load_file_as_list(file_path):
+    with open(file_path, 'r') as file:
+        lines = file.readlines()
+        lines = [line.strip() for line in lines]
+    return lines
+
+def find_similar_key(ocr_key, dictionary):
+    max_ratio = -1
+    closest_key = None
+    for key in dictionary.keys():
+        ratio = fuzz.ratio(ocr_key, key)
+        if ratio > max_ratio:
+            max_ratio = ratio
+            closest_key = key
+    return closest_key
+
+def timer_decorator(func):
+    def wrapper(*args, **kwargs):
+        start_time = time.time()
+        result = func(*args, **kwargs)
+        end_time = time.time()
+        log.debug(f"Function '{func.__name__}' took {end_time - start_time:.2f} seconds to run.")
+        return result
+    return wrapper
+
+def time_difference_in_seconds(start_time):
+    return time.time() - start_time
+
+
+def is_timed_stage():
+    return config_utils.config_values.get("timed_stage")
+
+def is_survival_mode():
+    return config_utils.config_values.get("survival_mode")
+
+def is_meowth_stage():
+    return config_utils.config_values.get("meowth_37")
+
+def is_coin_stage():
+    return config_utils.config_values.get("coin_stage")
+
+def is_fast_swipe():
+    return config_utils.config_values.get("fast_swipe")
+
+def is_tapper_active():
+    return config_utils.config_values.get("tapper")
+
+
+time_pattern = re.compile(r"\b(\d{1,2})\s*:\s*(\d{1,2})\b")

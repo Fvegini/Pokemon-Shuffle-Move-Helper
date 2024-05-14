@@ -32,7 +32,7 @@ def loadNewBoard():
         if not socket_port:
             load_socker_port()
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            s.settimeout(5)
+            s.settimeout(50)
             s.connect(('localhost', socket_port))  # Use the same port as in the Java application
             s.sendall(b'loadNewBoard\n')
             result = s.recv(1024).decode('utf-8')

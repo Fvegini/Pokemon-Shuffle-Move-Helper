@@ -3,9 +3,9 @@ import tkinter as tk
 import os
 from src import constants, custom_utils
 from pathlib import Path
-from src.execution_variables import execution_variables
+from src.execution_variables import current_run
 exception_list = ["Empty", "Coin", "Metal", "Wood", "Fog"]
-stages_fixed_list = ['BUG', 'DARK', 'DRAGON', 'ELECTRIC', 'FAIRY', 'FIGHTING', 'FIRE', 'FLYING', 'GHOST', 'GRASS', 'GROUND', 'ICE', 'MEOWTH COIN MANIA', 'NONE', 'NORMAL', 'POISON', 'PSYCHIC', 'ROCK', 'STEEL', 'WATER', 'SP_084', 'MEOWTH COIN MANIA']
+stages_fixed_list = ['BUG', 'DARK', 'DRAGON', 'ELECTRIC', 'FAIRY', 'FIGHTING', 'FIRE', 'FLYING', 'GHOST', 'GRASS', 'GROUND', 'ICE', 'MEOWTH COIN MANIA', 'NONE', 'NORMAL', 'POISON', 'PSYCHIC', 'ROCK', 'STEEL', 'WATER', 'SP_084', 'MEOWTH COIN MANIA', constants.SURVIVAL_MODE_STAGE_NAME, '037']
 stages_set = set(stages_fixed_list)
 
 class TeamData():
@@ -33,6 +33,7 @@ class TeamLoader(tk.Toplevel):
             lines = file.readlines()
 
         self.teams: list[TeamData] = []
+        tmp_teams: list[TeamData] = []
         for line in lines:
             parts = line.strip().split()
             if not parts[0] == "TEAM":
@@ -54,12 +55,17 @@ class TeamLoader(tk.Toplevel):
                 icons.append(mega_name)
             except:
                 pass
-            self.teams.append(TeamData(team_name, icons, stage_added))
+            # self.teams.append(TeamData(team_name, icons, stage_added))
+            tmp_teams.append(TeamData(team_name, icons, stage_added))
             if team_name == "SP_084":
-                self.teams.append(TeamData("MEOWTH COIN MANIA", icons))
+                # self.teams.append(TeamData("MEOWTH COIN MANIA", icons))
+                tmp_teams.append(TeamData("MEOWTH COIN MANIA", icons))
             
-        self.teams.sort(key=lambda x: stages_fixed_list.index(x.stage))
-
+        tmp_teams.sort(key=lambda x: stages_fixed_list.index(x.stage))
+        for stage_name in stages_fixed_list:
+            if not any([team for team in tmp_teams if stage_name == team.stage]):
+                tmp_teams.append(TeamData(stage_name, ["_Wood","_Metal"], []))
+        self.teams.extend(tmp_teams)
         # self.teams = sorted(self.teams, key=custom_sort)
 
         # Create the main Tkinter window
@@ -105,20 +111,24 @@ class TeamLoader(tk.Toplevel):
         self.root.destroy_selected_pokemons()
         selected_index = self.listbox.curselection()
         if selected_index:
-            execution_variables.current_stage = self.teams[selected_index[0]].stage
-            if execution_variables.current_stage == "MEOWTH COIN MANIA":
-                execution_variables.current_stage = "SP_084"
-            if execution_variables.current_stage == "SP_084":
-                execution_variables.current_strategy = constants.move_strategy.get(constants.GRADING_WEEKEND_MEOWTH, "")
+            current_run.current_stage = self.teams[selected_index[0]].stage
+            if current_run.current_stage == constants.SURVIVAL_MODE_STAGE_NAME:
+                new_pokemon_list = custom_utils.load_file_as_list(constants.SURVIVAL_MODE_TXT)
+                self.teams[selected_index[0]].stage_added.extend(new_pokemon_list)
+                self.teams[selected_index[0]].icons.extend(new_pokemon_list)
+            if current_run.current_stage == "MEOWTH COIN MANIA":
+                current_run.current_stage = "SP_084"
+            if current_run.current_stage == "SP_084":
+                current_run.current_strategy = constants.move_strategy.get(constants.GRADING_WEEKEND_MEOWTH, "")
             else:
-                execution_variables.current_strategy = constants.move_strategy.get(constants.GRADING_TOTAL_SCORE, "")
-            execution_variables.has_modifications = True
+                current_run.current_strategy = constants.move_strategy.get(constants.GRADING_TOTAL_SCORE, "")
+            current_run.has_modifications = True
             selected_team: TeamData = self.teams[selected_index[0]]
             for pokemon in selected_team.icons:
                 stage_added = pokemon in selected_team.stage_added
                 self.root.insert_image_widget(f"{pokemon}.png", stage_added=stage_added)
                 self.update_idletasks()
         
-        self.root.stage_combobox.set(execution_variables.current_stage)
-        self.root.strategy_combobox.set(execution_variables.current_strategy)
+        self.root.stage_combobox.set(current_run.current_stage)
+        self.root.strategy_combobox.set(current_run.current_strategy)
         self.destroy()
