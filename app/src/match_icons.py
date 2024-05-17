@@ -29,7 +29,7 @@ def load_icon_classes(values_to_execute: list[Pokemon], has_barriers):
             new_icon = Icon(pokemon.name, pokemon.path, False)
             icons_list.append(new_icon)
             loaded_icons_cache[new_icon.name] = new_icon
-        if has_barriers and not current_run.fake_barrier_active:
+        if has_barriers and not custom_utils.is_fake_barrier_active():
             pokemon_barrier_name = f"{constants.BARRIER_PREFIX}{pokemon.name}"
             if pokemon_barrier_name in loaded_icons_cache:
                 icons_list.append(loaded_icons_cache.get(pokemon_barrier_name))
@@ -82,7 +82,7 @@ def compare_with_list(original_image, icons_list: List[Icon], has_barriers):
         full_match_list_tmp.append(match)
         if not best_match or best_match.cosine_similarity < match.cosine_similarity:
             best_match = match
-    if has_barriers and current_run.fake_barrier_active:
+    if has_barriers and custom_utils.is_fake_barrier_active():
         fake_barrier_img = custom_utils.resize_cv2_image(cut_borders(original_image), constants.downscale_res)
         is_frozen = has_white_border(fake_barrier_img)
         if is_frozen:

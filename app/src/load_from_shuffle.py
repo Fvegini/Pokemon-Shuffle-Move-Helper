@@ -124,11 +124,17 @@ class TeamLoader(tk.Toplevel):
                 current_run.current_strategy = constants.move_strategy.get(constants.GRADING_TOTAL_SCORE, "")
             current_run.has_modifications = True
             selected_team: TeamData = self.teams[selected_index[0]]
-            for pokemon in selected_team.icons:
-                stage_added = pokemon in selected_team.stage_added
-                self.root.insert_image_widget(f"{pokemon}.png", stage_added=stage_added)
+            #First Append all Stage Added Pokemons
+            for pokemon in selected_team.stage_added:
+                self.root.insert_image_widget(f"{pokemon}.png", stage_added=True)
                 self.update_idletasks()
-        
+            #Then Append the others
+            for pokemon in selected_team.icons:
+                is_stage_added = pokemon in selected_team.stage_added
+                if not is_stage_added:
+                    self.root.insert_image_widget(f"{pokemon}.png", stage_added=False)
+                    self.update_idletasks()
+
         self.root.stage_combobox.set(current_run.current_stage)
         self.root.strategy_combobox.set(current_run.current_strategy)
         self.destroy()

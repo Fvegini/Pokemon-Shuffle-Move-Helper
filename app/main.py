@@ -159,11 +159,14 @@ class ImageSelectorApp():
         frame1_3_bottom.pack(side=tk.BOTTOM)
         ttk.Separator(self.tab1, orient='vertical').pack(side=tk.LEFT, fill='y', anchor=tk.W)
         
-        customtkinter.CTkLabel(frame1_3_bottom, text="View").pack(side=tk.BOTTOM, anchor=tk.S)
+        customtkinter.CTkLabel(frame1_3_bottom, text="Other").pack(side=tk.BOTTOM, anchor=tk.S)
 
         btn1_3_1 = customtkinter.CTkButton(frame1_3_top, text="Hide Main App", command=lambda: self.show_or_hide_widget(self.appview, expand=1, fill=tk.X, pady=0, padx=0, anchor="nw"), image=icon, **self.tab_button_style)        
         btn1_3_1.pack(side=tk.LEFT)
 
+        self.frame1_3_2_var = tk.BooleanVar(value=config_utils.config_values.get("fake_barrier"))
+        self.frame1_3_2_var_switch = customtkinter.CTkSwitch(frame1_3_top, variable=self.frame1_3_2_var, command=lambda: self.update_fake_barrier_switch_config(self.frame1_3_2_var, "fake_barrier"), text="Fake Barrier", onvalue=True, offvalue=False)
+        self.frame1_3_2_var_switch.pack(side=tk.LEFT)
 
 
     def set_stage_var(self, choice):
@@ -512,7 +515,7 @@ class ImageSelectorApp():
         image.thumbnail((50,50))
         photo = customtkinter.CTkImage(image, size=(50, 50))
 
-        selected_image_label = customtkinter.CTkLabel(selected_image_frame, image=photo, text=selected_file, compound=tk.TOP)
+        selected_image_label = customtkinter.CTkLabel(selected_image_frame, image=photo, text=selected_file.replace(".png",""), compound=tk.TOP)
         selected_image_label.pack()
         
         self.insert_extra_images_tooltip(image_path, selected_image_label)
@@ -577,7 +580,10 @@ class ImageSelectorApp():
         barrier_image_list = []
         original_path = Path(image_path)
         images_path_list = [original_path] + src.file_utils.find_matching_files(constants.IMAGES_EXTRA_PATH, original_path.stem, ".png")
-        barrier_images_path_list = src.file_utils.find_matching_files(constants.IMAGES_BARRIER_PATH, original_path.stem, ".png")
+        if config_utils.config_values.get("has_barrier") and not config_utils.config_values.get("fake_barrier"):
+            barrier_images_path_list = src.file_utils.find_matching_files(constants.IMAGES_BARRIER_PATH, original_path.stem, ".png")
+        else:
+            barrier_images_path_list = []
 
         for image_path in images_path_list:
             icon_image = Image.open(image_path)
@@ -715,6 +721,10 @@ class ImageSelectorApp():
     def update_combobox_config(self, config_var_name, new_value):
         config_utils.update_config(config_var_name, new_value)
 
+    def update_fake_barrier_switch_config(self, swich_var, config_var_name):
+        self.update_switch_config(swich_var, config_var_name)
+        self.reveal_or_hide_barrier_img()
+
     def reveal_or_hide_barrier_img(self):
         has_barrier = self.frame3_1_top_1_2_var_control_barrier.get()
         config_utils.update_config("has_barrier", has_barrier)
@@ -734,15 +744,18 @@ class ImageSelectorApp():
             for image_widgets in self.get_selected_images_widgets_list():
                 label = image_widgets[0]
                 image_path = Path(constants.IMAGES_PATH, label.cget("text"))
-                image2_path = Path(constants.IMAGES_BARRIER_PATH, label.cget("text"))
+                if not image_path.suffix:
+                    image_path = image_path.with_suffix('.png')
                 image = Image.open(image_path)
-                if os.path.exists(image2_path):
-                    image2 = Image.open(image2_path)
-                else:
-                    image2 = Image.open(r"assets\x.png")
                 image.thumbnail((50, 50))
-                image2.thumbnail((50, 50))
-                image = merge_pil_images(image, image2)
+                if not config_utils.config_values.get("fake_barrier"):
+                    image2_path = Path(constants.IMAGES_BARRIER_PATH, label.cget("text"))
+                    if os.path.exists(image2_path):
+                        image2 = Image.open(image2_path)
+                    else:
+                        image2 = Image.open(r"assets\x.png")
+                    image2.thumbnail((50, 50))
+                    image = merge_pil_images(image, image2)
                 photo = customtkinter.CTkImage(image, size=image.size)
                 label.configure(image=photo)
                 label.photo = photo

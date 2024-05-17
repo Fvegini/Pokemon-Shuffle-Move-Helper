@@ -580,5 +580,7 @@ def is_fast_swipe():
 def is_tapper_active():
     return config_utils.config_values.get("tapper")
 
+def is_fake_barrier_active():
+    return config_utils.config_values.get("fake_barrier")
 
 time_pattern = re.compile(r"\b(\d{1,2})\s*:\s*(\d{1,2})\b")
