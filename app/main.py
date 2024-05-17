@@ -795,7 +795,13 @@ class ImageSelectorApp():
             for pokemon in current_team:
                 if pokemon.name in load_from_shuffle.exception_list:
                     pokemon.name = f"_{pokemon.name}"
-                self.insert_image_widget(pokemon.name, skip_barrier=True, stage_added=pokemon.stage_added)
+                if pokemon.stage_added:
+                    self.insert_image_widget(pokemon.name, skip_barrier=True, stage_added=True)
+            for pokemon in current_team:
+                if pokemon.name in load_from_shuffle.exception_list:
+                    pokemon.name = f"_{pokemon.name}"
+                if not pokemon.stage_added:
+                    self.insert_image_widget(pokemon.name, skip_barrier=True, stage_added=False)
             if self.frame3_1_top_1_2_var_control_barrier.get():
                 self.reveal_or_hide_barrier_img()
         except Exception as ex:
