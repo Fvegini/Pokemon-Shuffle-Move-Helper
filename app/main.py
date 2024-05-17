@@ -100,16 +100,17 @@ class ImageSelectorApp():
 
         icon = self.get_icon("mouse")
 
-        btn1_1_1 = customtkinter.CTkButton(frame1_1_top, text="Board Position", command=lambda: self.show_board_position_selector_app(), image=icon, **self.tab_button_style)
+        # btn1_1_1 = customtkinter.CTkButton(frame1_1_top, text="Board Position", command=lambda: self.show_board_position_selector_app(), image=icon, **self.tab_button_style)
         btn1_1_2 = customtkinter.CTkButton(frame1_1_top, text="Select Current Stage", command=lambda: self.show_select_current_stage(), image=icon, **self.tab_button_style)
-        btn1_1_3 = customtkinter.CTkButton(frame1_1_top, text="Add Auto Click Icon", command=lambda: self.show_add_auto_click_icon(), image=icon, **self.tab_button_style)
+        btn1_1_3 = customtkinter.CTkButton(frame1_1_top, text="Get Coordinates", command=lambda: self.show_add_auto_click_icon(), image=icon, **self.tab_button_style)
         btn1_1_4 = customtkinter.CTkButton(frame1_1_top, text="Reload ADB", command=lambda: adb_utils.update_adb_connection(True), image=icon, **self.tab_button_style)
 
-        CTkToolTip(btn1_1_1, delay=0.5, message="Configure Shuffle Move Board Position")
+        # CTkToolTip(btn1_1_1, delay=0.5, message="Configure Shuffle Move Board Position")
         CTkToolTip(btn1_1_2, delay=0.5, message="Configure Current Stage for the Auto loop")
-        CTkToolTip(btn1_1_3, delay=0.5, message="Add a new icon to the search loop when not on active stage")
+        CTkToolTip(btn1_1_3, delay=0.5, message="Select a Square on the screen and print its coordinates")
+        CTkToolTip(btn1_1_4, delay=0.5, message="Reload the ADB Coordinates")
 
-        btn1_1_1.pack(side=tk.LEFT)
+        # btn1_1_1.pack(side=tk.LEFT)
         btn1_1_2.pack(side=tk.LEFT)
         btn1_1_3.pack(side=tk.LEFT)
         btn1_1_4.pack(side=tk.LEFT)
@@ -138,11 +139,17 @@ class ImageSelectorApp():
         self.strategy_combobox = customtkinter.CTkComboBox(frame1_2_top_1, values=constants.move_strategy.values(),
                                      command=self.set_strategy_var, variable=self.strategy_combobox_var, state="readonly", **self.tab_comboboxmenu_style)
         
-        self.stage_combobox.pack(side=tk.BOTTOM)
-        self.strategy_combobox.pack(side=tk.BOTTOM)
+        self.stage_hearts_combobox = customtkinter.CTkComboBox(frame1_2_top_1, values=["1","2","3"], width=70, state="readonly", 
+                                     command=lambda new_value: self.update_combobox_config("stage_hearts", new_value), **self.tab_comboboxmenu_style)
+        self.stage_hearts_combobox.set(config_utils.config_values.get("stage_hearts", 1))
+        
+        # self.stage_combobox.pack(side=tk.BOTTOM)
+        # self.strategy_combobox.pack(side=tk.BOTTOM)
+        self.stage_hearts_combobox.pack(side=tk.BOTTOM)
 
-        customtkinter.CTkLabel(frame1_2_top_2, text="Stage Type").pack(side=tk.BOTTOM, anchor=tk.E)
-        customtkinter.CTkLabel(frame1_2_top_2, text="Move Strategy").pack(side=tk.BOTTOM, anchor=tk.E)
+        # customtkinter.CTkLabel(frame1_2_top_2, text="Stage Type").pack(side=tk.BOTTOM, anchor=tk.W)
+        # customtkinter.CTkLabel(frame1_2_top_2, text="Move Strategy").pack(side=tk.BOTTOM, anchor=tk.W)
+        customtkinter.CTkLabel(frame1_2_top_2, text="Stage Hearts").pack(side=tk.BOTTOM, anchor=tk.W)
 
         frame1_3 = customtkinter.CTkFrame(self.tab1, fg_color="transparent")
         frame1_3_top = customtkinter.CTkFrame(frame1_3, fg_color="transparent")
@@ -166,6 +173,8 @@ class ImageSelectorApp():
     def set_strategy_var(self, choice):
         current_run.current_strategy = [k for k, v in constants.move_strategy.items() if v == choice][0]
         current_run.has_modifications = True
+
+
 
     def create_tab_2(self):
         frame2_1 = customtkinter.CTkFrame(self.tab2, fg_color="transparent")
@@ -390,8 +399,11 @@ class ImageSelectorApp():
         self.image_preview.grid(row=1, column=3, padx=5, pady=5, sticky='w')
 
     def create_bottom_message(self):
-        self.info_message = customtkinter.CTkLabel(self.appview, text=f"Model: {embed.model_path.parent.name}")
-        self.info_message.pack(side=tk.BOTTOM, fill=tk.X)
+        self.log_widget = customtkinter.CTkTextbox(self.master)
+        self.log_widget.pack(side=tk.BOTTOM, fill=tk.X)
+        
+        log_handler = log_utils.LogHandler(self.log_widget, max_lines=50)
+        log_utils.insert_new_handler(log_handler)
 
     def create_right_app_screen(self):
         self.scrollable_frame = customtkinter.CTkScrollableFrame(self.appview, width=200, height=200, orientation="horizontal")
@@ -510,19 +522,19 @@ class ImageSelectorApp():
 
         selected_image_frame.pokemon = Pokemon(selected_image_frame.name, False, False)
 
-        checkbox_disable: customtkinter.CTkCheckBox = customtkinter.CTkCheckBox(selected_image_frame, text="Disable", checkbox_width=12, checkbox_height=12, corner_radius=0, onvalue=True, offvalue=False, command=lambda: self.checkbox_disable_clicked(checkbox_disable, selected_image_frame))
+        checkbox_disable = customtkinter.CTkCheckBox(selected_image_frame, text="Disable", checkbox_width=12, checkbox_height=12, corner_radius=0, onvalue=True, offvalue=False, command=lambda: self.checkbox_disable_clicked(checkbox_disable, selected_image_frame))
         checkbox_disable.pack(padx=(25, 0))
 
         if disabled:
             checkbox_disable.toggle()
 
-        checkbox_stage_added: customtkinter.CTkCheckBox = customtkinter.CTkCheckBox(selected_image_frame, text="Stage Add", checkbox_width=12, checkbox_height=12, corner_radius=0, onvalue=True, offvalue=False, command=lambda: self.checkbox_stage_add_clicked(checkbox_stage_added, selected_image_frame))
+        checkbox_stage_added = customtkinter.CTkCheckBox(selected_image_frame, text="Stage Add", checkbox_width=12, checkbox_height=12, corner_radius=0, onvalue=True, offvalue=False, command=lambda: self.checkbox_stage_add_clicked(checkbox_stage_added, selected_image_frame))
         checkbox_stage_added.pack(padx=(25, 0))
         if stage_added:
             checkbox_stage_added.toggle()
 
         if selected_file in self.mega_list:
-            checkbox_mega: Any = customtkinter.CTkCheckBox(selected_image_frame, text="Mega", checkbox_width=12, checkbox_height=12, corner_radius=0, onvalue=True, offvalue=False, command=lambda: self.checkbox_mega_click(checkbox_mega, selected_image_frame))
+            checkbox_mega = customtkinter.CTkCheckBox(selected_image_frame, text="Mega", checkbox_width=12, checkbox_height=12, corner_radius=0, onvalue=True, offvalue=False, command=lambda: self.checkbox_mega_click(checkbox_mega, selected_image_frame))
             checkbox_mega.pack(padx=(25, 0))
             selected_image_frame.megaed = False
             selected_image_frame.checkbox_mega = checkbox_mega
@@ -637,7 +649,10 @@ class ImageSelectorApp():
             log.debug("Timed, starting fast next play")
             self.master.after(1, self.control_loop_function)
         else:
-            self.master.after(100, self.control_loop_function)
+            if current_run.is_combo_active or custom_utils.is_tapper_active():
+                self.master.after(100, self.control_loop_function)
+            else:
+                self.master.after(2000, self.control_loop_function)
         return match_result
 
     def execute_board_analysis_threaded(self, source=None, create_image=False, skip_shuffle_move=False, forced_board_image=None):
@@ -693,9 +708,12 @@ class ImageSelectorApp():
             return customtkinter.CTkImage(Image.open(Path("assets", "fonts", f"{icon_name}-solid.png")), size=(25, 25))
 
     def update_switch_config(self, swich_var, config_var_name):
-        v = swich_var.get()
-        config_utils.update_config(config_var_name, v)
+        new_value = swich_var.get()
+        config_utils.update_config(config_var_name, new_value)
         current_run.has_modifications = True
+        
+    def update_combobox_config(self, config_var_name, new_value):
+        config_utils.update_config(config_var_name, new_value)
 
     def reveal_or_hide_barrier_img(self):
         has_barrier = self.frame3_1_top_1_2_var_control_barrier.get()

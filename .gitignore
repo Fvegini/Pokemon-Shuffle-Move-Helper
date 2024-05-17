@@ -1,10 +1,13 @@
 env
+venv
 .vscode
 __pycache__
 *test
 to_remove
 last_board.png
 last_screen.png
+current_stage.png
+FLANN.png
 *.pkl
 custom_tk
 *.ini

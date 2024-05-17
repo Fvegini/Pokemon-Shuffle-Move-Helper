@@ -144,6 +144,7 @@ class Board():
 
 class Screen():
     
+    loaded: bool = True
     resolution_dict: dict
     board_top_left: tuple
     board_bottom_right: tuple
@@ -156,6 +157,7 @@ class Screen():
         self.mydict = resolution_dict
         board = resolution_dict.get("Board")
         if not board:
+            self.loaded = False
             board = (0, 0, 0, 0)
         board_top_left = board[0:2]
         board_bottom_right = board[2:4]

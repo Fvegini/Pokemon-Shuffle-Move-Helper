@@ -2,6 +2,7 @@ from typing import List
 import cv2
 import numpy as np
 from pathlib import Path
+from src import execution_variables
 from src.custom_utils import is_meowth_stage
 from src.embed import loaded_embedder
 from src import constants, custom_utils, config_utils, socket_utils, shuffle_config_files, adb_utils, log_utils, file_utils
@@ -146,15 +147,16 @@ def get_metrics(match_list):
 
     
 def start_from_helper(pokemon_list: list[Pokemon], has_barriers, root=None, source=None, create_image=False, skip_shuffle_move=False, forced_board_image=None) -> MatchResult:
+    log.debug("Starting a new execution")
     icons_list = load_icon_classes(pokemon_list, has_barriers)
     cell_list = make_cell_list(forced_board_image)
     original_image = cv2.imread(constants.LAST_SCREEN_IMAGE_PATH)
     current_screen_image = cv2.imread(constants.LAST_SCREEN_IMAGE_PATH)
-    is_combo_active = False
+    current_run.is_combo_active = False
     
     if source == "loop":
         if is_on_stage(current_screen_image):
-            is_combo_active = verify_active_combo(current_screen_image)
+            current_run.is_combo_active = verify_active_combo(current_screen_image)
         else:
             if should_auto_next_stage():
                 click_buttons(current_screen_image)
@@ -164,7 +166,7 @@ def start_from_helper(pokemon_list: list[Pokemon], has_barriers, root=None, sour
     else:
         current_run.mega_activated_this_round = False
         current_run.last_execution_swiped = False
-    match_list = match_cell_with_icons(icons_list, cell_list, has_barriers, is_combo_active)
+    match_list = match_cell_with_icons(icons_list, cell_list, has_barriers, current_run.is_combo_active)
     if skip_shuffle_move:
         return MatchResult(match_list=match_list)
     current_board = Board(match_list, pokemon_list, icons_list)
@@ -179,7 +181,7 @@ def start_from_helper(pokemon_list: list[Pokemon], has_barriers, root=None, sour
     if source == "loop" and custom_utils.is_tapper_active() and current_board.has_mega and has_mega_match_active(current_board):
         execute_tapper(current_board)
         return MatchResult()
-    elif source == "loop" and not custom_utils.is_fast_swipe() and not custom_utils.is_timed_stage() and is_combo_active:
+    elif source == "loop" and not custom_utils.is_fast_swipe() and not custom_utils.is_timed_stage() and current_run.is_combo_active:
         return MatchResult()
     result = socket_utils.loadNewBoard()
     swiped = adb_utils.execute_play(result, current_board)
@@ -191,7 +193,7 @@ def start_from_helper(pokemon_list: list[Pokemon], has_barriers, root=None, sour
     return MatchResult(result=result, match_image=result_image, match_list=match_list)
 
 
-def  verify_active_combo(current_screen_image):
+def verify_active_combo(current_screen_image):
     return adb_utils.has_icon_match(current_screen_image, constants.COMBO_IMAGE, "Combo", extra_timeout=0, click=False, min_point=30)
 
 def execute_tapper(current_board: Board):

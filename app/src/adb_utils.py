@@ -55,6 +55,8 @@ def get_screenshot():
     return img
 
 def crop_board(img):
+    if not get_screen().loaded:
+        update_adb_connection(True)
     img = img[get_screen().board_top_left[1]:get_screen().board_bottom_right[1], get_screen().board_top_left[0]:get_screen().board_bottom_right[0]].copy()
     cv2.imwrite(constants.LAST_BOARD_IMAGE_PATH, img)
     return img
@@ -130,14 +132,14 @@ def check_hearts(original_image):
             return
         hearts_number = int(hearts_number_str)
         log.debug(f"Current Hearts amount is: {hearts_number}")
-        if not is_escalation_battle() and hearts_number == 0:
-            wait_until_next_heart(original_image)
+        if not is_escalation_battle() and hearts_number < config_utils.config_values.get("stage_hearts", 1):
+            wait_until_fill_hearts(original_image, hearts_number)
         elif hearts_number >= 5 or current_run.hearts_loop_counter > 20:
             log.debug("Hearts maxed, small click test") #Try to skip the daily login bonus screen
             subprocess.Popen(f"{current_run.adb_shell_command} input tap {get_screen().get_position('Hearts')[0]} {get_screen().get_position('Hearts')[1]}", stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
         elif is_escalation_battle() and is_angry_active():
             if hearts_number == 0:
-                wait_until_next_heart(original_image)
+                wait_until_fill_hearts(original_image, hearts_number, 1)
         elif is_escalation_battle() and hearts_number <= 1:
             #The idea here is wait until has 1 life and 5 minutes waiting for the next.. then play the stage
             #On the next cycle, if the angry mode is activated it will wait until the next life, play and repeat.
@@ -163,16 +165,16 @@ def process_time(mystring):
         return re.findall(custom_utils.time_pattern, mystring)[0]
     except:
         log.error(f"Hearts Timer problem, original string: {mystring}")
-        return None, None
+        return 30, 0
 
 def is_angry_active():
     return current_run.angry_mode_active
 
-def wait_until_next_heart(original_image):
+def wait_until_fill_hearts(original_image, current_hearts, aimed_hearts=4):
     hearts_timer = get_label(original_image, "HeartTimer")
     minutes, seconds = process_time(hearts_timer)
-    current_run.thread_sleep_timer = int(minutes) * 60 + int(seconds) + 5
-    log.debug(f"Hearts Ended, waiting for {current_run.thread_sleep_timer} seconds")
+    current_run.thread_sleep_timer = (int(minutes) * 60) + int(seconds) + 5 + ((aimed_hearts - current_hearts - 1) * 30 * 60)
+    log.debug(f"Hearts Ended, waiting until {time.strftime('%H:%M:%S', time.localtime(time.time() + current_run.thread_sleep_timer))} ({current_run.thread_sleep_timer}) seconds")
     time.sleep(current_run.thread_sleep_timer)
     current_run.thread_sleep_timer = 0
 
@@ -287,7 +289,7 @@ def has_icon_match(original_image, icon_path, position="CompleteScreen", extra_t
             if m.distance < 0.7*n.distance:
                 good.append(m)
         if len(good)<MIN_MATCH_COUNT:
-            log.debug(f"Image not visible: {Path(icon_path).stem} - {len(good)} point found")
+            # log.debug(f"Image not visible: {Path(icon_path).stem} - {len(good)} point found")
             return False
         log.debug(f"Image Found with points: {Path(icon_path).stem} - {len(good)}")
         src_pts = np.float32([ kp1[m.queryIdx].pt for m in good ]).reshape(-1,1,2) #type: ignore

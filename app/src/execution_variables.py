@@ -23,6 +23,7 @@ class ExecutionVariable:
         self.metal_icon = classes.Icon("Metal", Path("Metal.png"), False)
         self.metal_match = classes.Match(None, None, self.metal_icon)
         self.fake_barrier_active = True
+        self.is_combo_active = False
         
 
 current_run = ExecutionVariable()

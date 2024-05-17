@@ -39,6 +39,7 @@ def loadNewBoard():
             if not result:
                 log.error(f"Socket connected on port {socket_port} but without any response.")
             else:
+                result = result.strip()
                 log.info(f"Shuffle Move Result: {result}")
             return result
     except:

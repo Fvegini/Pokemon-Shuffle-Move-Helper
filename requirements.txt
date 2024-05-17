@@ -11,6 +11,5 @@ thefuzz==0.22.1
 requests==2.31.0
 pytesseract===0.3.10
 levenshtein
-# pip install screen-ocr[winrt]
 # viztracer==0.16.2
 # pyinstaller==6.3.0
