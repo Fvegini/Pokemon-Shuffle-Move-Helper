@@ -129,7 +129,7 @@ class Board():
     frozen_list: list[str]
     has_mega: bool
     mega_name: str
-    moves_left: int = 5
+    moves_left: str = "5"
     current_score: int = 0
     stage_name: str = ""
     

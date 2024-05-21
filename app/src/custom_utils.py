@@ -525,6 +525,9 @@ def split_list_to_dict(complete_list, interest_list):
     return result_dict
 
 def find_slot_to_mega(current_board: Board):
+    #The idea of this one is when on timed stage sometimes there's actually no move to do
+    #So you need to move two icons do make it able to do a real move on the next play
+    #I try to do it by moving a "mega" icon close to another (when there's space also space for a third)  
     from_matrix, to_matrix = search_space_to_fit_mega(current_board.match_sequence, current_board.mega_name)
     from_row = from_matrix[0] + 1
     from_column = from_matrix[1] + 1
@@ -582,5 +585,8 @@ def is_tapper_active():
 
 def is_fake_barrier_active():
     return config_utils.config_values.get("fake_barrier")
+
+def is_debug_mode_active():
+    return config_utils.config_values.get("debug_mode")
 
 time_pattern = re.compile(r"\b(\d{1,2})\s*:\s*(\d{1,2})\b")

@@ -12,7 +12,7 @@ class LogHandler(logging.Handler):
         self.widget = widget
         self.max_lines = max_lines
         self.log_lines = deque(maxlen=max_lines)
-        self.setFormatter(logging.Formatter(f'%(asctime)s.%(msecs)03d %(levelname)s - %(filename)s - %(message)s', "%Y-%m-%d %H:%M:%S"))
+        self.setFormatter(logging.Formatter(f'%(asctime)s.%(msecs)03d %(levelname)s - %(filename)s_%(lineno)d - %(message)s', "%Y-%m-%d %H:%M:%S"))
 
     def emit(self, record):
         msg = self.format(record)
@@ -35,7 +35,7 @@ try:
 except:
     log.setLevel(logging.DEBUG)
 handler = logging.StreamHandler(sys.stdout)
-handler.setFormatter(logging.Formatter(f'%(asctime)s.%(msecs)03d %(levelname)s - %(filename)s - %(message)s', "%Y-%m-%d %H:%M:%S"))
+handler.setFormatter(logging.Formatter(f'%(asctime)s.%(msecs)03d %(levelname)s - %(filename)s_%(lineno)d - %(message)s', "%Y-%m-%d %H:%M:%S"))
 log.addHandler(handler)
 log.propagate = False
 

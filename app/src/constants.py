@@ -100,8 +100,8 @@ RESOLUTIONS = {
     "1600x900": {
         "CompleteScreen": (0, 0, 900, 1600),
         "TopScreen": (0, 0, 900, 716),
-        "HeartTimer": (26, 52, 172, 111),
-        "Hearts": (223, 60, 319, 113),
+        "HeartTimer": (44, 62, 158, 103),
+        "Hearts": (230, 62, 299, 105),
         "Continue": (271, 1463, 646, 1578),
         "Start!": (271, 1463, 646, 1578),
         "To Map": (271, 1463, 646, 1578),
@@ -129,6 +129,8 @@ SURVIVAL_MODE_STAGE_NAME = "SURVIVAL_MODE"
 
 SURVIVAL_MODE_TXT = r"assets\survival_list.txt"
 ADB_IMAGE_FOLDER = r"assets\adb"
+MEOWTH_DEBUG_IMAGE_FOLDER = r"assets\adb\debug\meowth"
+DEBUG_STAGES_IMAGE_FOLDER = r"assets\adb\debug\complete"
 CURRENT_STAGE_IMAGE = r"assets\adb\current_stage.png"
 MEOWTH_STAGE_IMAGE = r"assets\adb\meowth_037.png"
 SURVIVAL_MODE_STAGE_IMAGE = r"assets\adb\survival_mode.png"

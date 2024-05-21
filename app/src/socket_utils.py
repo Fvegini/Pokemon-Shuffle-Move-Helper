@@ -31,6 +31,7 @@ def loadNewBoard():
     try:
         if not socket_port:
             load_socker_port()
+        log.debug("Making socket call to Shuffle Move")
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             s.settimeout(50)
             s.connect(('localhost', socket_port))  # Use the same port as in the Java application

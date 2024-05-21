@@ -1,3 +1,4 @@
+import os
 import subprocess
 import math
 import cv2
@@ -14,7 +15,7 @@ import pytesseract
 from src import screen_utils
 from src.screen_utils import get_screen
 from pathlib import Path
-from src import log_utils
+from src import log_utils, file_utils
 import re
 
 log = log_utils.get_logger()
@@ -88,8 +89,9 @@ def execute_play(result, board_results):
                 #increase the chances that the swipe input will move to the correct cell and not one before it.
                 new_to_x, new_to_y = move_second_point(from_x, from_y, to_x, to_y, get_screen().board_w/2.5, get_screen().board_h/2.5)
                 adb_run_swipe(from_x, from_y, new_to_x, new_to_y, 350)
-                time.sleep(1.0)
-                return True
+                current_run.last_swipe_timer = time.time()
+                current_run.last_execution_swiped = True
+                return
     except Exception as ex:
         log.error(f"Error on execute_play: {ex}")
     return False
@@ -205,6 +207,9 @@ def check_buttons_to_click(original_image):
     if was_clicked and is_escalation_battle():
         verify_angry_mode(original_image, double_try=True)
     if has_text_match(original_image, "To Map", extra_timeout=1+timeout_increase):
+        if custom_utils.is_meowth_stage():
+            os.makedirs(constants.MEOWTH_DEBUG_IMAGE_FOLDER, exist_ok=True)
+            cv2.imwrite(os.path.join(constants.MEOWTH_DEBUG_IMAGE_FOLDER,f"{time.strftime('%Y_%m_%d_%H_%M')}.png") ,original_image)
         was_clicked = True
         original_image = get_screenshot()
     if has_text_match(original_image, "Continue", extra_timeout=1+timeout_increase):
@@ -235,21 +240,26 @@ def check_buttons_to_click(original_image):
         original_image = get_screenshot()
     if has_text_match(original_image, "Close", extra_timeout=1+timeout_increase):
         was_clicked = True
-        original_image = get_screenshot()   
-        
+        original_image = get_screenshot()
     if not was_clicked:
         return click_return_buttons(original_image, timeout_increase)
     if was_clicked:
-        hearts_loop_counter = 0
+        current_run.hearts_loop_counter = 0
     return
 
 def click_ok_buttons(original_image, timeout_increase):
-    return not has_icon_match(original_image, constants.OK_BUTTON_IMAGE, extra_timeout=1+timeout_increase, click=True) \
-            and not has_icon_match(original_image, constants.OK_BUTTON2_IMAGE, extra_timeout=1+timeout_increase, click=True)
+    if has_icon_match(original_image, constants.OK_BUTTON_IMAGE, extra_timeout=1+timeout_increase, click=True):
+        return True
+    if has_icon_match(original_image, constants.OK_BUTTON2_IMAGE, extra_timeout=1+timeout_increase, click=True):
+        return True
+    return False
 
 def click_return_buttons(original_image, timeout_increase):
-    return not has_icon_match(original_image, constants.RETURN_FLAG_IMAGE, extra_timeout=1+timeout_increase, click=True) \
-            and not has_icon_match(original_image, constants.RETURN_FLAG2_IMAGE, extra_timeout=1+timeout_increase, click=True)
+    if has_icon_match(original_image, constants.RETURN_FLAG_IMAGE, extra_timeout=1+timeout_increase, click=True):
+        return True
+    if has_icon_match(original_image, constants.RETURN_FLAG2_IMAGE, extra_timeout=1+timeout_increase, click=True):
+        return True
+
 def verify_angry_mode(original_image, double_try=False):
     is_angry = has_icon_match(original_image, constants.ANGRY_ICON_IMAGE) or has_icon_match(original_image, constants.ANGRY_ICON2_IMAGE)
     if is_angry:
@@ -331,7 +341,7 @@ def has_icon_match(original_image, icon_path, position="CompleteScreen", extra_t
     except:
         return False
 
-def text_visible(original_image, text, custom_click=None, custom_search_text=None):
+def text_visible(original_image, text, custom_click=None, custom_search_text=None, should_print=True):
     r = get_screen().get_position(text)
     img = original_image.copy()
     img = img[r[1]:r[3], r[0]:r[2]]
@@ -344,7 +354,7 @@ def text_visible(original_image, text, custom_click=None, custom_search_text=Non
         found_text, postition = (custom_search_text.upper() in result.upper(), r)
     else:
         found_text, postition = (text.upper() in result.upper(), r)
-    if found_text:
+    if found_text and should_print:
         if custom_search_text:
             log.debug(f"Text Found for {custom_search_text} -> {result.strip()} - alternative {result2.strip()}")
         else:
@@ -352,7 +362,7 @@ def text_visible(original_image, text, custom_click=None, custom_search_text=Non
     return found_text, postition
 
 def has_text_match(original_image, text, extra_timeout=1.0, click=True, custom_click=None, custom_search_text=None, double_checked=False):
-    visible, r = text_visible(original_image, text, custom_click, custom_search_text)
+    visible, r = text_visible(original_image, text, custom_click, custom_search_text, should_print=double_checked)
     if visible and click:
         debug_image_path = Path(constants.ADB_IMAGE_FOLDER, "debug", f"{text}.png")
         if not debug_image_path.exists():
@@ -365,8 +375,8 @@ def has_text_match(original_image, text, extra_timeout=1.0, click=True, custom_c
             has_text_match(get_screenshot(), text, extra_timeout, click, custom_click, custom_search_text, double_checked=True)
         else:
             subprocess.Popen(f"{current_run.adb_shell_command} input tap {math.floor((r[0] + r[2])/2)} {math.floor((r[1] + r[3])/2)}", stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
-        if extra_timeout:
-            time.sleep(extra_timeout)
+            if extra_timeout:
+                time.sleep(extra_timeout)
     return visible
     
 
@@ -386,7 +396,7 @@ def get_current_stage(original_image):
         v = "{:03}".format(int(v))
     return v
 
-def get_current_stage2(original_image):
+def get_current_stage_name(original_image):
     v = get_label(original_image, "StageName")
     if v.isnumeric():
         v = "{:03}".format(int(v))
@@ -450,7 +460,6 @@ def get_coordinates_from_board_index(idx):
     cell_x1 =  math.floor(get_screen().board_x + (get_screen().board_w * (column)))
     cell_y1 =  math.floor(get_screen().board_y + (get_screen().board_h * (row)))
     return cell_x0,cell_y0,cell_x1,cell_y1
-    
 
 def adb_run_swipe(from_x, from_y, to_x, to_y, delay, skip_on_error=False):
     try:

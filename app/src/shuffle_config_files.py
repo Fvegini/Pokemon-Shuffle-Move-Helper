@@ -69,7 +69,7 @@ def get_team_from_config_file_line(line, expand_megas):
                 final_team.append(Pokemon(mega_name, False, False))
     return final_team
 
-def create_board_files(current_board: Board, source=None, stage=None, is_meowth_stage=False):
+def update_shuffle_move_files(current_board: Board, source=None, stage=None):
     names_list = []
     frozen_list = []
     mega_activated = MEGA_NOT_ACTIVATED
@@ -104,12 +104,12 @@ def create_board_files(current_board: Board, source=None, stage=None, is_meowth_
     update_preferences(current_board.current_score, current_board.moves_left)
     if current_run.has_modifications or source == "bot":
         update_teams_file(complete_names_list, mega_name, current_board.extra_supports_list, stage)
-        update_gradingModes_file(source, mega_activated, is_meowth_stage, current_board)
+        update_gradingModes_file(source, mega_activated, current_board)
         current_run.has_modifications = False
-    elif is_meowth_stage:
-        update_gradingModes_file(source, mega_activated, is_meowth_stage, current_board)
+    elif custom_utils.is_meowth_stage():
+        update_gradingModes_file(source, mega_activated, current_board)
     elif current_run.current_strategy == constants.GRADING_MEGA_PROGRESS:
-        update_gradingModes_file(source, mega_activated, is_meowth_stage, current_board)
+        update_gradingModes_file(source, mega_activated, current_board)
     has_mega = mega_activated == MEGA_ACTIVATED
     current_board.has_mega = has_mega
     return
@@ -171,7 +171,7 @@ def update_current_stage(current_stage):
         file.writelines(lines)
     return
 
-def update_preferences(current_score=0, moves_left=5):
+def update_preferences(current_score=0, moves_left="5"):
     #INTEGER STAGE_CURRENT_SCORE 1111
     with open(PREFERENCES_PATH, 'r') as file:
         lines = file.readlines()
@@ -250,10 +250,10 @@ def update_teams_file_with_move_string(move_string, stage_name):
         update_teams_file_with_move_string(new_move_string, new_stage_name)
     return move_string
 
-def update_gradingModes_file(source, mega_activated, is_meowth_stage, current_board):
+def update_gradingModes_file(source, mega_activated, current_board):
     if source == "bot":
         strategy = constants.GRADING_TOTAL_SCORE
-    elif is_meowth_stage:
+    elif custom_utils.is_meowth_stage():
         if current_board.moves_left.isnumeric() and int(current_board.moves_left) <= 2:
             strategy = '037MeowthEndGame'
         else:

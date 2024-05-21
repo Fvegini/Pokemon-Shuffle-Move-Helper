@@ -17,12 +17,16 @@ class ExecutionVariable:
         self.angry_mode_active = False
         self.thread_sleep_timer = 0
         self.stage_timer = None
+        self.last_swipe_timer = None
         self.mega_activated_this_round = False
         self.last_execution_swiped = False
         self.last_pokemon_board_sequence = None
         self.metal_icon = classes.Icon("Metal", Path("Metal.png"), False)
         self.metal_match = classes.Match(None, None, self.metal_icon)
         self.is_combo_active = False
+        self.id = None
+        self.first_move = False
+        self.move_number = 0
         
 
 current_run = ExecutionVariable()
