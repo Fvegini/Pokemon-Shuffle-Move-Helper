@@ -13,8 +13,12 @@ from src import log_utils
 import time
 from src.screen_utils import get_screen
 from thefuzz import fuzz
+import io
 
 log = log_utils.get_logger()
+FROZEN_IMAGE = cv2.imread(Path(constants.ASSETS_PATH, "frozen.png").as_posix(), cv2.IMREAD_UNCHANGED)
+invalid_values = ["Wood", "Frozen", "Metal"]
+time_pattern = re.compile(r"\b(\d{1,2})\s*:\s*(\d{1,2})\b")
 
 def resize_cv2_image(image, target_size):
     try:
@@ -223,7 +227,7 @@ def make_match_image_comparison(result, match_list: List[Match]):
 
         return file_utils.concatenate_list_images([final_image1, final_image2])
     except:
-        return None
+        return np.zeros((100,100,3), dtype=np.uint8)
 
 def extract_result_idx(result):
     try:
@@ -283,8 +287,6 @@ def add_layer(image, color):
     else:
         raise Exception("Wrong color")
     return cv2.addWeighted(image, 0.5, transparent_layer, 0.5, 0)
-
-FROZEN_IMAGE = cv2.imread(Path(constants.ASSETS_PATH, "frozen.png").as_posix(), cv2.IMREAD_UNCHANGED)
 
 def add_transparent_image(background, foreground=FROZEN_IMAGE):
     foreground_resized = cv2.resize(foreground, (background.shape[1], background.shape[0]))
@@ -454,8 +456,6 @@ def replace_all_3_matches_indices(mylist: List[Match], replace_match):
         mylist[index] = replace_match
     return mylist
 
-invalid_values = ["Wood", "Frozen", "Metal"]
-
 def search_space_to_fit_mega(mylist: List[Match], target_value):
     matrix = np.array(mylist).reshape((6,6))
     cell_to_move_icon = None
@@ -564,6 +564,27 @@ def timer_decorator(func):
 def time_difference_in_seconds(start_time):
     return time.time() - start_time
 
+def compress_image_and_save(cv2_img, save_path, max_bytes=150000, initial_quality=50):
+
+    pil_image = cv2_to_pil(cv2_img)
+
+    quality = initial_quality
+
+    # Loop para ajustar a qualidade da imagem até que ela atenda ao limite de tamanho
+    while quality > 6:
+    # Crie um buffer de memória para a imagem
+        buffered = io.BytesIO()
+
+        pil_image.save(buffered, format="JPEG", optimize=True, quality=quality)
+
+        # Verifique o tamanho do buffer
+        if len(buffered.getvalue()) <= max_bytes:
+            break  # A imagem atende ao limite de tamanho
+        else:
+            quality -= 5  # Reduza a qualidade e tente novamente
+    
+    pil_image.save(save_path, format="JPEG", optimize=True, quality=quality)
+
 
 def is_timed_stage():
     return config_utils.config_values.get("timed_stage")
@@ -588,5 +609,3 @@ def is_fake_barrier_active():
 
 def is_debug_mode_active():
     return config_utils.config_values.get("debug_mode")
-
-time_pattern = re.compile(r"\b(\d{1,2})\s*:\s*(\d{1,2})\b")

@@ -91,7 +91,7 @@ def execute_play(result, board_results):
                 adb_run_swipe(from_x, from_y, new_to_x, new_to_y, 350)
                 current_run.last_swipe_timer = time.time()
                 current_run.last_execution_swiped = True
-                return
+                return True
     except Exception as ex:
         log.error(f"Error on execute_play: {ex}")
     return False
@@ -134,33 +134,45 @@ def check_hearts(original_image):
             return
         hearts_number = int(hearts_number_str)
         log.debug(f"Current Hearts amount is: {hearts_number}")
-        if not is_escalation_battle() and hearts_number < config_utils.config_values.get("stage_hearts", 1):
-            wait_until_fill_hearts(original_image, hearts_number)
-        elif hearts_number >= 5 or current_run.hearts_loop_counter > 20:
+        if hearts_number >= 5 or current_run.hearts_loop_counter > 20:
             log.debug("Hearts maxed, small click test") #Try to skip the daily login bonus screen
             subprocess.Popen(f"{current_run.adb_shell_command} input tap {get_screen().get_position('Hearts')[0]} {get_screen().get_position('Hearts')[1]}", stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
-        elif is_escalation_battle() and is_angry_active():
-            if hearts_number == 0:
-                wait_until_fill_hearts(original_image, hearts_number, 1)
-        elif is_escalation_battle() and hearts_number <= 1:
-            #The idea here is wait until has 1 life and 5 minutes waiting for the next.. then play the stage
-            #On the next cycle, if the angry mode is activated it will wait until the next life, play and repeat.
-            hearts_timer = get_label(original_image, "HeartTimer")
-            minutes, seconds = process_time(hearts_timer)
-            seconds_to_next_heart = int(minutes) * 60 + int(seconds) + 5
-            seconds_to_5_minutes_until_next_heart = seconds_to_next_heart - 540
-            time_to_wait = seconds_to_5_minutes_until_next_heart
-            if hearts_number == 0:
-                time_to_wait+= 1800
-            time_to_wait = max(time_to_wait, 0) # Avoid negative number when there's less than 5 minutes to next life.
-            current_run.thread_sleep_timer = int(time_to_wait)
-            log.debug(f"Hearts Ended, waiting for {current_run.thread_sleep_timer} seconds - ESCALATION BATTLE TEST")
-            time.sleep(current_run.thread_sleep_timer)
-            log.debug("Sleep ended, continuing")
-            current_run.thread_sleep_timer = 0
+        if is_escalation_battle():
+            escalation_hearts_processing(original_image, hearts_number)
+        elif hearts_number < config_utils.config_values.get("stage_hearts", 1):
+            wait_until_fill_hearts(original_image, hearts_number)
     except Exception as ex:
         log.debug(f"Error checking hearts number: {ex}")
         return
+
+def escalation_hearts_processing(original_image, hearts_number):
+    if is_angry_active():
+        if hearts_number == 0:
+            wait_until_fill_hearts(original_image, hearts_number, 1)
+        else:
+            return
+    elif hearts_number > 1:
+        return
+    else:
+        verify_angry_mode(original_image, max_retries=1)
+        if is_angry_active():
+            return escalation_hearts_processing(original_image, hearts_number)
+
+        #The idea here is wait until has 1 life and 7 minutes waiting for the next.. then play the stage
+        #On the next cycle, if the angry mode is activated it will wait until the next life, play and repeat.
+        hearts_timer = get_label(original_image, "HeartTimer")
+        minutes, seconds = process_time(hearts_timer)
+        seconds_to_next_heart = int(minutes) * 60 + int(seconds) + 5
+        seconds_to_5_minutes_until_next_heart = seconds_to_next_heart - 420
+        time_to_wait = seconds_to_5_minutes_until_next_heart
+        if hearts_number == 0:
+            time_to_wait+= 1800
+        time_to_wait = max(time_to_wait, 0) # Avoid negative number when there's less than 5 minutes to next life.
+        current_run.thread_sleep_timer = int(time_to_wait)
+        log.debug(f"Escalation Hearts Management: Waiting until {time.strftime('%H:%M:%S', time.localtime(time.time() + current_run.thread_sleep_timer))} ({current_run.thread_sleep_timer}) seconds")
+        time.sleep(current_run.thread_sleep_timer)
+        log.debug("Escalation sleep ended, continuing")
+        current_run.thread_sleep_timer = 0
 
 def process_time(mystring):
     try:
@@ -204,8 +216,6 @@ def check_buttons_to_click(original_image):
     if has_icon_match(original_image, current_stage_image_path, extra_timeout=1+timeout_increase, click=True, min_point=40):
         was_clicked = True
         original_image = get_screenshot()
-    if was_clicked and is_escalation_battle():
-        verify_angry_mode(original_image, double_try=True)
     if has_text_match(original_image, "To Map", extra_timeout=1+timeout_increase):
         if custom_utils.is_meowth_stage():
             os.makedirs(constants.MEOWTH_DEBUG_IMAGE_FOLDER, exist_ok=True)
@@ -260,20 +270,26 @@ def click_return_buttons(original_image, timeout_increase):
     if has_icon_match(original_image, constants.RETURN_FLAG2_IMAGE, extra_timeout=1+timeout_increase, click=True):
         return True
 
-def verify_angry_mode(original_image, double_try=False):
+def verify_angry_mode(original_image, retry_count=0, max_retries=0):
+    if current_run.angry_mode_active:
+        return
+    
+    if current_run.last_stage_had_anger:
+        log.info("Since the last stage was already angered, the current one can't be. This is a test to avoid false positives on the stage cleared screen.")
+        return
+    
     is_angry = has_icon_match(original_image, constants.ANGRY_ICON_IMAGE) or has_icon_match(original_image, constants.ANGRY_ICON2_IMAGE)
-    if is_angry:
+    is_angry_text = has_text_match(original_image, "Angry", custom_search_text="grew angry")
+    
+    if is_angry or is_angry_text:
         current_run.angry_mode_active = True
         log.info("Angry Mode is ACTIVE")
         return
-    elif double_try:
+    
+    if retry_count < max_retries:
         time.sleep(5)
-        original_image = get_screenshot()
-        is_angry = has_icon_match(original_image, constants.ANGRY_ICON_IMAGE) or has_icon_match(original_image, constants.ANGRY_ICON2_IMAGE)
-        if is_angry:
-            current_run.angry_mode_active = True
-            log.info("Angry Mode is ACTIVE")
-            return
+        new_image = get_screenshot()
+        verify_angry_mode(new_image, retry_count + 1, max_retries)
     return
     
 def has_icon_match(original_image, icon_path, position="CompleteScreen", extra_timeout=1.0, click=True, min_point=10, debug=False, double_checked=False):
@@ -301,7 +317,6 @@ def has_icon_match(original_image, icon_path, position="CompleteScreen", extra_t
         if len(good)<MIN_MATCH_COUNT:
             # log.debug(f"Image not visible: {Path(icon_path).stem} - {len(good)} point found")
             return False
-        log.debug(f"Image Found with points: {Path(icon_path).stem} - {len(good)}")
         src_pts = np.float32([ kp1[m.queryIdx].pt for m in good ]).reshape(-1,1,2) #type: ignore
         dst_pts = np.float32([ kp2[m.trainIdx].pt for m in good ]).reshape(-1,1,2) #type: ignore
         M, mask = cv2.findHomography(src_pts, dst_pts, cv2.RANSAC,5.0)
@@ -331,7 +346,9 @@ def has_icon_match(original_image, icon_path, position="CompleteScreen", extra_t
 
         if click and not double_checked:
             return has_icon_match(get_screenshot(), icon_path, position, extra_timeout, click, min_point, debug, double_checked=True) #Add a double-check with a new ScreenShot before the click
-        elif click and double_checked:
+        if double_checked:
+            log.debug(f"Image Found with points: {Path(icon_path).stem} - {len(good)}")
+        if click and double_checked:
             box_center_x = int((box[0][0] + box[2][0]) / 2)
             box_center_y = int((box[0][1] + box[2][1]) / 2)
             subprocess.Popen(f"{current_run.adb_shell_command} input tap {r[0] + box_center_x} {r[1] + box_center_y}", stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
@@ -463,6 +480,7 @@ def get_coordinates_from_board_index(idx):
 
 def adb_run_swipe(from_x, from_y, to_x, to_y, delay, skip_on_error=False):
     try:
+        log.debug(f"Swiping at: {from_x} {from_y} {to_x} {to_y} {delay}")
         return subprocess.Popen(f"{current_run.adb_shell_command} input swipe {from_x} {from_y} {to_x} {to_y} {delay}", stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
     except:
         if skip_on_error:
@@ -472,6 +490,7 @@ def adb_run_swipe(from_x, from_y, to_x, to_y, delay, skip_on_error=False):
 
 def adb_run_tap(x ,y, skip_on_error=False):
     try:
+        log.debug(f"Tapping at: {x}, {y}")
         return subprocess.Popen(f"{current_run.adb_shell_command} input tap {x} {y}", stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
     except:
         if skip_on_error:

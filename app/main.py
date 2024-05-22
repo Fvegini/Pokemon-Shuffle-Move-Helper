@@ -678,12 +678,7 @@ class ImageSelectorApp():
                 self.analysis_lock = threading.Lock()
                 current_run.thread_sleep_timer = 0
             log.info("Loop Mode Off")
-            current_run.mega_activated_this_round = False
-            current_run.last_execution_swiped = False
-            current_run.stage_timer = None
-            current_run.id = None
-            current_run.move_number = 0
-            current_run.first_move = False
+            current_run.clear_stage_variables()
             return
         else:
             self.execute_board_analysis_threaded(source="loop")

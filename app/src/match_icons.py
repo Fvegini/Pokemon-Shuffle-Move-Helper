@@ -90,7 +90,7 @@ def compare_with_list(original_image, icons_list: List[Icon], has_barriers):
             best_match.name = f"{constants.BARRIER_PREFIX}{best_match.name}" #type: ignore
     return best_match
 
-def has_white_border(image, threshold=190, border_size=10, debug=False):
+def has_white_border(image, threshold=170, border_size=10, debug=False):
     # height, width = image.shape[:2]
     if debug:
         top_border_img = image[:border_size, :]
@@ -118,9 +118,6 @@ def has_white_border(image, threshold=190, border_size=10, debug=False):
     return [top_border, bottom_border, left_border, right_border].count(True) >= 3 
 
 
-
-
-
 def calculate_percentage_difference(num1, num2):
     average = (num1 + num2) / 2
     percentage_difference = abs((num1 - num2) / average) * 100
@@ -146,51 +143,78 @@ def get_metrics(match_list):
     "variance": statistics.variance(numbers_list),
     }
 
-    
 def start_from_helper(pokemon_list: list[Pokemon], has_barriers, root=None, source=None, create_image=False, skip_shuffle_move=False, forced_board_image=None) -> MatchResult:
     try:
         log.debug(f"Starting a new {source} execution")
         icons_list = load_icon_classes(pokemon_list, has_barriers)
+        can_swipe = is_swipe_enabled(source)
         current_screen_image = adb_utils.get_screenshot()
         current_run.is_combo_active = False
+        
         if skip_shuffle_move:
-            return MatchResult(match_list=match_cell_with_icons(icons_list, make_cell_list(forced_board_image), has_barriers, True))
+            return handle_skip_shuffle_move(icons_list, forced_board_image, has_barriers)
+
         if source == "loop":
-            if is_on_stage(current_screen_image):
-                current_run.is_combo_active = verify_active_combo(current_screen_image)
-            else:
-                if should_auto_next_stage():
-                    click_buttons(current_screen_image)
-                else:
-                    log.debug("Stage isn't active and next stage is disabled")
-                return MatchResult()
-        else:
-            current_run.mega_activated_this_round = False
-            current_run.last_execution_swiped = False
-        if current_run.first_move and not custom_utils.is_timed_stage() and not custom_utils.is_fast_swipe():
+            result = verify_or_enter_stage(current_screen_image)
+            if result is not None:
+                return result
+        can_swipe = can_swipe and not current_run.is_combo_active
+        initialize_run_flags()
+        if should_tap_and_recapture_screen():
             current_screen_image = click_and_recapture_screen()
+
         cell_list = make_cell_list(adb_utils.crop_board(current_screen_image))
-        current_screen_image = cv2.imread(constants.LAST_SCREEN_IMAGE_PATH)
         match_list = match_cell_with_icons(icons_list, cell_list, has_barriers, current_run.is_combo_active)
         current_board = Board(match_list, pokemon_list, icons_list)
         update_board_with_stage_parameters(current_screen_image, current_board)
         shuffle_config_files.update_shuffle_move_files(current_board, source)
-        if source == "loop" and custom_utils.is_tapper_active() and has_mega_match_active(current_board):
-            execute_tapper(current_board)
+
+        if verify_and_execute_tapper(source, current_board):
             return MatchResult()
-        elif source == "loop" and not next_swipe_enabled():
-            return MatchResult()
+        
         result = socket_utils.loadNewBoard()
-        if custom_utils.is_debug_mode_active():
-            save_debug_objects(result, match_list, current_board, source == "manual")
-        adb_utils.execute_play(result, current_board)
+
+        if can_swipe:
+            swiped = adb_utils.execute_play(result, current_board)
+            if custom_utils.is_debug_mode_active() and swiped:
+                save_debug_objects(result, match_list, source == "manual")
+
         result_image = None
+
         if create_image:
             result_image = custom_utils.make_match_image_comparison(result, match_list)
+
         return MatchResult(result=result, match_image=result_image, match_list=match_list)
     except Exception as ex:
         log.error(f"Unknown Error in main loop: {ex}")
         return MatchResult()
+
+def handle_skip_shuffle_move(icons_list, forced_board_image, has_barriers):
+    return MatchResult(match_list=match_cell_with_icons(icons_list, make_cell_list(forced_board_image), has_barriers, True))
+
+def verify_or_enter_stage(current_screen_image):
+    if is_on_stage(current_screen_image):
+        current_run.is_combo_active = verify_active_combo(current_screen_image)
+    else:
+        if should_auto_next_stage():
+            click_buttons(current_screen_image)
+        else:
+            log.debug("Stage isn't active and next stage is disabled")
+        return MatchResult()
+    return None
+
+def initialize_run_flags():
+    current_run.mega_activated_this_round = False
+    current_run.last_execution_swiped = False
+
+def should_tap_and_recapture_screen():
+    return current_run.first_move and not custom_utils.is_timed_stage() and not custom_utils.is_fast_swipe()
+
+def verify_and_execute_tapper(source, current_board):
+    if source == "loop" and custom_utils.is_tapper_active() and has_mega_match_active(current_board):
+        execute_tapper(current_board)
+        return True
+    return False
 
 def update_board_with_stage_parameters(current_screen_image, current_board):
     if not custom_utils.is_timed_stage():
@@ -203,30 +227,33 @@ def update_board_with_stage_parameters(current_screen_image, current_board):
 def click_and_recapture_screen():
     log.info("First Move, Executing clicks to speed up test")
     adb_utils.click_on_board_index(1)
-    time.sleep(0.1)
-    adb_utils.click_on_board_index(1)
-    time.sleep(0.1)
+    time.sleep(1)
     adb_utils.click_on_board_index(1)
     time.sleep(1)
+    adb_utils.click_on_board_index(1)
+    time.sleep(3)
+    log.info("First Move, Recapturing Screen")
     current_screen_image = adb_utils.get_screenshot()
     return current_screen_image
 
-def save_debug_objects(result, match_list, current_board, is_manual):
+def save_debug_objects(result="", match_list=[], is_manual=False):
     try:
-        if not is_manual:
-            session_folder = Path(constants.DEBUG_STAGES_IMAGE_FOLDER, current_run.id)
-            current_run.move_number+= 1
-            current_move = f"{current_run.move_number:02d}"
-        else:
+        if is_manual:
             session_folder = Path(constants.DEBUG_STAGES_IMAGE_FOLDER, "manual")
             os.makedirs(session_folder, exist_ok=True)
             current_move = custom_utils.get_next_filename_number_on_start(session_folder, "match_image.png")[0:2]
+        elif not current_run.id:
+            return
+        else:
+            session_folder = Path(constants.DEBUG_STAGES_IMAGE_FOLDER, current_run.id)
+            current_run.move_number+= 1
+            current_move = f"{current_run.move_number:02d}"
         id_folder = Path(session_folder, f"{current_move}")
         os.makedirs(session_folder, exist_ok=True)
         os.makedirs(id_folder, exist_ok=True)
         match_image = custom_utils.make_match_image_comparison(result, match_list)
-        cv2.imwrite(Path(session_folder, f"{current_move}_match_image.png").as_posix(), match_image)
-        shutil.copy(constants.LAST_SCREEN_IMAGE_PATH, id_folder)
+        custom_utils.compress_image_and_save(match_image, Path(session_folder, f"match_image_{current_move}.jpeg").as_posix())
+        custom_utils.compress_image_and_save(cv2.imread(constants.LAST_SCREEN_IMAGE_PATH), Path(session_folder, f"screen_{current_move}.jpeg").as_posix())
         shutil.copy(shuffle_config_files.PREFERENCES_PATH, id_folder)
         shutil.copy(shuffle_config_files.BOARD_PATH, id_folder)
         shutil.copy(shuffle_config_files.GRADING_MODES_PATH, id_folder)
@@ -234,7 +261,9 @@ def save_debug_objects(result, match_list, current_board, is_manual):
         log.error(f"Error on save_debug_objects: {ex}")
         return
 
-def next_swipe_enabled():
+def is_swipe_enabled(source):
+    if source == "manual":
+        return True
     if custom_utils.is_fast_swipe() or custom_utils.is_timed_stage():
         return True
     elif current_run.is_combo_active:
@@ -306,7 +335,6 @@ def mask_already_existant_matches(match_list: List[Match]) -> List[Match]:
 def is_on_stage(original_image):
     on_stage = adb_utils.has_icon_match(original_image, constants.ACTIVE_BOARD_IMAGE, "StageMenu", extra_timeout=0, click=False, min_point=8)
     if on_stage:
-        current_run.angry_mode_active = False
         current_run.non_stage_count = 0
         current_run.first_move = False
         if not current_run.id:
@@ -314,13 +342,18 @@ def is_on_stage(original_image):
             current_run.first_move = True
             current_run.stage_timer = time.time()
             current_run.move_number = 0
+            if current_run.last_stage_had_anger:
+                log.warning("Last Stage Had Anger Active, forcing clear the angry mode")
+                current_run.last_stage_had_anger = False
+                current_run.angry_mode_active = False
+            if current_run.angry_mode_active:
+                log.warning("Starting a stage with angry mode, setting the last_stage_variable to test")
+                current_run.angry_mode_active = False
+                current_run.last_stage_had_anger = True
     if not on_stage:
-        current_run.mega_activated_this_round = False
-        current_run.last_execution_swiped = False
-        current_run.stage_timer = None
-        current_run.id = None
-        current_run.move_number = 0
-        current_run.first_move = False
+        if current_run.id is not None:
+            save_debug_objects()
+            current_run.clear_stage_variables()
     elif on_stage and not current_run.stage_timer:
         current_run.stage_timer = time.time()
     elif on_stage and custom_utils.time_difference_in_seconds(current_run.stage_timer) > 60:

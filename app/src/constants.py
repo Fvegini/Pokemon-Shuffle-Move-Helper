@@ -115,6 +115,7 @@ RESOLUTIONS = {
         "CoinStage": (153, 646, 742, 826),
         "CoinStageYes": (118, 1041, 225, 1093),
         "Close": (348, 1033, 544, 1096),
+        "Angry": (70, 686, 826, 915), #The Grey Angry! text
         # "EscalationLevel": (558, 434, 841, 623),
         # Stage
         "Board": (16, 716, 886, 1586),
