@@ -162,7 +162,11 @@ class ImageSelectorApp():
         customtkinter.CTkLabel(frame1_3_bottom, text="Other").pack(side=tk.BOTTOM, anchor=tk.S)
 
         btn1_3_1 = customtkinter.CTkButton(frame1_3_top, text="Hide Main App", command=lambda: self.show_or_hide_widget(self.appview, expand=1, fill=tk.X, pady=0, padx=0, anchor="nw"), image=icon, **self.tab_button_style)        
+        btn1_3_2 = customtkinter.CTkButton(frame1_3_top, text="Save Screenshot", command=lambda: self.save_screenshot(), image=icon, **self.tab_button_style)        
+
         btn1_3_1.pack(side=tk.LEFT)
+        btn1_3_2.pack(side=tk.LEFT)        
+
 
     def set_stage_var(self, choice):
         current_run.current_stage = [k for k, v in constants.move_stages.items() if v == choice][0]
@@ -643,11 +647,11 @@ class ImageSelectorApp():
                 widget_list.append(image_widgets)
         return widget_list
 
-    def execute_board_analysis(self, source=None, create_image=False, skip_shuffle_move=False, forced_board_image=None) -> MatchResult:
+    def execute_board_analysis(self, source=None, create_image=False, skip_shuffle_move=False, forced_board_image=None, forced_swipe_skip=False) -> MatchResult:
         current_lock = self.analysis_lock
         if source == "manual":
             pokemons_list = self.extract_pokemon_list()
-            match_result = match_icons.start_from_helper(pokemons_list, self.frame3_1_top_1_2_var_control_barrier.get(), root=self, source=source, create_image=create_image, skip_shuffle_move=skip_shuffle_move, forced_board_image=forced_board_image)
+            match_result = match_icons.start_from_helper(pokemons_list, self.frame3_1_top_1_2_var_control_barrier.get(), root=self, source=source, create_image=create_image, skip_shuffle_move=skip_shuffle_move, forced_board_image=forced_board_image, forced_swipe_skip=forced_swipe_skip)
             return MatchResult()
 
         if self.analysis_lock.locked():
@@ -656,7 +660,7 @@ class ImageSelectorApp():
 
         with self.analysis_lock:
             pokemons_list = self.extract_pokemon_list()
-            match_result = match_icons.start_from_helper(pokemons_list, self.frame3_1_top_1_2_var_control_barrier.get(), root=self, source=source, create_image=create_image, skip_shuffle_move=skip_shuffle_move, forced_board_image=forced_board_image)
+            match_result = match_icons.start_from_helper(pokemons_list, self.frame3_1_top_1_2_var_control_barrier.get(), root=self, source=source, create_image=create_image, skip_shuffle_move=skip_shuffle_move, forced_board_image=forced_board_image, forced_swipe_skip=forced_swipe_skip)
         if current_lock != self.analysis_lock:
             return match_result #Avoid problem with older timed threads keeping a parallel loop.
         if config_utils.config_values.get("timed_stage"):
@@ -782,7 +786,7 @@ class ImageSelectorApp():
 
     def show_current_board_with_matches(self):
         self.disable_loop()
-        result = self.execute_board_analysis(create_image=True)
+        result = self.execute_board_analysis(create_image=True, forced_swipe_skip=False)
         image_frame = tk.Toplevel(self.master)
         image_frame.title("Image Frame")
         image = Image.fromarray(cv2.cvtColor(result.match_image, cv2.COLOR_RGB2BGR))
@@ -827,6 +831,12 @@ class ImageSelectorApp():
         else:
             widget.pack(**kwargs)
 
+    def save_screenshot(self):
+        current_screen_image = adb_utils.get_screenshot()
+        debug_folder = Path(constants.DEBUG_STAGES_IMAGE_FOLDER)
+        os.makedirs(debug_folder, exist_ok=True)
+        image_name = f"{time.strftime('%Y_%m_%d_%H_%M')}.jpeg"
+        custom_utils.compress_image_and_save(current_screen_image, Path(debug_folder, f"screen_{image_name}").as_posix())
 
 def merge_pil_images(image1, image2):
     # Get the width and height of each image

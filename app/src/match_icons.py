@@ -85,9 +85,10 @@ def compare_with_list(original_image, icons_list: List[Icon], has_barriers):
             best_match = match
     if has_barriers and custom_utils.is_fake_barrier_active():
         fake_barrier_img = custom_utils.resize_cv2_image(cut_borders(original_image), constants.downscale_res)
-        is_frozen = has_white_border(fake_barrier_img)
-        if is_frozen:
+        is_barrier = has_white_border(fake_barrier_img)
+        if is_barrier:
             best_match.name = f"{constants.BARRIER_PREFIX}{best_match.name}" #type: ignore
+            best_match.match_icon = custom_utils.add_transparent_image(best_match.match_icon) #type: ignore
     return best_match
 
 def has_white_border(image, threshold=170, border_size=10, debug=False):
@@ -143,7 +144,7 @@ def get_metrics(match_list):
     "variance": statistics.variance(numbers_list),
     }
 
-def start_from_helper(pokemon_list: list[Pokemon], has_barriers, root=None, source=None, create_image=False, skip_shuffle_move=False, forced_board_image=None) -> MatchResult:
+def start_from_helper(pokemon_list: list[Pokemon], has_barriers, root=None, source=None, create_image=False, skip_shuffle_move=False, forced_board_image=None, forced_swipe_skip=False) -> MatchResult:
     try:
         log.debug(f"Starting a new {source} execution")
         icons_list = load_icon_classes(pokemon_list, has_barriers)
@@ -158,7 +159,7 @@ def start_from_helper(pokemon_list: list[Pokemon], has_barriers, root=None, sour
             result = verify_or_enter_stage(current_screen_image)
             if result is not None:
                 return result
-        can_swipe = can_swipe and not current_run.is_combo_active
+        can_swipe = can_swipe and not current_run.is_combo_active and not forced_swipe_skip
         initialize_run_flags()
         if should_tap_and_recapture_screen():
             current_screen_image = click_and_recapture_screen()
@@ -248,15 +249,22 @@ def save_debug_objects(result="", match_list=[], is_manual=False):
             session_folder = Path(constants.DEBUG_STAGES_IMAGE_FOLDER, current_run.id)
             current_run.move_number+= 1
             current_move = f"{current_run.move_number:02d}"
-        id_folder = Path(session_folder, f"{current_move}")
+        id_folder = Path(session_folder, "configs", f"{current_move}")
+        match_folder = Path(session_folder, "matches")
+        boards_folder = Path(id_folder, "boards")
         os.makedirs(session_folder, exist_ok=True)
         os.makedirs(id_folder, exist_ok=True)
+        os.makedirs(match_folder, exist_ok=True)
+        os.makedirs(boards_folder, exist_ok=True)
+
         match_image = custom_utils.make_match_image_comparison(result, match_list)
-        custom_utils.compress_image_and_save(match_image, Path(session_folder, f"match_image_{current_move}.jpeg").as_posix())
-        custom_utils.compress_image_and_save(cv2.imread(constants.LAST_SCREEN_IMAGE_PATH), Path(session_folder, f"screen_{current_move}.jpeg").as_posix())
+        screen_image = custom_utils.add_result_to_screen(result, cv2.imread(constants.LAST_SCREEN_IMAGE_PATH))
+
+        custom_utils.compress_image_and_save(match_image, Path(match_folder, f"match_{current_move}.jpeg").as_posix())
+        custom_utils.compress_image_and_save(screen_image, Path(session_folder, f"screen_{current_move}.jpeg").as_posix())
         shutil.copy(shuffle_config_files.PREFERENCES_PATH, id_folder)
-        shutil.copy(shuffle_config_files.BOARD_PATH, id_folder)
         shutil.copy(shuffle_config_files.GRADING_MODES_PATH, id_folder)
+        shutil.copy(shuffle_config_files.BOARD_PATH, boards_folder)
     except Exception as ex:
         log.error(f"Error on save_debug_objects: {ex}")
         return
@@ -284,10 +292,10 @@ def execute_tapper(current_board: Board):
         if not has_mega_match_active(current_board):
             return
         log.debug("Executing crazy Tapper Logic")
-        interest_list = ["Frozen", "Metal", "Fog", "Stage_Added", "Wood"]
+        interest_list = ["Barrier", "Metal", "Fog", "Stage_Added", "Wood"]
         final_sequence = [process_tap_match(match, current_board.extra_supports_list) for match in current_board.match_sequence]
         tapper_dict = custom_utils.split_list_to_dict(final_sequence, interest_list)
-        tapper_dict["Frozen"] = [idx for idx, value in enumerate(current_board.frozen_list) if value == 'true' and final_sequence[idx] != "None"]
+        tapper_dict["Barrier"] = [idx for idx, value in enumerate(current_board.barrier_list) if value == 'true' and final_sequence[idx] != "None"]
         list_of_tuples = [(key, value) for key in interest_list for value in tapper_dict[key]]
         if len(list_of_tuples) < 5:
             list_of_tuples.extend(fixed_tuple_positions)
@@ -301,7 +309,7 @@ def has_mega_match_active(current_board: Board):
         return custom_utils.has_match_of_3(current_board.match_sequence, f"Mega_{current_board.mega_name}")
 
 def process_tap_match(match: Match, stage_added_list: list[str]):
-    if match.cosine_similarity < 0.6:
+    if match.cosine_similarity < 0.3:
         return "None"
     if match.name in stage_added_list:
         return "Stage_Added"

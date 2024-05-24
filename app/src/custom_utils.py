@@ -14,10 +14,11 @@ import time
 from src.screen_utils import get_screen
 from thefuzz import fuzz
 import io
+import math
 
 log = log_utils.get_logger()
-FROZEN_IMAGE = cv2.imread(Path(constants.ASSETS_PATH, "frozen.png").as_posix(), cv2.IMREAD_UNCHANGED)
-invalid_values = ["Wood", "Frozen", "Metal"]
+FROZEN_IMAGE = cv2.imread(Path(constants.ASSETS_PATH, "barrier.png").as_posix(), cv2.IMREAD_UNCHANGED)
+invalid_values = ["Wood", "Barrier", "Metal"]
 time_pattern = re.compile(r"\b(\d{1,2})\s*:\s*(\d{1,2})\b")
 
 def resize_cv2_image(image, target_size):
@@ -252,6 +253,27 @@ def extract_result_position(result):
     except:
         return None, None, None, None
 
+def add_result_to_screen(result, original_screen_image):
+    try:
+        red_row, red_column, blue_row, blue_column = extract_result_position(result)
+
+        red_x0 = math.floor(get_screen().board_x + (get_screen().board_w * (red_column - 1)))
+        red_y0 = math.floor(get_screen().board_y + (get_screen().board_h * (red_row - 1)))
+        blue_x0 = math.floor(get_screen().board_x + (get_screen().board_w * (blue_column - 1)))
+        blue_y0 = math.floor(get_screen().board_y + (get_screen().board_h * (blue_row - 1)))
+
+        red_x1 = math.floor(red_x0 + get_screen().board_w)
+        red_y1 = math.floor(red_y0 + get_screen().board_h)
+        blue_x1 = math.floor(blue_x0 + get_screen().board_w)
+        blue_y1 = math.floor(blue_y0 + get_screen().board_h)
+        
+        new_screen_image = add_layer_on_position(original_screen_image, "red", red_x0, red_y0, red_x1, red_y1)
+        new_screen_image = add_layer_on_position(new_screen_image, "blue", blue_x0, blue_y0, blue_x1, blue_y1)
+
+        return new_screen_image
+    except:
+        return original_screen_image
+
 def update_match_with_result(result, match_list: List[Match]):
     try:
        red = result.split(":")[0].split("->")[0].strip()
@@ -287,6 +309,21 @@ def add_layer(image, color):
     else:
         raise Exception("Wrong color")
     return cv2.addWeighted(image, 0.5, transparent_layer, 0.5, 0)
+
+def add_layer_on_position(image, color, x0, y0, x1, y1):
+    overlay = image.copy()
+    output = image.copy()
+    
+    alpha = 0.5  # Transparency factor
+    cv2.rectangle(overlay, (x0, y0), (x1, y1), (0, 0, 255), -1)  # Red color in BGR
+
+    if color == "red":
+        cv2.rectangle(overlay, (x0, y0), (x1, y1), (0, 0, 255), -1)  # Red color in BGR
+    elif color == "blue":
+        cv2.rectangle(overlay, (x0, y0), (x1, y1), (255, 0, 0), -1)  # Red color in BGR
+
+    # Blend the overlay with the original image
+    return cv2.addWeighted(overlay, alpha, output, 1 - alpha, 0, output)
 
 def add_transparent_image(background, foreground=FROZEN_IMAGE):
     foreground_resized = cv2.resize(foreground, (background.shape[1], background.shape[0]))
@@ -515,7 +552,7 @@ def search_space_to_fit_mega(mylist: List[Match], target_value):
 
 
 def split_list_to_dict(complete_list, interest_list):
-    result_dict: dict[Any, List] = {key: [] for key in interest_list}
+    result_dict = {key: [] for key in interest_list}
     for idx, string in enumerate(complete_list):
         if string not in interest_list:
             continue

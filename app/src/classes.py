@@ -126,7 +126,7 @@ class Board():
     extra_supports_list: list[str]
     sequence_names_list: list[str]
     original_complete_names_list: list[str]
-    frozen_list: list[str]
+    barrier_list: list[str]
     has_mega: bool
     mega_name: str
     moves_left: str = "5"
@@ -139,7 +139,7 @@ class Board():
         self.sequence_names_list = [match.name for match in self.match_sequence]
         self.original_complete_names_list = [icon.name for icon in icons_list]
         self.pokemon_board_sequence = [match.name for match in self.match_sequence]
-        self.frozen_list = []
+        self.barrier_list = []
         self.has_mega = False
 
 class Screen():

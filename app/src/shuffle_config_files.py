@@ -71,16 +71,16 @@ def get_team_from_config_file_line(line, expand_megas):
 
 def update_shuffle_move_files(current_board: Board, source=None, stage=None):
     names_list = []
-    frozen_list = []
+    barrier_list = []
     mega_activated = MEGA_NOT_ACTIVATED
     mega_name = "-"
 
     for name in current_board.sequence_names_list:
         if "Barrier_" in name:
             name = name.split("Barrier_")[1]
-            frozen_list.append("true")
+            barrier_list.append("true")
         else:
-            frozen_list.append("false")
+            barrier_list.append("false")
         if "Mega_" in name:
             new_name = name.split("Mega_")[1]
             names_list.append(new_name)
@@ -89,9 +89,9 @@ def update_shuffle_move_files(current_board: Board, source=None, stage=None):
         else:
             names_list.append(name)
 
-    names_list, frozen_list, mega_name = process_pokemon_names_list(current_board.sequence_names_list)
+    names_list, barrier_list, mega_name = process_pokemon_names_list(current_board.sequence_names_list)
     complete_names_list, _, forced_mega_name = process_pokemon_names_list(current_board.original_complete_names_list)
-    current_board.frozen_list = frozen_list
+    current_board.barrier_list = barrier_list
     if mega_name == "-":
         mega_name = forced_mega_name
     else:
@@ -100,7 +100,7 @@ def update_shuffle_move_files(current_board: Board, source=None, stage=None):
     
     if custom_utils.is_survival_mode():
         stage = get_stage_name(current_board.stage_name)
-    update_board_file(names_list, frozen_list, mega_activated, stage)
+    update_board_file(names_list, barrier_list, mega_activated, stage)
     update_preferences(current_board.current_score, current_board.moves_left)
     if current_run.has_modifications or source == "bot":
         update_teams_file(complete_names_list, mega_name, current_board.extra_supports_list, stage)
@@ -142,22 +142,22 @@ def load_stages_dict():
 
 def process_pokemon_names_list(original_names_list):
     names_list = []
-    frozen_list = []
+    barrier_list = []
     mega_name = "-"
 
     for name in original_names_list:
         if "Barrier_" in name:
             name = name.split("Barrier_")[1]
-            frozen_list.append("true")
+            barrier_list.append("true")
         else:
-            frozen_list.append("false")
+            barrier_list.append("false")
         if "Mega_" in name:
             new_name = name.split("Mega_")[1]
             names_list.append(new_name)
             mega_name = new_name
         else:
             names_list.append(name)    
-    return names_list, frozen_list, mega_name
+    return names_list, barrier_list, mega_name
 
 def update_current_stage(current_stage):
     with open(BOARD_PATH, 'r') as file:
@@ -186,7 +186,7 @@ def update_preferences(current_score=0, moves_left="5"):
         file.writelines(lines)
     return 
 
-def update_board_file(names_list, frozen_list, mega_activated, stage):
+def update_board_file(names_list, barrier_list, mega_activated, stage):
     if not stage:
         stage = current_run.current_stage
     board_file_content = f"""STAGE {stage}
@@ -194,22 +194,22 @@ MEGA_PROGRESS {mega_activated}
 STATUS NONE
 STATUS_DURATION 0
 ROW_1 {",".join(names_list[0:6])}
-FROW_1 {",".join(frozen_list[0:6])}
+FROW_1 {",".join(barrier_list[0:6])}
 CROW_1 {CROW}
 ROW_2 {",".join(names_list[6:12])}
-FROW_2 {",".join(frozen_list[6:12])}
+FROW_2 {",".join(barrier_list[6:12])}
 CROW_2 {CROW}
 ROW_3 {",".join(names_list[12:18])}
-FROW_3 {",".join(frozen_list[12:18])}
+FROW_3 {",".join(barrier_list[12:18])}
 CROW_3 {CROW}
 ROW_4 {",".join(names_list[18:24])}
-FROW_4 {",".join(frozen_list[18:24])}
+FROW_4 {",".join(barrier_list[18:24])}
 CROW_4 {CROW}
 ROW_5 {",".join(names_list[24:30])}
-FROW_5 {",".join(frozen_list[24:30])}
+FROW_5 {",".join(barrier_list[24:30])}
 CROW_5 {CROW}
 ROW_6 {",".join(names_list[30:36])}
-FROW_6 {",".join(frozen_list[30:36])}
+FROW_6 {",".join(barrier_list[30:36])}
 CROW_6 {CROW}
 """
     with open(BOARD_PATH, 'w') as file:
