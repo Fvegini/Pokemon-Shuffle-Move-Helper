@@ -622,6 +622,17 @@ def compress_image_and_save(cv2_img, save_path, max_bytes=150000, initial_qualit
     
     pil_image.save(save_path, format="JPEG", optimize=True, quality=quality)
 
+def verify_or_update_png_path(path) -> Path:
+    if not path.exists() and path.suffix != ".png":
+        path = path.with_suffix(".png")
+    return path
+
+
+    mypath = mypath if mypath.exists() else mypath.with_suffix(".png")
+    if not mypath.exists():
+        log.error(f"{mypath} not found")
+    return mypath
+
 
 def is_timed_stage():
     return config_utils.config_values.get("timed_stage")

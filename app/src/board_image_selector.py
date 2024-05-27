@@ -70,11 +70,11 @@ class PokemonIconSelector(tk.Toplevel):
         widgets_list = self.root.get_selected_images_widgets_list()
         for widgets in widgets_list:
             if self.folder == "barrier":
-                image_cv2 = custom_utils.open_cv2_image(Path(constants.IMAGES_PATH, widgets[0].cget("text")).as_posix())
+                image_cv2 = custom_utils.open_cv2_image(custom_utils.verify_or_update_png_path(Path(constants.IMAGES_PATH, widgets[0].cget("text"))).as_posix())
                 image_cv2 = custom_utils.add_transparent_image(image_cv2)
                 image = Image.fromarray(cv2.cvtColor(image_cv2, cv2.COLOR_RGB2BGR))
             else:
-                image = Image.open(Path(constants.IMAGES_PATH, widgets[0].cget("text")))
+                image = Image.open(custom_utils.verify_or_update_png_path(Path(constants.IMAGES_PATH, widgets[0].cget("text"))))
             tk_image = customtkinter.CTkImage(image, size=image.size)
 
             label = customtkinter.CTkLabel(self, image=tk_image, text="", cursor="hand2")
@@ -150,11 +150,12 @@ def remove_icon(image_path):
 def save_new_icon(image, image_name, folder):
     if folder == "barrier":
         os.makedirs(constants.IMAGES_BARRIER_PATH, exist_ok=True)
-        image_path = Path(constants.IMAGES_BARRIER_PATH, image_name)
+        image_path = custom_utils.verify_or_update_png_path(Path(constants.IMAGES_BARRIER_PATH, image_name))
         image_path = custom_utils.get_next_filename(image_path)
     else:
         os.makedirs(constants.IMAGES_EXTRA_PATH, exist_ok=True)
-        image_path = Path(constants.IMAGES_EXTRA_PATH, image_name)
+        image_path = custom_utils.verify_or_update_png_path(Path(constants.IMAGES_EXTRA_PATH, image_name))
         image_path = custom_utils.get_next_filename(image_path)
     image = image.resize(constants.downscale_res)
+    image_path = custom_utils.verify_or_update_png_path(image_path)
     image.save(image_path)
