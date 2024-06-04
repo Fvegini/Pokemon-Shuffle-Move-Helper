@@ -306,12 +306,12 @@ class ImageSelectorApp():
 
         self.frame3_1_top_4_1_var = tk.BooleanVar(value=config_utils.config_values.get("debug_mode"))      
         self.frame3_1_top_4_2_var = tk.BooleanVar(value=config_utils.config_values.get("fake_barrier")) 
-        self.frame3_1_top_4_3_var = tk.BooleanVar(value=config_utils.config_values.get("placeholder")) 
+        self.frame3_1_top_4_3_var = tk.BooleanVar(value=config_utils.config_values.get("extra_debug")) 
         self.frame3_1_top_4_4_var = tk.BooleanVar(value=config_utils.config_values.get("placeholder"))
         
         self.frame3_1_top_4_1_switch = customtkinter.CTkSwitch(frame3_1_top_4, variable=self.frame3_1_top_4_1_var, command=lambda: self.update_switch_config(self.frame3_1_top_4_1_var, "debug_mode"), text="Debug Mode", onvalue=True, offvalue=False)
         self.frame3_1_top_4_2_switch = customtkinter.CTkSwitch(frame3_1_top_4, variable=self.frame3_1_top_4_2_var, command=lambda: self.update_fake_barrier_switch_config(self.frame3_1_top_4_2_var, "fake_barrier"), text="Fake Barrier", onvalue=True, offvalue=False)
-        self.frame3_1_top_4_3_switch = customtkinter.CTkSwitch(frame3_1_top_4, variable=self.frame3_1_top_4_3_var, command=lambda: self.update_switch_config(self.frame3_1_top_4_3_var, "placeholder"), text="placeholder", onvalue=True, offvalue=False)
+        self.frame3_1_top_4_3_switch = customtkinter.CTkSwitch(frame3_1_top_4, variable=self.frame3_1_top_4_3_var, command=lambda: self.update_switch_config(self.frame3_1_top_4_3_var, "extra_debug"), text="Extra Debug", onvalue=True, offvalue=False)
         self.frame3_1_top_4_4_switch = customtkinter.CTkSwitch(frame3_1_top_4, variable=self.frame3_1_top_4_4_var, command=lambda: self.update_switch_config(self.frame3_1_top_4_4_var, "placeholder"), text="placeholder", onvalue=True, offvalue=False)
         
         self.frame3_1_top_4_1_switch.pack(side=tk.TOP, anchor=tk.W, padx=1)

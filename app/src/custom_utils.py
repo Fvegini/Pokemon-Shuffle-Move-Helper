@@ -627,11 +627,32 @@ def verify_or_update_png_path(path) -> Path:
         path = path.with_suffix(".png")
     return path
 
+def add_red_marker(image_path, points_list, marker_radius=20, transparency=0.7):
+    # Load the image
+    image = cv2.imread(image_path, cv2.IMREAD_UNCHANGED)
+    
+    if image is None:
+        raise ValueError(f"Image not found at path: {image_path}")
 
-    mypath = mypath if mypath.exists() else mypath.with_suffix(".png")
-    if not mypath.exists():
-        log.error(f"{mypath} not found")
-    return mypath
+    # Check if image has an alpha channel
+    if image.shape[2] == 3:
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2BGRA)
+
+    for x, y in points_list:
+        # Create an overlay with the same size as the image
+        overlay = image.copy()
+
+        # Define the color and thickness of the marker (Red in BGR format)
+        marker_color = (0, 0, 255, int(255 * transparency))  # Red with alpha for transparency
+
+        # Draw a filled circle (marker) on the overlay
+        cv2.circle(overlay, (x, y), marker_radius, marker_color, -1)
+
+        # Blend the overlay with the original image
+        cv2.addWeighted(overlay, transparency, image, 1 - transparency, 0, image)
+
+    return image
+
 
 
 def is_timed_stage():
@@ -657,3 +678,6 @@ def is_fake_barrier_active():
 
 def is_debug_mode_active():
     return config_utils.config_values.get("debug_mode")
+
+def is_extra_debug_active():
+    return config_utils.config_values.get("extra_debug")

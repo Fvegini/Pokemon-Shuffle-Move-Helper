@@ -17,7 +17,7 @@ from src.screen_utils import get_screen
 from pathlib import Path
 from src import log_utils, file_utils
 import re
-
+from datetime import datetime
 log = log_utils.get_logger()
 
 
@@ -136,7 +136,7 @@ def check_hearts(original_image):
         log.debug(f"Current Hearts amount is: {hearts_number}")
         if hearts_number >= 5 or current_run.hearts_loop_counter > 20:
             log.debug("Hearts maxed, small click test") #Try to skip the daily login bonus screen
-            subprocess.Popen(f"{current_run.adb_shell_command} input tap {get_screen().get_position('Hearts')[0]} {get_screen().get_position('Hearts')[1]}", stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
+            adb_run_tap(get_screen().get_position('Hearts')[0], get_screen().get_position('Hearts')[1])
         if is_escalation_battle():
             escalation_hearts_processing(original_image, hearts_number)
         elif hearts_number < config_utils.config_values.get("stage_hearts", 1):
@@ -351,7 +351,7 @@ def has_icon_match(original_image, icon_path, position="CompleteScreen", extra_t
         if click and double_checked:
             box_center_x = int((box[0][0] + box[2][0]) / 2)
             box_center_y = int((box[0][1] + box[2][1]) / 2)
-            subprocess.Popen(f"{current_run.adb_shell_command} input tap {r[0] + box_center_x} {r[1] + box_center_y}", stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
+            adb_run_tap(r[0] + box_center_x ,r[1] + box_center_y)
             if extra_timeout > 0:
                 time.sleep(extra_timeout)
         return True
@@ -391,7 +391,7 @@ def has_text_match(original_image, text, extra_timeout=1.0, click=True, custom_c
         if not double_checked:
             has_text_match(get_screenshot(), text, extra_timeout, click, custom_click, custom_search_text, double_checked=True)
         else:
-            subprocess.Popen(f"{current_run.adb_shell_command} input tap {math.floor((r[0] + r[2])/2)} {math.floor((r[1] + r[3])/2)}", stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
+            adb_run_tap(math.floor((r[0] + r[2])/2), math.floor((r[1] + r[3])/2))
             if extra_timeout:
                 time.sleep(extra_timeout)
     return visible
@@ -465,7 +465,7 @@ def click_on_board_index(index):
     cell_x0, cell_y0, cell_x1, cell_y1 = get_coordinates_from_board_index(index)
     center_x = math.floor((cell_x0 + cell_x1) / 2)
     center_y = math.floor((cell_y0 + cell_y1) / 2)
-    subprocess.Popen(f"{current_run.adb_shell_command} input tap {center_x} {center_y}", stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
+    adb_run_tap(center_x, center_y)
     time.sleep(0.1)
     return center_x, center_y
 
@@ -478,25 +478,35 @@ def get_coordinates_from_board_index(idx):
     cell_y1 =  math.floor(get_screen().board_y + (get_screen().board_h * (row)))
     return cell_x0,cell_y0,cell_x1,cell_y1
 
-def adb_run_swipe(from_x, from_y, to_x, to_y, delay, skip_on_error=False):
+def adb_run_swipe(from_x, from_y, to_x, to_y, delay, skip_on_error=False, skip_extra_debug=False):
     try:
         log.debug(f"Swiping at: {from_x} {from_y} {to_x} {to_y} {delay}")
-        return subprocess.Popen(f"{current_run.adb_shell_command} input swipe {from_x} {from_y} {to_x} {to_y} {delay}", stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
+        subprocess.Popen(f"{current_run.adb_shell_command} input swipe {from_x} {from_y} {to_x} {to_y} {delay}", stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
+        if not skip_extra_debug and custom_utils.is_extra_debug_active():
+            save_extra_debug_image([[from_x, from_y], [to_x, to_y]], "swipe")
     except:
         if skip_on_error:
             return
         update_adb_connection(reconfigure_screen=True)
-        adb_run_swipe(from_x, from_y, to_x, to_y, delay, skip_on_error=True)    
+        adb_run_swipe(from_x, from_y, to_x, to_y, delay, skip_on_error=True, skip_extra_debug=skip_extra_debug)
 
-def adb_run_tap(x ,y, skip_on_error=False):
+def adb_run_tap(x ,y, skip_on_error=False, skip_extra_debug=False):
     try:
         log.debug(f"Tapping at: {x}, {y}")
-        return subprocess.Popen(f"{current_run.adb_shell_command} input tap {x} {y}", stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
+        subprocess.Popen(f"{current_run.adb_shell_command} input tap {x} {y}", stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
+        if not skip_extra_debug and custom_utils.is_extra_debug_active():
+            save_extra_debug_image([[x, y]], "tap")
     except:
         if skip_on_error:
             return
         update_adb_connection(reconfigure_screen=True)
-        adb_run_tap(x ,y, skip_on_error=True)    
+        adb_run_tap(x ,y, skip_on_error=True, skip_extra_debug=skip_extra_debug)
+
+def save_extra_debug_image(points_list, suffix):
+    os.makedirs(constants.DEBUG_EXTRA_IMAGE_FOLDER, exist_ok=True)
+    image_path = Path(constants.DEBUG_EXTRA_IMAGE_FOLDER, f"{datetime.now().strftime('%Y_%m_%d_%H_%M_%S_%f')[:-3]}_{suffix}.jpeg")
+    image_with_markers = custom_utils.add_red_marker(constants.LAST_SCREEN_IMAGE_PATH, points_list)
+    custom_utils.compress_image_and_save(image_with_markers, image_path.as_posix(), initial_quality=6)
     
 def adb_run_screenshot(skip_on_error=False):
     try:

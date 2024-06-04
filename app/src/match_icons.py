@@ -159,10 +159,8 @@ def start_from_helper(pokemon_list: list[Pokemon], has_barriers, root=None, sour
             result = verify_or_enter_stage(current_screen_image)
             if result is not None:
                 return result
-        can_swipe = can_swipe and not current_run.is_combo_active and not forced_swipe_skip
+        can_swipe = can_swipe and not forced_swipe_skip and is_swipe_enabled(source)
         initialize_run_flags()
-        if should_tap_and_recapture_screen():
-            current_screen_image = click_and_recapture_screen()
 
         cell_list = make_cell_list(adb_utils.crop_board(current_screen_image))
         match_list = match_cell_with_icons(icons_list, cell_list, has_barriers, current_run.is_combo_active)
@@ -208,9 +206,6 @@ def initialize_run_flags():
     current_run.mega_activated_this_round = False
     current_run.last_execution_swiped = False
 
-def should_tap_and_recapture_screen():
-    return current_run.first_move and not custom_utils.is_timed_stage() and not custom_utils.is_fast_swipe()
-
 def verify_and_execute_tapper(source, current_board):
     if source == "loop" and custom_utils.is_tapper_active() and has_mega_match_active(current_board):
         execute_tapper(current_board)
@@ -224,18 +219,6 @@ def update_board_with_stage_parameters(current_screen_image, current_board):
             current_board.current_score = adb_utils.get_current_score(current_screen_image)
         if custom_utils.is_survival_mode():
             current_board.stage_name = adb_utils.get_current_stage_name(current_screen_image)
-
-def click_and_recapture_screen():
-    log.info("First Move, Executing clicks to speed up test")
-    adb_utils.click_on_board_index(1)
-    time.sleep(1)
-    adb_utils.click_on_board_index(1)
-    time.sleep(1)
-    adb_utils.click_on_board_index(1)
-    time.sleep(3)
-    log.info("First Move, Recapturing Screen")
-    current_screen_image = adb_utils.get_screenshot()
-    return current_screen_image
 
 def save_debug_objects(result="", match_list=[], is_manual=False):
     try:
@@ -360,7 +343,8 @@ def is_on_stage(original_image):
                 current_run.last_stage_had_anger = True
     if not on_stage:
         if current_run.id is not None:
-            save_debug_objects()
+            if custom_utils.is_debug_mode_active():
+                save_debug_objects()
             current_run.clear_stage_variables()
     elif on_stage and not current_run.stage_timer:
         current_run.stage_timer = time.time()
