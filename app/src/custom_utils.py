@@ -454,21 +454,29 @@ def capture_board_screensot(save=True, return_type="cv2"):
         else:
             return img
 
-def has_match_of_3(mylist, target):
-    matrix = np.array(mylist).reshape((6,6))
+def find_matches_of_3(mylist, target):
+    matrix = np.array(mylist).reshape((6, 6))
+    matches = []
+
     # Check rows
-    for row in matrix:
-        for i in range(len(row) - 2):
-            if row[i] == target and row[i+1] == target and row[i+2] == target:
-                return True
+    for i, row in enumerate(matrix):
+        for j in range(len(row) - 2):
+            if row[j] == target and row[j + 1] == target and row[j + 2] == target:
+                matches.append((i, j))
+                matches.append((i, j + 1))
+                matches.append((i, j + 2))
 
     # Check columns
     for i in range(len(matrix) - 2):
         for j in range(len(matrix[0])):
-            if matrix[i][j] == target and matrix[i+1][j] == target and matrix[i+2][j] == target:
-                return True
-
-    return False
+            if matrix[i][j] == target and matrix[i + 1][j] == target and matrix[i + 2][j] == target:
+                matches.append((i, j))
+                matches.append((i + 1, j))
+                matches.append((i + 2, j))
+    results_idx = []
+    for position in matches:
+        results_idx.append(custom_utils.coordinates_to_index(position[0], position[1], start_at_1=False))
+    return results_idx
 
 def replace_all_3_matches_indices(mylist: List[Match], replace_match):
     matrix = np.array(mylist).reshape((6,6))

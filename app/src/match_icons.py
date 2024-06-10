@@ -2,9 +2,8 @@ from typing import List
 import cv2
 import numpy as np
 from pathlib import Path
-from src import execution_variables
 from src.embed import loaded_embedder
-from src import constants, custom_utils, config_utils, socket_utils, shuffle_config_files, adb_utils, log_utils, file_utils
+from src import constants, custom_utils, config_utils, socket_utils, shuffle_config_files, adb_utils, log_utils, file_utils, tapper_utils
 from src.execution_variables import current_run
 from src.classes import Icon, Match, Pokemon, MatchResult, Board
 import statistics
@@ -173,7 +172,7 @@ def start_from_helper(pokemon_list: list[Pokemon], has_barriers, root=None, sour
         
         result = socket_utils.loadNewBoard()
 
-        if can_swipe:
+        if can_swipe and int(current_board.moves_left) > 0:
             swiped = adb_utils.execute_play(result, current_board)
             if custom_utils.is_debug_mode_active() and swiped:
                 save_debug_objects(result, match_list, source == "manual")
@@ -206,10 +205,10 @@ def initialize_run_flags():
     current_run.mega_activated_this_round = False
     current_run.last_execution_swiped = False
 
-def verify_and_execute_tapper(source, current_board):
-    if source == "loop" and custom_utils.is_tapper_active() and has_mega_match_active(current_board):
-        execute_tapper(current_board)
-        return True
+def verify_and_execute_tapper(source, current_board: Board):
+    if source == "loop" and custom_utils.is_tapper_active() and int(current_board.moves_left) > 0:
+        executed_tapper = execute_tapper(current_board)
+        return executed_tapper
     return False
 
 def update_board_with_stage_parameters(current_screen_image, current_board):
@@ -270,32 +269,62 @@ def verify_active_combo(current_screen_image):
     return adb_utils.has_icon_match(current_screen_image, constants.COMBO_IMAGE, "Combo", extra_timeout=0, click=False, min_point=30)
 
 def execute_tapper(current_board: Board):
-    if True or current_run.mega_activated_this_round or current_board.has_mega:
-        current_run.mega_activated_this_round = True
-        if not has_mega_match_active(current_board):
-            return
-        log.debug("Executing crazy Tapper Logic")
+    if current_board.has_mega:
+        mega_position_list = get_mega_match_active(current_board)
+        if len(mega_position_list) == 0:
+            return False
         interest_list = ["Barrier", "Metal", "Fog", "Stage_Added", "Wood"]
         final_sequence = [process_tap_match(match, current_board.extra_supports_list) for match in current_board.match_sequence]
+        for idx in mega_position_list:
+            final_sequence[idx] = "Air"
         tapper_dict = custom_utils.split_list_to_dict(final_sequence, interest_list)
         tapper_dict["Barrier"] = [idx for idx, value in enumerate(current_board.barrier_list) if value == 'true' and final_sequence[idx] != "None"]
         list_of_tuples = [(key, value) for key in interest_list for value in tapper_dict[key]]
-        if len(list_of_tuples) < 5:
-            list_of_tuples.extend(fixed_tuple_positions)
-        for icon, index in list_of_tuples[:5]:
-            x, y = adb_utils.click_on_board_index(index)
-            log.debug(f"Tapped on {icon} at {x}, {y}")
-        return
 
-def has_mega_match_active(current_board: Board):
+        if current_board.mega_name in ["Charizard_sx", "Pinsir", "Camerupt", "Rayquaza_s"]:
+            shape="cross"
+            num_points=2
+        elif current_board.mega_name in ["Tyranitar", "Aggron"]:
+            shape="cross"
+            num_points=3
+        elif current_board.mega_name in ["Beedrill"]:
+            shape="square"
+            num_points=1
+        else:
+            shape="cross"
+            num_points=2   
+
+        if len(list_of_tuples) > 0:
+            results_idx = tapper_utils.find_taps_to_clear_more_disruptions(final_sequence, shape, num_points)
+            for index in results_idx:
+                x, y = adb_utils.click_on_board_index(index)
+                x, y = adb_utils.click_on_board_index(index)
+                x, y = adb_utils.click_on_board_index(index)
+                log.debug(f"Tapping at cell {index+1} - {x}, {y} with the clear more disruptions logic") 
+        else:
+            results_idx = tapper_utils.find_taps_to_make_extra_matches(final_sequence, shape, num_points)
+            for index in results_idx:
+                x, y = adb_utils.click_on_board_index(index)
+                x, y = adb_utils.click_on_board_index(index)
+                x, y = adb_utils.click_on_board_index(index)
+                log.debug(f"Tapping at cell {index+1} - {x}, {y} with the make extra matches logic") 
+        return True
+
+
+
+
+def get_mega_match_active(current_board: Board):
     if current_board.has_mega:
-        return custom_utils.has_match_of_3(current_board.match_sequence, f"Mega_{current_board.mega_name}")
+        return custom_utils.find_matches_of_3(current_board.match_sequence, f"Mega_{current_board.mega_name}")
 
 def process_tap_match(match: Match, stage_added_list: list[str]):
     if match.cosine_similarity < 0.3:
         return "None"
-    if match.name in stage_added_list:
-        return "Stage_Added"
+    if any([True if (stage_added_name in match.name) else False for stage_added_name in stage_added_list]):
+        if "Barrier" in match.name:
+            return "Barrier_Stage_Added"
+        else:
+            return "Stage_Added"
     return match.name
 
 def click_buttons(current_screen_image):
@@ -317,10 +346,15 @@ def match_cell_with_icons(icons_list, cell_list, has_barriers, combo_is_running=
         match_list.append(result)
     if timed_stage:
         mask_already_existant_matches(match_list)
+        mask_inconsistencies(match_list)
     return match_list
 
 def mask_already_existant_matches(match_list: List[Match]) -> List[Match]:
     match_list = custom_utils.replace_all_3_matches_indices(match_list, current_run.metal_match)
+    return match_list
+
+def mask_inconsistencies(match_list):
+    #TODO ON NEXT TIMED EVENT
     return match_list
 
 def is_on_stage(original_image):
