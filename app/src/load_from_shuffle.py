@@ -51,7 +51,7 @@ class TeamLoader(tk.Toplevel):
             icons = icons_str.split(",")
             #Append mega:
             try:
-                mega_name = f"Mega_{parts[4]}"
+                mega_name = f"{constants.MEGA_PREFIX}{parts[4]}"
                 icons.append(mega_name)
             except:
                 pass

@@ -478,16 +478,22 @@ def find_matches_of_3(mylist, target):
         results_idx.append(custom_utils.coordinates_to_index(position[0], position[1], start_at_1=False))
     return results_idx
 
-def replace_all_3_matches_indices(mylist: List[Match], replace_match):
+def replace_all_3_matches_indices_and_air(mylist: List[Match], replace_match, current_run):
     matrix = np.array(mylist).reshape((6,6))
     matrix_index_list = []
+    matrix_air_index_list = []
+    ignore_mega = False
+    if custom_utils.is_tapper_active():
+        ignore_mega = True
     for i in range(6):
         for j in range(6):
             value = matrix[i][j]
             if value is None:
                 continue
+            if ignore_mega and value.name.startswith(constants.MEGA_PREFIX):
+                continue
             elif value == "Air":
-                matrix_index_list.extend([(i, j)])
+                matrix_air_index_list.extend([(i, j)])
                 continue
             # Check horizontal
             if j <= 3 and matrix[i][j + 1] == value and matrix[i][j + 2] == value:
@@ -499,6 +505,9 @@ def replace_all_3_matches_indices(mylist: List[Match], replace_match):
     for matrix_index in matrix_index_list:
         index = coordinates_to_index(matrix_index[0], matrix_index[1], start_at_1=False)
         mylist[index] = replace_match
+    for matrix_index in matrix_air_index_list:
+        index = coordinates_to_index(matrix_index[0], matrix_index[1], start_at_1=False)
+        mylist[index] = current_run.get_next_timed_fake_icon()
     return mylist
 
 def search_space_to_fit_mega(mylist: List[Match], target_value):
@@ -689,3 +698,9 @@ def is_debug_mode_active():
 
 def is_extra_debug_active():
     return config_utils.config_values.get("extra_debug")
+
+def is_sleep_machine_enabled():
+    return config_utils.config_values.get("sleep_machine")
+
+def is_adb_move_enabled():
+    return config_utils.config_values.get("adb_move")

@@ -53,7 +53,7 @@ def get_team_from_config_file_line(line, expand_megas):
     if len(values_list) == 1 or values_list[1] == "-":
         current_team = values_list[0].split(",")
     else:
-        current_team = values_list[0].split(",") + [f"Mega_{values_list[1]}"]
+        current_team = values_list[0].split(",") + [f"{constants.MEGA_PREFIX}{values_list[1]}"]
     if len(values_list) == 3:
         stage_added = values_list[2].split(",")
     else:
@@ -63,7 +63,7 @@ def get_team_from_config_file_line(line, expand_megas):
         pokemon = Pokemon(pokemon_name, False, (pokemon_name in stage_added))
         if pokemon not in final_team:
             final_team.append(pokemon)
-        mega_name = f"Mega_{pokemon.name}"
+        mega_name = f"{constants.MEGA_PREFIX}{pokemon.name}"
         if expand_megas:
             if mega_name in pokemon_names.original_names_set and mega_name not in final_team:
                 final_team.append(Pokemon(mega_name, False, False))
@@ -81,8 +81,8 @@ def update_shuffle_move_files(current_board: Board, source=None, stage=None):
             barrier_list.append("true")
         else:
             barrier_list.append("false")
-        if "Mega_" in name:
-            new_name = name.split("Mega_")[1]
+        if constants.MEGA_PREFIX in name:
+            new_name = name.split(constants.MEGA_PREFIX)[1]
             names_list.append(new_name)
             mega_activated = MEGA_ACTIVATED
             mega_name = new_name
@@ -151,8 +151,8 @@ def process_pokemon_names_list(original_names_list):
             barrier_list.append("true")
         else:
             barrier_list.append("false")
-        if "Mega_" in name:
-            new_name = name.split("Mega_")[1]
+        if constants.MEGA_PREFIX in name:
+            new_name = name.split(constants.MEGA_PREFIX)[1]
             names_list.append(new_name)
             mega_name = new_name
         else:

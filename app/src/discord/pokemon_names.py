@@ -79,8 +79,8 @@ def find_pokemon(original_pokemon_name):
 #                 similar_names = [fuzz_tuple[0] for fuzz_tuple in process.extractBests(pokemon_name, original_names_set, score_cutoff=80)]
 #                 pokemons_not_found[pokemon_name] = similar_names
 #             if final_pokemon_name:
-#                 if final_pokemon_name.startswith("Mega_"):
-#                     final_pokemon_name = final_pokemon_name.split("Mega_")[1]
+#                 if final_pokemon_name.startswith(constants.MEGA_PREFIX):
+#                     final_pokemon_name = final_pokemon_name.split(constants.MEGA_PREFIX)[1]
 #                     mega = final_pokemon_name
 #                 if final_pokemon_name not in pokemons_list:
 #                     pokemons_list.append(final_pokemon_name)

@@ -1,5 +1,5 @@
 from pathlib import Path
-from src import classes, log_utils
+from src import classes, constants, log_utils
 
 log = log_utils.get_logger()
 class ExecutionVariable:
@@ -29,6 +29,9 @@ class ExecutionVariable:
         self.id = None
         self.first_move = False
         self.move_number = 0
+        self.fake_matches = []
+        self.current_fake_match_index = -1
+        self.disable_loop = False
 
     def clear_stage_variables(self):
         if self.angry_mode_active:
@@ -47,6 +50,21 @@ class ExecutionVariable:
         self.angry_mode_active = False
         self.hearts_loop_counter = 0
         self.non_stage_count = 0
+        
+    def load_fake_matchs(self, skip_icons):
+        for image_path in Path(constants.IMAGES_PATH).glob("*.png"):
+            if image_path.stem not in skip_icons:
+                icon = classes.Icon(image_path.stem, image_path, False)
+                match = classes.Match(None, None, icon)
+                self.fake_matches.append(match)
+                if len(self.fake_matches) > 15:
+                    return
+        
+    def get_next_timed_fake_icon(self):
+        if len(self.fake_matches) == 0:
+            self.load_fake_matchs
+        self.current_fake_match_index = (self.current_fake_match_index + 1) % len(self.fake_matches)
+        return self.fake_matches[self.current_fake_match_index]
 
 
 current_run = ExecutionVariable()

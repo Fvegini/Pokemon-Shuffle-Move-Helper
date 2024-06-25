@@ -2,6 +2,7 @@ from pathlib import Path
 
 
 BARRIER_PREFIX = "Barrier_"
+MEGA_PREFIX = "Mega_"
 
 STAGE_FLANN_IMAGE_PATH = r"FLANN.png"
 LAST_BOARD_IMAGE_PATH = r"last_board.png"

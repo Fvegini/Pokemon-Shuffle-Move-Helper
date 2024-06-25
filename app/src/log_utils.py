@@ -1,4 +1,5 @@
 import logging
+from logging.handlers import RotatingFileHandler#, TimedRotatingFileHandler
 import os
 import sys
 
@@ -16,15 +17,14 @@ class LogHandler(logging.Handler):
 
     def emit(self, record):
         msg = self.format(record)
-        # self.log_lines.append(msg)
-        self.log_lines.appendleft(msg)
-        self.update_widget()
+        self.log_lines.append(msg)  # Append the message to the end
+        self.update_widget(msg)  # Pass only the new message
 
-    def update_widget(self):
-        # self.widget.config(state=tk.NORMAL)
-        self.widget.delete(1.0, tk.END)
-        self.widget.insert(tk.END, '\n'.join(self.log_lines))
-        # self.widget.config(state=tk.DISABLED)
+    def update_widget(self, new_message):
+        if len(self.log_lines) > self.max_lines:
+            self.widget.delete("1.0", "2.0")
+        self.widget.insert(tk.END, new_message + '\n')  # Insert the new message at the end
+        self.widget.see(tk.END)  # Ensure the latest message is visible
 
 
 log = logging.getLogger("custom")
@@ -34,13 +34,31 @@ try:
     log.setLevel(logging_level)
 except:
     log.setLevel(logging.DEBUG)
-handler = logging.StreamHandler(sys.stdout)
-handler.setFormatter(logging.Formatter(f'%(asctime)s.%(msecs)03d %(levelname)s - %(filename)s_%(lineno)d - %(message)s', "%Y-%m-%d %H:%M:%S"))
-log.addHandler(handler)
+
+
+console_handler = logging.StreamHandler(sys.stdout)
+console_handler.setFormatter(logging.Formatter(f'%(asctime)s.%(msecs)03d %(levelname)s - %(filename)s_%(lineno)d - %(message)s', "%Y-%m-%d %H:%M:%S"))
+log.addHandler(console_handler)
+
+# # Create a file handler
+# log_file = "debug/app.log"
+# file_handler = logging.FileHandler(log_file)
+# file_handler.setFormatter(logging.Formatter(f'%(asctime)s.%(msecs)03d %(levelname)s - %(filename)s_%(lineno)d - %(message)s', "%Y-%m-%d %H:%M:%S"))
+# log.addHandler(file_handler)
+
+# Create a rotating file handler (by size)
+log_file_size = "debug/app_size.log"
+rotating_file_handler = RotatingFileHandler(log_file_size, maxBytes=10*1024*1024, backupCount=5)  # 10MB per file, keep 5 backups
+rotating_file_handler.setFormatter(logging.Formatter(f'%(asctime)s.%(msecs)03d %(levelname)s - %(filename)s_%(lineno)d - %(message)s', "%Y-%m-%d %H:%M:%S"))
+log.addHandler(rotating_file_handler)
+
+# # Create a timed rotating file handler (by day)
+# log_file_time = "app_time.log"
+# timed_rotating_file_handler = TimedRotatingFileHandler(log_file_time, when="midnight", interval=1, backupCount=7)  # Rotate daily, keep 7 backups
+# timed_rotating_file_handler.setFormatter(logging.Formatter(f'%(asctime)s.%(msecs)03d %(levelname)s - %(filename)s_%(lineno)d - %(message)s', "%Y-%m-%d %H:%M:%S"))
+# log.addHandler(timed_rotating_file_handler)
+
 log.propagate = False
-
-
-
 
 
 def insert_new_handler(custom_handler):

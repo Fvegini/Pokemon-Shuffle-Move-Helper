@@ -206,14 +206,14 @@ def initialize_run_flags():
     current_run.last_execution_swiped = False
 
 def verify_and_execute_tapper(source, current_board: Board):
-    if source == "loop" and custom_utils.is_tapper_active() and int(current_board.moves_left) > 0:
+    if custom_utils.is_tapper_active() and int(current_board.moves_left) > 0:
         executed_tapper = execute_tapper(current_board)
         return executed_tapper
     return False
 
 def update_board_with_stage_parameters(current_screen_image, current_board):
+    current_board.moves_left = adb_utils.get_moves_left(current_screen_image)
     if not custom_utils.is_timed_stage():
-        current_board.moves_left = adb_utils.get_moves_left(current_screen_image)
         if custom_utils.is_meowth_stage():
             current_board.current_score = adb_utils.get_current_score(current_screen_image)
         if custom_utils.is_survival_mode():
@@ -255,14 +255,21 @@ def is_swipe_enabled(source):
     if source == "manual":
         return True
     if custom_utils.is_fast_swipe() or custom_utils.is_timed_stage():
+        log.debug("Fast Swipe or Timed Stage Enabled")
         return True
     elif current_run.is_combo_active:
+        log.debug("Can't Swipe because of active Combo")
         return False
-    elif current_run.last_swipe_timer and custom_utils.time_difference_in_seconds(current_run.last_swipe_timer) > 2:
-        return True
     elif not current_run.last_swipe_timer:
+        log.debug("Swipe enabled, last swipe timer don't exists")
+        return True
+    last_swipe_time = custom_utils.time_difference_in_seconds(current_run.last_swipe_timer)
+    if current_run.last_swipe_timer and last_swipe_time > 2:
+        log.debug(f"Swipe enabled, last swipe was {last_swipe_time} seconds")
         return True
     else:
+        log.debug(f"Can't Swipe, last swipe was {last_swipe_time} seconds")
+        log.debug("Can't Swipe, no options selected")
         return False
 
 def verify_active_combo(current_screen_image):
@@ -273,7 +280,7 @@ def execute_tapper(current_board: Board):
         mega_position_list = get_mega_match_active(current_board)
         if len(mega_position_list) == 0:
             return False
-        interest_list = ["Barrier", "Metal", "Fog", "Stage_Added", "Wood"]
+        interest_list = ["Barrier", "Metal", "Fog", "Stage_Added"]
         final_sequence = [process_tap_match(match, current_board.extra_supports_list) for match in current_board.match_sequence]
         for idx in mega_position_list:
             final_sequence[idx] = "Air"
@@ -292,30 +299,29 @@ def execute_tapper(current_board: Board):
             num_points=1
         else:
             shape="cross"
-            num_points=2   
-
-        if len(list_of_tuples) > 0:
+            num_points=2
+        logic = ""
+        results_idx = []
+        if len(tapper_dict["Barrier"]) > 0 or len(list_of_tuples) > 2:
             results_idx = tapper_utils.find_taps_to_clear_more_disruptions(final_sequence, shape, num_points)
-            for index in results_idx:
-                x, y = adb_utils.click_on_board_index(index)
-                x, y = adb_utils.click_on_board_index(index)
-                x, y = adb_utils.click_on_board_index(index)
-                log.debug(f"Tapping at cell {index+1} - {x}, {y} with the clear more disruptions logic") 
+            logic = "make extra matches"
         else:
             results_idx = tapper_utils.find_taps_to_make_extra_matches(final_sequence, shape, num_points)
-            for index in results_idx:
+            logic = "clear more disruptions"
+            if len(results_idx) == 0:
+                results_idx = tapper_utils.find_taps_to_clear_more_disruptions(final_sequence, shape, num_points)
+                logic = "make extra matches because no good play was found"
+        for index in results_idx:
+            if custom_utils.is_adb_move_enabled():
                 x, y = adb_utils.click_on_board_index(index)
                 x, y = adb_utils.click_on_board_index(index)
                 x, y = adb_utils.click_on_board_index(index)
-                log.debug(f"Tapping at cell {index+1} - {x}, {y} with the make extra matches logic") 
+                log.debug(f"Tapping at cell {index+1} - {x}, {y} with the {logic} logic")             
         return True
-
-
-
 
 def get_mega_match_active(current_board: Board):
     if current_board.has_mega:
-        return custom_utils.find_matches_of_3(current_board.match_sequence, f"Mega_{current_board.mega_name}")
+        return custom_utils.find_matches_of_3(current_board.match_sequence, f"{constants.MEGA_PREFIX}{current_board.mega_name}")
 
 def process_tap_match(match: Match, stage_added_list: list[str]):
     if match.cosine_similarity < 0.3:
@@ -333,6 +339,8 @@ def click_buttons(current_screen_image):
     if adb_utils.is_escalation_battle():
         adb_utils.verify_angry_mode(current_screen_image)
     adb_utils.check_hearts(current_screen_image)
+    if current_run.disable_loop: #Make the loop stop after the sleep if file was filled
+        return
     adb_utils.check_buttons_to_click(current_screen_image)
     log.debug("Finished Click Buttons Check")
 
@@ -345,16 +353,13 @@ def match_cell_with_icons(icons_list, cell_list, has_barriers, combo_is_running=
             result = update_fog_match(result, icons_list, has_barriers, idx)
         match_list.append(result)
     if timed_stage:
+        if len(current_run.fake_matches) == 0:
+            current_run.load_fake_matchs([icon.name for icon in icons_list])
         mask_already_existant_matches(match_list)
-        mask_inconsistencies(match_list)
     return match_list
 
 def mask_already_existant_matches(match_list: List[Match]) -> List[Match]:
-    match_list = custom_utils.replace_all_3_matches_indices(match_list, current_run.metal_match)
-    return match_list
-
-def mask_inconsistencies(match_list):
-    #TODO ON NEXT TIMED EVENT
+    match_list = custom_utils.replace_all_3_matches_indices_and_air(match_list, current_run.metal_match, current_run)
     return match_list
 
 def is_on_stage(original_image):

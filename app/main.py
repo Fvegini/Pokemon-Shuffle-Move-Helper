@@ -307,12 +307,12 @@ class ImageSelectorApp():
         self.frame3_1_top_4_1_var = tk.BooleanVar(value=config_utils.config_values.get("debug_mode"))      
         self.frame3_1_top_4_2_var = tk.BooleanVar(value=config_utils.config_values.get("fake_barrier")) 
         self.frame3_1_top_4_3_var = tk.BooleanVar(value=config_utils.config_values.get("extra_debug")) 
-        self.frame3_1_top_4_4_var = tk.BooleanVar(value=config_utils.config_values.get("placeholder"))
+        self.frame3_1_top_4_4_var = tk.BooleanVar(value=config_utils.config_values.get("sleep_machine"))
         
         self.frame3_1_top_4_1_switch = customtkinter.CTkSwitch(frame3_1_top_4, variable=self.frame3_1_top_4_1_var, command=lambda: self.update_switch_config(self.frame3_1_top_4_1_var, "debug_mode"), text="Debug Mode", onvalue=True, offvalue=False)
         self.frame3_1_top_4_2_switch = customtkinter.CTkSwitch(frame3_1_top_4, variable=self.frame3_1_top_4_2_var, command=lambda: self.update_fake_barrier_switch_config(self.frame3_1_top_4_2_var, "fake_barrier"), text="Fake Barrier", onvalue=True, offvalue=False)
         self.frame3_1_top_4_3_switch = customtkinter.CTkSwitch(frame3_1_top_4, variable=self.frame3_1_top_4_3_var, command=lambda: self.update_switch_config(self.frame3_1_top_4_3_var, "extra_debug"), text="Extra Debug", onvalue=True, offvalue=False)
-        self.frame3_1_top_4_4_switch = customtkinter.CTkSwitch(frame3_1_top_4, variable=self.frame3_1_top_4_4_var, command=lambda: self.update_switch_config(self.frame3_1_top_4_4_var, "placeholder"), text="placeholder", onvalue=True, offvalue=False)
+        self.frame3_1_top_4_4_switch = customtkinter.CTkSwitch(frame3_1_top_4, variable=self.frame3_1_top_4_4_var, command=lambda: self.update_switch_config(self.frame3_1_top_4_4_var, "sleep_machine"), text="Sleep Machine", onvalue=True, offvalue=False)
         
         self.frame3_1_top_4_1_switch.pack(side=tk.TOP, anchor=tk.W, padx=1)
         self.frame3_1_top_4_2_switch.pack(side=tk.TOP, anchor=tk.W, padx=1)
@@ -414,7 +414,7 @@ class ImageSelectorApp():
         self.image_preview.grid(row=1, column=3, padx=5, pady=5, sticky='w')
 
     def create_bottom_message(self):
-        self.log_widget = customtkinter.CTkTextbox(self.master)
+        self.log_widget = customtkinter.CTkTextbox(self.master, font=("Courier", 13), width=500, height=500)
         self.log_widget.pack(side=tk.BOTTOM, fill=tk.X)
         
         log_handler = log_utils.LogHandler(self.log_widget, max_lines=50)
@@ -475,8 +475,8 @@ class ImageSelectorApp():
         folder_path = constants.IMAGES_PATH
         image_files = [f for f in os.listdir(folder_path) if f.lower().endswith((".png", ".jpg", ".jpeg", ".gif")) and "mega_" in f.lower()]
         for image_file in image_files:
-            if image_file.startswith("Mega_"):
-             self.mega_list.append(image_file.split("Mega_")[1])
+            if image_file.startswith(constants.MEGA_PREFIX):
+             self.mega_list.append(image_file.split(constants.MEGA_PREFIX)[1])
 
        
 
@@ -490,7 +490,7 @@ class ImageSelectorApp():
         image_files = sorted(image_files, key=lambda word: (word[0] != '_', word))
 
         for image_file in image_files:
-            if not image_file.startswith("Mega_"):
+            if not image_file.startswith(constants.MEGA_PREFIX):
                 self.image_listbox.insert(tk.END, image_file)
 
         self.image_listbox.bind("<<ListboxSelect>>", self.update_preview_image)
@@ -578,13 +578,13 @@ class ImageSelectorApp():
 
     def checkbox_mega_click(self, checkbox, selected_image_frame):
         for widget in self.get_selected_images_widgets_list():
-            if widget[0].master.name.startswith("Mega_"):
+            if widget[0].master.name.startswith(constants.MEGA_PREFIX):
                 widget[0].master.destroy()
                 continue
             if hasattr(widget[0].master, "megaed") and widget[0].master.name != selected_image_frame.name:
                 widget[0].master.checkbox_mega.deselect()
         if checkbox.get():
-            self.insert_image_widget(f"Mega_{selected_image_frame.name}")
+            self.insert_image_widget(f"{constants.MEGA_PREFIX}{selected_image_frame.name}")
         return
 
     def insert_extra_images_tooltip(self, image_path, selected_image_label):
@@ -654,13 +654,20 @@ class ImageSelectorApp():
             match_result = match_icons.start_from_helper(pokemons_list, self.frame3_1_top_1_2_var_control_barrier.get(), root=self, source=source, create_image=create_image, skip_shuffle_move=skip_shuffle_move, forced_board_image=forced_board_image, forced_swipe_skip=forced_swipe_skip)
             return MatchResult()
 
+        if current_run.disable_loop:
+            log.info("Forcing Disable Loop with Sleep Function")
+            current_run.disable_loop = False
+            self.disable_loop()
+
         if self.analysis_lock.locked():
             log.debug("Already running.")
             return MatchResult()
 
         with self.analysis_lock:
             pokemons_list = self.extract_pokemon_list()
+            starting_time = time.time()
             match_result = match_icons.start_from_helper(pokemons_list, self.frame3_1_top_1_2_var_control_barrier.get(), root=self, source=source, create_image=create_image, skip_shuffle_move=skip_shuffle_move, forced_board_image=forced_board_image, forced_swipe_skip=forced_swipe_skip)
+            log.info(f"Match Function took {(time.time() - starting_time):.2f} seconds to run")
         if current_lock != self.analysis_lock:
             return match_result #Avoid problem with older timed threads keeping a parallel loop.
         if config_utils.config_values.get("timed_stage"):

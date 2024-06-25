@@ -2,7 +2,7 @@ import os
 import subprocess
 import math
 import cv2
-from src import constants
+from src import constants, sleep_utils
 from src.execution_variables import current_run
 import numpy as np
 import subprocess
@@ -119,11 +119,11 @@ def check_if_close_to_same_color(pixel1, pixel2, threshold=10):
 def check_hearts(original_image):
     try:
         if custom_utils.is_coin_stage():
-            log.debug("Coin Stagem skipping Hearts check")
+            log.debug("Coin Stage, skipping Hearts check")
             return
         hearts_number_unfiltered = get_label(original_image, "Hearts", '--psm 6 --oem 3 -c tessedit_char_whitelist="0123456789"')
         hearts_number_str = re.sub(r'\D', '', hearts_number_unfiltered)
-        if hearts_number_str == "7":
+        if hearts_number_str in ["7", "1"]:
             hearts_timer = get_label(original_image, "HeartTimer")
             minutes, seconds = process_time(hearts_timer)
             if minutes or seconds:
@@ -158,19 +158,24 @@ def escalation_hearts_processing(original_image, hearts_number):
         if is_angry_active():
             return escalation_hearts_processing(original_image, hearts_number)
 
+        start_with_n_minutes = 7
+        
+        if custom_utils.is_timed_stage():
+            start_with_n_minutes = 10
+
         #The idea here is wait until has 1 life and 7 minutes waiting for the next.. then play the stage
         #On the next cycle, if the angry mode is activated it will wait until the next life, play and repeat.
         hearts_timer = get_label(original_image, "HeartTimer")
         minutes, seconds = process_time(hearts_timer)
         seconds_to_next_heart = int(minutes) * 60 + int(seconds) + 5
-        seconds_to_5_minutes_until_next_heart = seconds_to_next_heart - 420
-        time_to_wait = seconds_to_5_minutes_until_next_heart
+        seconds_to_n_minutes_until_next_heart = seconds_to_next_heart - (start_with_n_minutes * 60 )
+        time_to_wait = seconds_to_n_minutes_until_next_heart
         if hearts_number == 0:
             time_to_wait+= 1800
         time_to_wait = max(time_to_wait, 0) # Avoid negative number when there's less than 5 minutes to next life.
         current_run.thread_sleep_timer = int(time_to_wait)
-        log.debug(f"Escalation Hearts Management: Waiting until {time.strftime('%H:%M:%S', time.localtime(time.time() + current_run.thread_sleep_timer))} ({current_run.thread_sleep_timer}) seconds")
-        time.sleep(current_run.thread_sleep_timer)
+        log.debug(f"Escalation Hearts Management: Waiting until {time.strftime('%H:%M:%S', time.localtime(time.time() + current_run.thread_sleep_timer))} ({current_run.thread_sleep_timer / 60}) minutes")
+        sleep_utils.make_it_sleep(current_run.thread_sleep_timer)
         log.debug("Escalation sleep ended, continuing")
         current_run.thread_sleep_timer = 0
 
@@ -188,8 +193,8 @@ def wait_until_fill_hearts(original_image, current_hearts, aimed_hearts=4):
     hearts_timer = get_label(original_image, "HeartTimer")
     minutes, seconds = process_time(hearts_timer)
     current_run.thread_sleep_timer = (int(minutes) * 60) + int(seconds) + 5 + ((aimed_hearts - current_hearts - 1) * 30 * 60)
-    log.debug(f"Hearts Ended, waiting until {time.strftime('%H:%M:%S', time.localtime(time.time() + current_run.thread_sleep_timer))} ({current_run.thread_sleep_timer}) seconds")
-    time.sleep(current_run.thread_sleep_timer)
+    log.debug(f"Hearts Ended, waiting until {time.strftime('%H:%M:%S', time.localtime(time.time() + current_run.thread_sleep_timer))} ({current_run.thread_sleep_timer / 60}) minutes")
+    sleep_utils.make_it_sleep(current_run.thread_sleep_timer)
     current_run.thread_sleep_timer = 0
 
 def is_escalation_battle():
@@ -213,7 +218,7 @@ def check_buttons_to_click(original_image):
         current_stage_image_path = constants.MEOWTH_STAGE_IMAGE
     elif custom_utils.is_survival_mode():
         current_stage_image_path = constants.SURVIVAL_MODE_STAGE_IMAGE
-    if has_icon_match(original_image, current_stage_image_path, extra_timeout=1+timeout_increase, click=True, min_point=40):
+    if has_icon_match(original_image, current_stage_image_path, extra_timeout=1+timeout_increase, click=True, min_point=40, log_not_found=True):
         was_clicked = True
         original_image = get_screenshot()
     if has_text_match(original_image, "To Map", extra_timeout=1+timeout_increase):
@@ -231,7 +236,7 @@ def check_buttons_to_click(original_image):
     if has_text_match(original_image, "Next", extra_timeout=1):
         was_clicked = True
         original_image = get_screenshot()
-    if custom_utils.is_coin_stage():
+    if custom_utils.is_coin_stage() or config_utils.config_values.get("stage_hearts",1) == 2:
         if has_text_match(original_image, "CoinStage", custom_click="CoinStageYes", extra_timeout=1, custom_search_text="need to spend"):
             was_clicked = True
             original_image = get_screenshot()
@@ -258,16 +263,16 @@ def check_buttons_to_click(original_image):
     return
 
 def click_ok_buttons(original_image, timeout_increase):
-    if has_icon_match(original_image, constants.OK_BUTTON_IMAGE, extra_timeout=1+timeout_increase, click=True):
+    if has_icon_match(original_image, constants.OK_BUTTON_IMAGE, extra_timeout=1+timeout_increase, click=True, log_not_found=True):
         return True
-    if has_icon_match(original_image, constants.OK_BUTTON2_IMAGE, extra_timeout=1+timeout_increase, click=True):
+    if has_icon_match(original_image, constants.OK_BUTTON2_IMAGE, extra_timeout=1+timeout_increase, click=True, log_not_found=True):
         return True
     return False
 
 def click_return_buttons(original_image, timeout_increase):
-    if has_icon_match(original_image, constants.RETURN_FLAG_IMAGE, extra_timeout=1+timeout_increase, click=True):
+    if has_icon_match(original_image, constants.RETURN_FLAG_IMAGE, extra_timeout=1+timeout_increase, click=True, log_not_found=True):
         return True
-    if has_icon_match(original_image, constants.RETURN_FLAG2_IMAGE, extra_timeout=1+timeout_increase, click=True):
+    if has_icon_match(original_image, constants.RETURN_FLAG2_IMAGE, extra_timeout=1+timeout_increase, click=True, log_not_found=True):
         return True
 
 def verify_angry_mode(original_image, retry_count=0, max_retries=0):
@@ -278,7 +283,7 @@ def verify_angry_mode(original_image, retry_count=0, max_retries=0):
         log.info("Since the last stage was already angered, the current one can't be. This is a test to avoid false positives on the stage cleared screen.")
         return
     
-    is_angry = has_icon_match(original_image, constants.ANGRY_ICON_IMAGE) or has_icon_match(original_image, constants.ANGRY_ICON2_IMAGE)
+    is_angry = has_icon_match(original_image, constants.ANGRY_ICON_IMAGE, log_not_found=True) or has_icon_match(original_image, constants.ANGRY_ICON2_IMAGE, log_not_found=True)
     is_angry_text = has_text_match(original_image, "Angry", custom_search_text="grew angry")
     
     if is_angry or is_angry_text:
@@ -292,7 +297,7 @@ def verify_angry_mode(original_image, retry_count=0, max_retries=0):
         verify_angry_mode(new_image, retry_count + 1, max_retries)
     return
     
-def has_icon_match(original_image, icon_path, position="CompleteScreen", extra_timeout=1.0, click=True, min_point=10, debug=False, double_checked=False):
+def has_icon_match(original_image, icon_path, position="CompleteScreen", extra_timeout=1.0, click=True, min_point=10, debug=False, double_checked=False, log_not_found=False):
     try:
         r = get_screen().get_position(position)
         img = original_image.copy()
@@ -315,7 +320,8 @@ def has_icon_match(original_image, icon_path, position="CompleteScreen", extra_t
             if m.distance < 0.7*n.distance:
                 good.append(m)
         if len(good)<MIN_MATCH_COUNT:
-            # log.debug(f"Image not visible: {Path(icon_path).stem} - {len(good)} point found")
+            if log_not_found:
+                log.debug(f"Image not visible: {Path(icon_path).stem} - {len(good)} points found")
             return False
         src_pts = np.float32([ kp1[m.queryIdx].pt for m in good ]).reshape(-1,1,2) #type: ignore
         dst_pts = np.float32([ kp2[m.trainIdx].pt for m in good ]).reshape(-1,1,2) #type: ignore
@@ -345,7 +351,7 @@ def has_icon_match(original_image, icon_path, position="CompleteScreen", extra_t
             cv2.imwrite(debug_image_path.as_posix(), final_img)
 
         if click and not double_checked:
-            return has_icon_match(get_screenshot(), icon_path, position, extra_timeout, click, min_point, debug, double_checked=True) #Add a double-check with a new ScreenShot before the click
+            return has_icon_match(get_screenshot(), icon_path, position, extra_timeout, click, min_point, debug, double_checked=True, log_not_found=log_not_found) #Add a double-check with a new ScreenShot before the click
         if double_checked:
             log.debug(f"Image Found with points: {Path(icon_path).stem} - {len(good)}")
         if click and double_checked:
@@ -387,7 +393,6 @@ def has_text_match(original_image, text, extra_timeout=1.0, click=True, custom_c
             cv2.rectangle(final_img, (r[0], r[1]), (r[2], r[3]), (0, 0, 255), 4)
             debug_image_path.parent.mkdir(parents=True, exist_ok=True)
             cv2.imwrite(debug_image_path.as_posix(), final_img)
-
         if not double_checked:
             has_text_match(get_screenshot(), text, extra_timeout, click, custom_click, custom_search_text, double_checked=True)
         else:
@@ -420,7 +425,17 @@ def get_current_stage_name(original_image):
     return v
 
 def get_moves_left(original_image):
-    return get_label(original_image, "MovesLeft")
+    moves = get_label(original_image, "MovesLeft")
+    if ":" in moves:
+        _, seconds = process_time(moves)
+        seconds = int(seconds)
+        if seconds <= 3:
+            moves = "1"
+        elif seconds <= 10:
+            moves = "3"
+        else:
+            moves = "5"
+    return moves
 
 def get_current_score(original_image):
     return get_label(original_image, "Score")

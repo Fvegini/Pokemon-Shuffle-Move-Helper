@@ -1,6 +1,8 @@
 import numpy as np
 from itertools import combinations
-from src import custom_utils
+from src import custom_utils, log_utils
+
+log = log_utils.get_logger()
 
 #######FUCTIONS TO THE CLEAR DISRUPTION TAPPER STRATEGY
 
@@ -12,6 +14,13 @@ def find_taps_to_clear_more_disruptions(final_sequence, shape, num_points):
         for j in range(matrix.shape[1]):
             converted_matrix[i, j] = convert_matrix_clear_disruption_strategy(matrix[i, j], i)
     positions, sum_values = find_best_combination_for_clear_disruptions(converted_matrix, num_points, shape)
+    
+    final = np.array(converted_matrix.copy(), dtype=str) # Convert to string type
+    for point in positions:
+        final[point] = "X"
+    
+    print_3_matrices_side_by_side(matrix,converted_matrix,final)
+    log.debug(f"Score for this Clear Disruptions tap is: {sum_values}")
     results_idx = []
     for position in positions:
         results_idx.append(custom_utils.coordinates_to_index(position[0], position[1], start_at_1=False))
@@ -25,16 +34,16 @@ def convert_matrix_clear_disruption_strategy(value, row):
         elif row in [2, 3, 4]:
             return 50
         elif row == 5:
-            return 1
-    elif value == "Barrier":
-        if row == [0, 1]:
+            return 4
+    elif value.startswith("Barrier"):
+        if row in [0, 1]:
             return 90
         elif row in [2, 3]:
             return 20
         elif row == 4:
-            return 5
+            return 10
         elif row == 5:
-            return 1
+            return 2
     elif value in ["Stage_Added", "Metal", "Fog"]:
         return 5
     elif value in ["Wood"]:
@@ -98,7 +107,7 @@ def find_best_combination_for_clear_disruptions(matrix, num_points=2, shape="cro
 ####### FUCTIONS TO THE MAKE EXTRA MATCHES STRATEGY
 def find_taps_to_make_extra_matches(final_sequence, shape="cross", num_points=2):
     replacement_list, replacement_dict = replace_strings_with_numbers(final_sequence)
-    
+    names_matrix = np.array(final_sequence).reshape((6,6))
     matrix = np.array(replacement_list).reshape((6,6))
 
     best_points = None
@@ -109,29 +118,19 @@ def find_taps_to_make_extra_matches(final_sequence, shape="cross", num_points=2)
         if new_best_score > best_score:
             best_points = new_points
 
-    if False:
-        print("Original Matrix:")
-        print(matrix)
-        
-        # Display the results for best pair (cross shape)
-        marked_matrix_pair_cross = erase_shape(matrix, best_points, 'cross')
-        for point in best_points:
-            marked_matrix_pair_cross[point] = "-9"
-        print("\nMatrix with best pair of points (cross shape) marked with -1:")
-        print(marked_matrix_pair_cross)
-        for point in best_points:
-            marked_matrix_pair_cross[point] = "-1"
-        final_matrix_pair_cross = apply_gravity(marked_matrix_pair_cross)
-        final_matrix_pair_cross = replace_empty_spots(final_matrix_pair_cross)
+    marked_matrix_pair_cross = erase_shape(matrix, best_points, shape)
+    second = np.array(marked_matrix_pair_cross.copy(), dtype=str) # Convert to string type
+    for point in best_points:
+        second[point] = "X"
+    final_matrix_pair_cross = apply_gravity(marked_matrix_pair_cross)
+    final_matrix_pair_cross = replace_empty_spots(final_matrix_pair_cross)
 
-        print("\nFinal Matrix for best pair of points (cross shape):")
-        print(final_matrix_pair_cross)
-        print("\nBest Pair of Points (cross shape):", best_points)
-        print("Final Score for Pair of Points (cross shape):", best_score)
-
+    print_4_matrices_side_by_side(names_matrix, matrix, second, final_matrix_pair_cross)
+    log.debug(f"Score for this Extra Matches tap is: {best_score}")
     results_idx = []
-    for position in best_points:
-        results_idx.append(custom_utils.coordinates_to_index(position[0], position[1], start_at_1=False))
+    if best_score > 0:
+        for position in best_points:
+            results_idx.append(custom_utils.coordinates_to_index(position[0], position[1], start_at_1=False))
     return results_idx
 
 
@@ -180,7 +179,7 @@ def count_sequences(matrix):
         if len(sequence) < 3:
             return 0
         else:
-            return sum(1 for s in sequence if s != '-')
+            return sum(1 for s in sequence if s not in ['-',0,"0"])
 
     def count_horizontal():
         count = 0
@@ -246,6 +245,10 @@ def replace_strings_with_numbers(strings):
             replacement_list.append(-1)
             if "Air" not in replacement_dict:
                 replacement_dict["Air"] = -1
+        elif s in ["Wood", "Metal", "Stage_Added", "Fog"]:
+            replacement_list.append(0)
+            if "Disruption" not in replacement_dict:
+                replacement_dict["Disruption"] = 0
         else:
             if s not in replacement_dict:
                 replacement_dict[s] = counter
@@ -253,3 +256,55 @@ def replace_strings_with_numbers(strings):
             replacement_list.append(replacement_dict[s])
     
     return replacement_list, replacement_dict
+
+
+
+def print_3_matrices_side_by_side(matrix1, matrix2, matrix3, col_width=5):
+    for row1, row2, row3 in zip(matrix1, matrix2, matrix3):
+        row_str = ''
+        for element in row1:
+            element_str = str(element)
+            if len(element_str) > col_width:
+                element_str = element_str[:col_width]
+            row_str += f'{element_str:>{col_width}} '
+        row_str += '| '
+        for element in row2:
+            element_str = str(element)
+            if len(element_str) > col_width:
+                element_str = element_str[:col_width]
+            row_str += f'{element_str:>{col_width}} '
+        row_str += '| '
+        for element in row3:
+            element_str = str(element)
+            if len(element_str) > col_width:
+                element_str = element_str[:col_width]
+            row_str += f'{element_str:>{col_width}} '
+        log.debug(row_str)
+
+def print_4_matrices_side_by_side(matrix1, matrix2, matrix3, matrix4, col_width=5):
+    for row1, row2, row3, row4 in zip(matrix1, matrix2, matrix3, matrix4):
+        row_str = ''
+        for element in row1:
+            element_str = str(element)
+            if len(element_str) > col_width:
+                element_str = element_str[:col_width]
+            row_str += f'{element_str:>{col_width}} '
+        row_str += '| '
+        for element in row2:
+            element_str = str(element)
+            if len(element_str) > col_width:
+                element_str = element_str[:col_width]
+            row_str += f'{element_str:>{col_width}} '
+        row_str += '| '
+        for element in row3:
+            element_str = str(element)
+            if len(element_str) > col_width:
+                element_str = element_str[:col_width]
+            row_str += f'{element_str:>{col_width}} '
+        row_str += '| '
+        for element in row4:
+            element_str = str(element)
+            if len(element_str) > col_width:
+                element_str = element_str[:col_width]
+            row_str += f'{element_str:>{col_width}} '
+        log.debug(row_str)
