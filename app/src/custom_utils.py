@@ -1,3 +1,4 @@
+from logging import config
 from pathlib import Path
 import cv2
 import numpy as np
@@ -454,14 +455,20 @@ def capture_board_screensot(save=True, return_type="cv2"):
         else:
             return img
 
-def find_matches_of_3(mylist, target):
+def find_matches_of_3(mylist, target, also_mega=False):
     matrix = np.array(mylist).reshape((6, 6))
     matches = []
+    targets = []
+
+    targets.append(target)
+    if also_mega:
+        targets.append(f"{constants.MEGA_PREFIX}{target}")
+
 
     # Check rows
     for i, row in enumerate(matrix):
         for j in range(len(row) - 2):
-            if row[j] == target and row[j + 1] == target and row[j + 2] == target:
+            if row[j] in targets and row[j + 1] in targets and row[j + 2] in targets:
                 matches.append((i, j))
                 matches.append((i, j + 1))
                 matches.append((i, j + 2))
@@ -469,7 +476,7 @@ def find_matches_of_3(mylist, target):
     # Check columns
     for i in range(len(matrix) - 2):
         for j in range(len(matrix[0])):
-            if matrix[i][j] == target and matrix[i + 1][j] == target and matrix[i + 2][j] == target:
+            if matrix[i][j] in targets and matrix[i + 1][j] in targets and matrix[i + 2][j] in targets:
                 matches.append((i, j))
                 matches.append((i + 1, j))
                 matches.append((i + 2, j))
@@ -704,3 +711,6 @@ def is_sleep_machine_enabled():
 
 def is_adb_move_enabled():
     return config_utils.config_values.get("adb_move")
+
+def use_great_ball():
+    return config_utils.config_values.get("greatball")

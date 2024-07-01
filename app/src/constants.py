@@ -118,6 +118,10 @@ RESOLUTIONS = {
         "Close": (348, 1033, 544, 1096),
         "Angry": (70, 686, 826, 915), #The Grey Angry! text
         # "EscalationLevel": (558, 434, 841, 623),
+        "Pokeball Capture": (320, 1028, 577, 1272),
+        "Greatball": (110, 1259, 803, 1308), #Do you want to use 3500 Coins
+        "GreatballNo": (691, 1453, 772, 1509),
+        "GreatballYes": (123, 1460, 217, 1506),
         # Stage
         "Board": (16, 716, 886, 1586),
         "Stage": (34, 87, 202, 125),
@@ -145,4 +149,4 @@ RETURN_FLAG_IMAGE = r"assets\adb\return_flag1.png"
 RETURN_FLAG2_IMAGE = r"assets\adb\return_flag2.png"
 ANGRY_ICON_IMAGE = r"assets\adb\angry_1.png"
 ANGRY_ICON2_IMAGE = r"assets\adb\angry_2.png"
-
+POKEBALL_CAPTURE_IMAGE = r"assets\adb\pokeball_capture.png" 

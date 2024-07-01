@@ -207,7 +207,7 @@ def initialize_run_flags():
 
 def verify_and_execute_tapper(source, current_board: Board):
     if custom_utils.is_tapper_active() and int(current_board.moves_left) > 0:
-        executed_tapper = execute_tapper(current_board)
+        executed_tapper = execute_tapper(current_board, source)
         return executed_tapper
     return False
 
@@ -275,7 +275,7 @@ def is_swipe_enabled(source):
 def verify_active_combo(current_screen_image):
     return adb_utils.has_icon_match(current_screen_image, constants.COMBO_IMAGE, "Combo", extra_timeout=0, click=False, min_point=30)
 
-def execute_tapper(current_board: Board):
+def execute_tapper(current_board: Board, source):
     if current_board.has_mega:
         mega_position_list = get_mega_match_active(current_board)
         if len(mega_position_list) == 0:
@@ -312,7 +312,7 @@ def execute_tapper(current_board: Board):
                 results_idx = tapper_utils.find_taps_to_clear_more_disruptions(final_sequence, shape, num_points)
                 logic = "make extra matches because no good play was found"
         for index in results_idx:
-            if custom_utils.is_adb_move_enabled():
+            if custom_utils.is_adb_move_enabled() and not source == "manual":
                 x, y = adb_utils.click_on_board_index(index)
                 x, y = adb_utils.click_on_board_index(index)
                 x, y = adb_utils.click_on_board_index(index)
@@ -321,7 +321,7 @@ def execute_tapper(current_board: Board):
 
 def get_mega_match_active(current_board: Board):
     if current_board.has_mega:
-        return custom_utils.find_matches_of_3(current_board.match_sequence, f"{constants.MEGA_PREFIX}{current_board.mega_name}")
+        return custom_utils.find_matches_of_3(current_board.match_sequence, current_board.mega_name, also_mega=True)
 
 def process_tap_match(match: Match, stage_added_list: list[str]):
     if match.cosine_similarity < 0.3:

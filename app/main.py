@@ -62,6 +62,7 @@ class ImageSelectorApp():
         
         self.tab1 = self.tabview.add("Configurations")
         self.tab2 = self.tabview.add("Icons")
+        self.tab4 = self.tabview.add("Extra")
         self.tab3 = self.tabview.add("Execute")
         self.tabview._segmented_button.grid(sticky="W")
         self.tabview.pack_propagate(True)
@@ -82,6 +83,7 @@ class ImageSelectorApp():
         self.create_tab_1()
         self.create_tab_2()
         self.create_tab_3()
+        self.create_tab_4()
         
         self.tabview.set("Execute")
 
@@ -381,6 +383,92 @@ class ImageSelectorApp():
         
         customtkinter.CTkLabel(frame3_4_top_2, text="Stage Type").pack(side=tk.BOTTOM, anchor=tk.E)
         customtkinter.CTkLabel(frame3_4_top_2, text="Move Strategy").pack(side=tk.BOTTOM, anchor=tk.E)
+
+    def create_tab_4(self):
+        frame4_1 = customtkinter.CTkFrame(self.tab4, fg_color="transparent")
+        frame4_1_top = customtkinter.CTkFrame(frame4_1)
+        frame4_1_bottom = customtkinter.CTkFrame(frame4_1)
+        frame4_1.pack(side=tk.LEFT, expand=False, fill=tk.Y, anchor=tk.W)
+        frame4_1_top.pack(side=tk.TOP)
+        frame4_1_bottom.pack(side=tk.BOTTOM)
+        ttk.Separator(self.tab4, orient='vertical').pack(side=tk.LEFT, fill='y', anchor=tk.W)
+        customtkinter.CTkLabel(frame4_1_bottom, text="Board Capture Mode", bg_color="transparent").pack(side=tk.BOTTOM)
+        
+        
+        frame4_1_top_1 = customtkinter.CTkFrame(frame4_1_top, fg_color="transparent")
+        frame4_1_top_2 = customtkinter.CTkFrame(frame4_1_top, fg_color="transparent")
+        frame4_1_top_3 = customtkinter.CTkFrame(frame4_1_top, fg_color="transparent")
+        frame4_1_top_4 = customtkinter.CTkFrame(frame4_1_top, fg_color="transparent")
+        frame4_1_top_1.pack(side=tk.LEFT)
+        frame4_1_top_2.pack(side=tk.LEFT)
+        frame4_1_top_3.pack(side=tk.LEFT)
+        frame4_1_top_4.pack(side=tk.LEFT)
+
+        self.frame4_1_top_1_1_var = tk.BooleanVar(value=config_utils.config_values.get("greatball")) 
+        self.frame4_1_top_1_2_var = tk.BooleanVar(value=config_utils.config_values.get("placeholder"))
+        self.frame4_1_top_1_3_var = tk.BooleanVar(value=config_utils.config_values.get("placeholder")) 
+        self.frame4_1_top_1_4_var = tk.BooleanVar(value=config_utils.config_values.get("placeholder"))
+        
+        self.frame4_1_top_1_1_switch = customtkinter.CTkSwitch(frame4_1_top_1, variable=self.frame4_1_top_1_1_var, command=lambda: self.update_switch_config(self.frame4_1_top_1_1_var, "greatball"), text="Great Ball", onvalue=True, offvalue=False)
+        self.frame4_1_top_1_2_switch = customtkinter.CTkSwitch(frame4_1_top_1, variable=self.frame4_1_top_1_2_var, command=lambda: self.update_switch_config(self.frame4_1_top_1_2_var, "placeholder"), text="placeholder", onvalue=True, offvalue=False)
+        self.frame4_1_top_1_3_switch = customtkinter.CTkSwitch(frame4_1_top_1, variable=self.frame4_1_top_1_3_var, command=lambda: self.update_switch_config(self.frame4_1_top_1_3_var, "placeholder"), text="placeholder", onvalue=True, offvalue=False)
+        self.frame4_1_top_1_4_switch = customtkinter.CTkSwitch(frame4_1_top_1, variable=self.frame4_1_top_1_4_var, command=lambda: self.update_switch_config(self.frame4_1_top_1_4_var, "placeholder"), text="placeholder", onvalue=True, offvalue=False)
+        
+
+        self.frame4_1_top_1_1_switch.pack(side=tk.TOP, anchor=tk.W, padx=1)
+        self.frame4_1_top_1_2_switch.pack(side=tk.TOP, anchor=tk.W, padx=1)
+        self.frame4_1_top_1_3_switch.pack(side=tk.TOP, anchor=tk.W, padx=1)
+        self.frame4_1_top_1_4_switch.pack(side=tk.TOP, anchor=tk.W, padx=1)
+
+
+        self.frame4_1_top_2_1_var = tk.BooleanVar(value=config_utils.config_values.get("placeholder"))      
+        self.frame4_1_top_2_2_var = tk.BooleanVar(value=config_utils.config_values.get("placeholder")) 
+        self.frame4_1_top_2_3_var = tk.BooleanVar(value=config_utils.config_values.get("placeholder")) 
+        self.frame4_1_top_2_4_var = tk.BooleanVar(value=config_utils.config_values.get("placeholder"))
+        
+        self.frame4_1_top_2_1_switch = customtkinter.CTkSwitch(frame4_1_top_2, variable=self.frame4_1_top_2_1_var, command=lambda: self.update_switch_config(self.frame4_1_top_2_1_var, "placeholder"), text="placeholder", onvalue=True, offvalue=False)
+        self.frame4_1_top_2_2_switch = customtkinter.CTkSwitch(frame4_1_top_2, variable=self.frame4_1_top_2_2_var, command=lambda: self.update_switch_config(self.frame4_1_top_2_2_var, "placeholder"), text="placeholder", onvalue=True, offvalue=False)
+        self.frame4_1_top_2_3_switch = customtkinter.CTkSwitch(frame4_1_top_2, variable=self.frame4_1_top_2_3_var, command=lambda: self.update_switch_config(self.frame4_1_top_2_3_var, "placeholder"), text="placeholder", onvalue=True, offvalue=False)
+        self.frame4_1_top_2_4_switch = customtkinter.CTkSwitch(frame4_1_top_2, variable=self.frame4_1_top_2_4_var, command=lambda: self.update_switch_config(self.frame4_1_top_2_4_var, "placeholder"), text="placeholder", onvalue=True, offvalue=False)
+        
+
+        self.frame4_1_top_2_1_switch.pack(side=tk.TOP, anchor=tk.W, padx=1)
+        self.frame4_1_top_2_2_switch.pack(side=tk.TOP, anchor=tk.W, padx=1)
+        self.frame4_1_top_2_3_switch.pack(side=tk.TOP, anchor=tk.W, padx=1)
+        self.frame4_1_top_2_4_switch.pack(side=tk.TOP, anchor=tk.W, padx=1)
+
+
+        self.frame4_1_top_3_1_var = tk.BooleanVar(value=config_utils.config_values.get("placeholder"))      
+        self.frame4_1_top_3_2_var = tk.BooleanVar(value=config_utils.config_values.get("placeholder")) 
+        self.frame4_1_top_3_3_var = tk.BooleanVar(value=config_utils.config_values.get("placeholder")) 
+        self.frame4_1_top_3_4_var = tk.BooleanVar(value=config_utils.config_values.get("placeholder"))
+        
+        self.frame4_1_top_3_1_switch = customtkinter.CTkSwitch(frame4_1_top_3, variable=self.frame4_1_top_3_1_var, command=lambda: self.update_switch_config(self.frame4_1_top_3_1_var, "placeholder"), text="placeholder", onvalue=True, offvalue=False)
+        self.frame4_1_top_3_2_switch = customtkinter.CTkSwitch(frame4_1_top_3, variable=self.frame4_1_top_3_2_var, command=lambda: self.update_switch_config(self.frame4_1_top_3_2_var, "placeholder"), text="placeholder", onvalue=True, offvalue=False)
+        self.frame4_1_top_3_3_switch = customtkinter.CTkSwitch(frame4_1_top_3, variable=self.frame4_1_top_3_3_var, command=lambda: self.update_switch_config(self.frame4_1_top_3_3_var, "placeholder"), text="placeholder", onvalue=True, offvalue=False)
+        self.frame4_1_top_3_4_switch = customtkinter.CTkSwitch(frame4_1_top_3, variable=self.frame4_1_top_3_4_var, command=lambda: self.update_switch_config(self.frame4_1_top_3_4_var, "placeholder"), text="placeholder", onvalue=True, offvalue=False)
+        
+
+        self.frame4_1_top_3_1_switch.pack(side=tk.TOP, anchor=tk.W, padx=1)
+        self.frame4_1_top_3_2_switch.pack(side=tk.TOP, anchor=tk.W, padx=1)
+        self.frame4_1_top_3_3_switch.pack(side=tk.TOP, anchor=tk.W, padx=1)
+        self.frame4_1_top_3_4_switch.pack(side=tk.TOP, anchor=tk.W, padx=1)
+
+        self.frame4_1_top_4_1_var = tk.BooleanVar(value=config_utils.config_values.get("placeholder"))      
+        self.frame4_1_top_4_2_var = tk.BooleanVar(value=config_utils.config_values.get("placeholder")) 
+        self.frame4_1_top_4_3_var = tk.BooleanVar(value=config_utils.config_values.get("placeholder")) 
+        self.frame4_1_top_4_4_var = tk.BooleanVar(value=config_utils.config_values.get("placeholder"))
+        
+        self.frame4_1_top_4_1_switch = customtkinter.CTkSwitch(frame4_1_top_4, variable=self.frame4_1_top_4_1_var, command=lambda: self.update_switch_config(self.frame4_1_top_4_1_var, "placeholder"), text="placeholder", onvalue=True, offvalue=False)
+        self.frame4_1_top_4_2_switch = customtkinter.CTkSwitch(frame4_1_top_4, variable=self.frame4_1_top_4_2_var, command=lambda: self.update_switch_config(self.frame4_1_top_4_2_var, "placeholder"), text="placeholder", onvalue=True, offvalue=False)
+        self.frame4_1_top_4_3_switch = customtkinter.CTkSwitch(frame4_1_top_4, variable=self.frame4_1_top_4_3_var, command=lambda: self.update_switch_config(self.frame4_1_top_4_3_var, "placeholder"), text="placeholder", onvalue=True, offvalue=False)
+        self.frame4_1_top_4_4_switch = customtkinter.CTkSwitch(frame4_1_top_4, variable=self.frame4_1_top_4_4_var, command=lambda: self.update_switch_config(self.frame4_1_top_4_4_var, "placeholder"), text="placeholder", onvalue=True, offvalue=False)
+        
+        self.frame4_1_top_4_1_switch.pack(side=tk.TOP, anchor=tk.W, padx=1)
+        self.frame4_1_top_4_2_switch.pack(side=tk.TOP, anchor=tk.W, padx=1)
+        self.frame4_1_top_4_3_switch.pack(side=tk.TOP, anchor=tk.W, padx=1)
+        self.frame4_1_top_4_4_switch.pack(side=tk.TOP, anchor=tk.W, padx=1)
+        
 
     def create_left_app_screen(self):
 

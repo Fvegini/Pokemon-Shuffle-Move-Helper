@@ -189,7 +189,7 @@ def process_time(mystring):
 def is_angry_active():
     return current_run.angry_mode_active
 
-def wait_until_fill_hearts(original_image, current_hearts, aimed_hearts=4):
+def wait_until_fill_hearts(original_image, current_hearts, aimed_hearts=2):
     hearts_timer = get_label(original_image, "HeartTimer")
     minutes, seconds = process_time(hearts_timer)
     current_run.thread_sleep_timer = (int(minutes) * 60) + int(seconds) + 5 + ((aimed_hearts - current_hearts - 1) * 30 * 60)
@@ -208,10 +208,12 @@ def check_buttons_to_click(original_image):
     else:
         timeout_increase = 0
 
-    if current_run.non_stage_count > 5:
-        current_run.non_stage_count = 0
+    if (current_run.non_stage_count % 5 == 0):
         click_ok_buttons(original_image, timeout_increase)
         click_return_buttons(original_image, timeout_increase)
+
+    if current_run.non_stage_count > 5:
+        run_capture_logic_test(original_image)
 
     current_stage_image_path = constants.CURRENT_STAGE_IMAGE
     if custom_utils.is_meowth_stage():
@@ -296,7 +298,26 @@ def verify_angry_mode(original_image, retry_count=0, max_retries=0):
         new_image = get_screenshot()
         verify_angry_mode(new_image, retry_count + 1, max_retries)
     return
-    
+
+def run_capture_logic_test(original_image):
+    try:
+        if get_moves_left(original_image) == "0":
+            if has_icon_match(original_image, constants.POKEBALL_CAPTURE_IMAGE, "Pokeball Capture", min_point=30, log_not_found=True):
+                time.sleep(4)
+                log.info("found_capture_icon and clicked")
+                current_run.non_stage_count = 0
+            else:
+                log.info("capture_pokeball_not_found, checking for Great Ball")
+                if custom_utils.use_great_ball():
+                    has_text_match(original_image, "Greatball", custom_click="GreatballYes", custom_search_text="Do you want to use 3500 Coins")
+                    time.sleep(4)
+                else:
+                    has_text_match(original_image, "Greatball", custom_click="GreatballNo", custom_search_text="Do you want to use 3500 Coins")
+                    time.sleep(4)
+    except Exception as ex:
+        log.error(f"Erro: {ex}")
+        pass
+
 def has_icon_match(original_image, icon_path, position="CompleteScreen", extra_timeout=1.0, click=True, min_point=10, debug=False, double_checked=False, log_not_found=False):
     try:
         r = get_screen().get_position(position)
