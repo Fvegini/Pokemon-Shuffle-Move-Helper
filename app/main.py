@@ -8,7 +8,7 @@ import keyboard
 from src import match_icons, screen_utils, shuffle_config_files
 from pathlib import Path
 from src.board_image_selector import BoardIconSelector, PokemonIconSelector
-from src import constants, custom_utils, load_from_shuffle, config_utils, mouse_utils
+from src import constants, custom_utils, load_from_shuffle, config_utils, mouse_utils, adb_commands
 from src.execution_variables import current_run
 import warnings
 from CTkToolTip import CTkToolTip
@@ -105,7 +105,7 @@ class ImageSelectorApp():
         # btn1_1_1 = customtkinter.CTkButton(frame1_1_top, text="Board Position", command=lambda: self.show_board_position_selector_app(), image=icon, **self.tab_button_style)
         btn1_1_2 = customtkinter.CTkButton(frame1_1_top, text="Select Current Stage", command=lambda: self.show_select_current_stage(), image=icon, **self.tab_button_style)
         btn1_1_3 = customtkinter.CTkButton(frame1_1_top, text="Get Coordinates", command=lambda: self.show_add_auto_click_icon(), image=icon, **self.tab_button_style)
-        btn1_1_4 = customtkinter.CTkButton(frame1_1_top, text="Reload ADB", command=lambda: adb_utils.update_adb_connection(True), image=icon, **self.tab_button_style)
+        btn1_1_4 = customtkinter.CTkButton(frame1_1_top, text="Reload ADB", command=lambda: src.adb_commands.update_adb_connection(True), image=icon, **self.tab_button_style)
 
         # CTkToolTip(btn1_1_1, delay=0.5, message="Configure Shuffle Move Board Position")
         CTkToolTip(btn1_1_2, delay=0.5, message="Configure Current Stage for the Auto loop")

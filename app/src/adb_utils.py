@@ -1,53 +1,23 @@
 import os
-import subprocess
 import math
 import cv2
 from src import constants, sleep_utils
+from src.adb_commands import adb_run_screenshot, adb_run_swipe, adb_run_tap, update_adb_connection
 from src.execution_variables import current_run
 import numpy as np
-import subprocess
 import math
 from src import config_utils
 from src import custom_utils
 import pyautogui
 import time
 import pytesseract
-from src import screen_utils
 from src.screen_utils import get_screen
 from pathlib import Path
 from src import log_utils, file_utils
 import re
-from datetime import datetime
 log = log_utils.get_logger()
 
 
-def update_adb_connection(reconfigure_screen):
-    pipe = adb_run_screen_size()
-    output = str(pipe.stdout.read()) #type: ignore
-    if output.startswith("b'Physical size"):
-        log.info(output)
-    else:
-        pipe = subprocess.Popen("adb kill-server",stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
-        output = str(pipe.stdout.read()) #type: ignore
-        pipe = subprocess.Popen("adb connect localhost:5555",stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
-        output = str(pipe.stdout.read()) #type: ignore
-        current_run.adb_shell_command = "adb -s localhost:5555 shell"
-        pipe = adb_run_screen_size()
-        output = str(pipe.stdout.read()) #type: ignore
-        log.info(output)
-    if reconfigure_screen:
-        configure_screen()
-
-def configure_screen():
-    try:
-        pipe = subprocess.Popen(f"{current_run.adb_shell_command} wm size",stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
-        response = str(pipe.stdout.read()).strip() #type: ignore
-        resolution = re.findall(r"\b\d{2,4}\s*x\s*\d{2,4}\b", response)[0]
-        screen_utils.update_screen(constants.RESOLUTIONS[resolution])
-    except Exception as ex:
-        log.error(f"Couldn't load screen resolution: {ex}")
-        pass
-    
 def get_screenshot():
     pipe = adb_run_screenshot()
     image_bytes = pipe.stdout.read().replace(b'\r\n', b'\n') #type: ignore
@@ -513,53 +483,3 @@ def get_coordinates_from_board_index(idx):
     cell_x1 =  math.floor(get_screen().board_x + (get_screen().board_w * (column)))
     cell_y1 =  math.floor(get_screen().board_y + (get_screen().board_h * (row)))
     return cell_x0,cell_y0,cell_x1,cell_y1
-
-def adb_run_swipe(from_x, from_y, to_x, to_y, delay, skip_on_error=False, skip_extra_debug=False):
-    try:
-        log.debug(f"Swiping at: {from_x} {from_y} {to_x} {to_y} {delay}")
-        subprocess.Popen(f"{current_run.adb_shell_command} input swipe {from_x} {from_y} {to_x} {to_y} {delay}", stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
-        if not skip_extra_debug and custom_utils.is_extra_debug_active():
-            save_extra_debug_image([[from_x, from_y], [to_x, to_y]], "swipe")
-    except:
-        if skip_on_error:
-            return
-        update_adb_connection(reconfigure_screen=True)
-        adb_run_swipe(from_x, from_y, to_x, to_y, delay, skip_on_error=True, skip_extra_debug=skip_extra_debug)
-
-def adb_run_tap(x ,y, skip_on_error=False, skip_extra_debug=False):
-    try:
-        log.debug(f"Tapping at: {x}, {y}")
-        subprocess.Popen(f"{current_run.adb_shell_command} input tap {x} {y}", stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
-        if not skip_extra_debug and custom_utils.is_extra_debug_active():
-            save_extra_debug_image([[x, y]], "tap")
-    except:
-        if skip_on_error:
-            return
-        update_adb_connection(reconfigure_screen=True)
-        adb_run_tap(x ,y, skip_on_error=True, skip_extra_debug=skip_extra_debug)
-
-def save_extra_debug_image(points_list, suffix):
-    os.makedirs(constants.DEBUG_EXTRA_IMAGE_FOLDER, exist_ok=True)
-    image_path = Path(constants.DEBUG_EXTRA_IMAGE_FOLDER, f"{datetime.now().strftime('%Y_%m_%d_%H_%M_%S_%f')[:-3]}_{suffix}.jpeg")
-    image_with_markers = custom_utils.add_red_marker(constants.LAST_SCREEN_IMAGE_PATH, points_list)
-    custom_utils.compress_image_and_save(image_with_markers, image_path.as_posix(), initial_quality=6)
-    
-def adb_run_screenshot(skip_on_error=False):
-    try:
-        return subprocess.Popen(f"{current_run.adb_shell_command} screencap -p", stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
-    except:
-        if skip_on_error:
-            return
-        update_adb_connection(reconfigure_screen=True)
-        adb_run_screenshot(skip_on_error=True)    
-
-def adb_run_screen_size(skip_on_error=False):
-    try:
-        return subprocess.Popen(f"{current_run.adb_shell_command} wm size",stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
-    except:
-        if skip_on_error:
-            log.debug("Couldn't find ADB active connection")
-        update_adb_connection(reconfigure_screen=True)
-        adb_run_screen_size(skip_on_error=True)
-
-update_adb_connection(reconfigure_screen=True)

@@ -1,5 +1,5 @@
 import time
-from src import dropbox_utils, log_utils, custom_utils, config_utils
+from src import dropbox_utils, log_utils, custom_utils, config_utils, adb_commands
 import os
 from datetime import datetime, timedelta
 from src.execution_variables import current_run
@@ -19,6 +19,14 @@ def make_it_sleep(sleep_seconds):
             else:
                 log.error("Waked Early from sleep, sleeping the rest of the time")
                 sleep_remaining_time(must_wait_until_time)
+            #Force some screenshots after wake up. (Sometimes the bluestacks emulator didn't refresh the screen/hearts timer)
+            adb_commands.adb_run_screenshot()
+            time.sleep(5)
+            adb_commands.adb_run_screenshot()
+            time.sleep(5)
+            adb_commands.adb_run_screenshot()
+            time.sleep(10)
+            adb_commands.adb_run_screenshot()
         verify_keep_or_stop_loop()
     except Exception as ex:
         log.error(ex)
@@ -78,10 +86,6 @@ def schedule_wakeup(seconds):
 
 
 def sleep_computer():
-    # Put the computer to sleep
-    # os.system("powercfg -hibernate off") # This one altered the hibernate/sleep functions
-    # os.system("powercfg -sleep on") # This one didn't work at all.
-    # os.system("rundll32.exe powrprof.dll,SetSuspendState Sleep")
     os.system(f"wosb /standby")
-    log.info("Sleep Timeout Ended")
-    time.sleep(10)
+    time.sleep(2)
+    log.info("Sleep Timeout Ended") 
