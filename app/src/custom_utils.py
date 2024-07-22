@@ -428,7 +428,7 @@ def get_center_positions_list(left_position, right_position):
 def capture_screen_screenshot():
     adb_board = config_utils.config_values.get("adb_board")
     if adb_board:
-        return adb_utils.get_screenshot()
+        return adb_utils.get_new_screenshot()
     else:
         return pyautogui.screenshot()
 
@@ -437,7 +437,7 @@ def capture_board_screensot(save=True, return_type="cv2"):
     adb_board = config_utils.config_values.get("adb_board")
     if adb_board:
         # adb_utils.get_screen_positions()
-        img = adb_utils.crop_board(adb_utils.get_screenshot())
+        img = adb_utils.crop_board(adb_utils.get_new_screenshot())
         if return_type == "cv2":
             return img
         else:

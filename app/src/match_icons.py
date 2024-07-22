@@ -143,50 +143,6 @@ def get_metrics(match_list):
     "variance": statistics.variance(numbers_list),
     }
 
-def start_from_helper(pokemon_list: list[Pokemon], has_barriers, root=None, source=None, create_image=False, skip_shuffle_move=False, forced_board_image=None, forced_swipe_skip=False) -> MatchResult:
-    try:
-        log.debug(f"Starting a new {source} execution")
-        icons_list = load_icon_classes(pokemon_list, has_barriers)
-        can_swipe = is_swipe_enabled(source)
-        current_screen_image = adb_utils.get_screenshot()
-        current_run.is_combo_active = False
-        
-        if skip_shuffle_move:
-            return handle_skip_shuffle_move(icons_list, forced_board_image, has_barriers)
-
-        if source == "loop":
-            result = verify_or_enter_stage(current_screen_image)
-            if result is not None:
-                return result
-        can_swipe = can_swipe and not forced_swipe_skip and is_swipe_enabled(source)
-        initialize_run_flags()
-
-        cell_list = make_cell_list(adb_utils.crop_board(current_screen_image))
-        match_list = match_cell_with_icons(icons_list, cell_list, has_barriers, current_run.is_combo_active)
-        current_board = Board(match_list, pokemon_list, icons_list)
-        update_board_with_stage_parameters(current_screen_image, current_board)
-        shuffle_config_files.update_shuffle_move_files(current_board, source)
-
-        if verify_and_execute_tapper(source, current_board):
-            return MatchResult()
-        
-        result = socket_utils.loadNewBoard()
-
-        if can_swipe and int(current_board.moves_left) > 0:
-            swiped = adb_utils.execute_play(result, current_board)
-            if custom_utils.is_debug_mode_active() and swiped:
-                save_debug_objects(result, match_list, source == "manual")
-
-        result_image = None
-
-        if create_image:
-            result_image = custom_utils.make_match_image_comparison(result, match_list)
-
-        return MatchResult(result=result, match_image=result_image, match_list=match_list)
-    except Exception as ex:
-        log.error(f"Unknown Error in main loop: {ex}")
-        return MatchResult()
-
 def handle_skip_shuffle_move(icons_list, forced_board_image, has_barriers):
     return MatchResult(match_list=match_cell_with_icons(icons_list, make_cell_list(forced_board_image), has_barriers, True))
 
@@ -195,7 +151,7 @@ def verify_or_enter_stage(current_screen_image):
         current_run.is_combo_active = verify_active_combo(current_screen_image)
     else:
         if should_auto_next_stage():
-            click_buttons(current_screen_image)
+            click_buttons_to_enter_new_stage(current_screen_image)
         else:
             log.debug("Stage isn't active and next stage is disabled")
         return MatchResult()
@@ -333,13 +289,13 @@ def process_tap_match(match: Match, stage_added_list: list[str]):
             return "Stage_Added"
     return match.name
 
-def click_buttons(current_screen_image):
+def click_buttons_to_enter_new_stage(current_screen_image):
     log.debug("Starting Click Buttons Check")
     current_run.non_stage_count+= 1
     if adb_utils.is_escalation_battle():
         adb_utils.verify_angry_mode(current_screen_image)
     adb_utils.check_hearts(current_screen_image)
-    if current_run.disable_loop: #Make the loop stop after the sleep if file was filled
+    if current_run.disable_loop or current_run.awakened_from_sleep: #Cancel Current loop run.
         return
     adb_utils.check_buttons_to_click(current_screen_image)
     log.debug("Finished Click Buttons Check")
@@ -395,6 +351,13 @@ def is_on_stage(original_image):
 def should_auto_next_stage():
     return config_utils.config_values.get("auto_next_stage")
 
+def update_fog_match(result, icons_list, has_barriers, idx):
+    new_img = adb_utils.update_fog_image(idx)
+    new_result = predict(new_img, icons_list, has_barriers)
+    if new_result.name == "Fog":
+        return predict(new_img, [current_run.metal_icon], False)
+    return new_result
+
 def start_from_bot(pokemon_list: list[Pokemon], has_barriers, image, current_stage, source="bot", create_image=False):
     icons_list = load_icon_classes(pokemon_list, has_barriers)
     match_list: List[Match] = []
@@ -410,9 +373,46 @@ def start_from_bot(pokemon_list: list[Pokemon], has_barriers, image, current_sta
         result_image = custom_utils.make_match_image_comparison(result, match_list)
     return MatchResult(result=result, match_image=result_image, match_list=match_list)
 
-def update_fog_match(result, icons_list, has_barriers, idx):
-    new_img = adb_utils.update_fog_image(idx)
-    new_result = predict(new_img, icons_list, has_barriers)
-    if new_result.name == "Fog":
-        return predict(new_img, [current_run.metal_icon], False)
-    return new_result
+def start_from_helper(pokemon_list: list[Pokemon], has_barriers, root=None, source=None, create_image=False, skip_shuffle_move=False, forced_board_image=None, forced_swipe_skip=False) -> MatchResult:
+    try:
+        log.debug(f"Starting a new {source} execution")
+        icons_list = load_icon_classes(pokemon_list, has_barriers)
+        can_swipe = is_swipe_enabled(source)
+        current_screen_image = adb_utils.get_new_screenshot()
+        current_run.is_combo_active = False
+        
+        if skip_shuffle_move:
+            return handle_skip_shuffle_move(icons_list, forced_board_image, has_barriers)
+
+        if source == "loop":
+            result = verify_or_enter_stage(current_screen_image)
+            if result is not None:
+                return result
+        can_swipe = can_swipe and not forced_swipe_skip and is_swipe_enabled(source)
+        initialize_run_flags()
+
+        cell_list = make_cell_list(adb_utils.crop_board(current_screen_image))
+        match_list = match_cell_with_icons(icons_list, cell_list, has_barriers, current_run.is_combo_active)
+        current_board = Board(match_list, pokemon_list, icons_list)
+        update_board_with_stage_parameters(current_screen_image, current_board)
+        shuffle_config_files.update_shuffle_move_files(current_board, source)
+
+        if verify_and_execute_tapper(source, current_board):
+            return MatchResult()
+        
+        result = socket_utils.loadNewBoard()
+
+        if can_swipe and int(current_board.moves_left) > 0:
+            swiped = adb_utils.execute_play(result, current_board)
+            if custom_utils.is_debug_mode_active() and swiped:
+                save_debug_objects(result, match_list, source == "manual")
+
+        result_image = None
+
+        if create_image:
+            result_image = custom_utils.make_match_image_comparison(result, match_list)
+
+        return MatchResult(result=result, match_image=result_image, match_list=match_list)
+    except Exception as ex:
+        log.error(f"Unknown Error in main loop: {ex}")
+        return MatchResult()

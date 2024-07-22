@@ -32,6 +32,7 @@ class ExecutionVariable:
         self.fake_matches = []
         self.current_fake_match_index = -1
         self.disable_loop = False
+        self.awakened_from_sleep = False
 
     def clear_stage_variables(self):
         if self.angry_mode_active:
@@ -50,6 +51,7 @@ class ExecutionVariable:
         self.angry_mode_active = False
         self.hearts_loop_counter = 0
         self.non_stage_count = 0
+        self.awakened_from_sleep = False
         
     def load_fake_matchs(self, skip_icons):
         for image_path in Path(constants.IMAGES_PATH).glob("*.png"):

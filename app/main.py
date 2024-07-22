@@ -927,7 +927,7 @@ class ImageSelectorApp():
             widget.pack(**kwargs)
 
     def save_screenshot(self):
-        current_screen_image = adb_utils.get_screenshot()
+        current_screen_image = adb_utils.get_new_screenshot()
         debug_folder = Path(constants.DEBUG_STAGES_IMAGE_FOLDER)
         os.makedirs(debug_folder, exist_ok=True)
         image_name = f"{time.strftime('%Y_%m_%d_%H_%M')}.jpeg"

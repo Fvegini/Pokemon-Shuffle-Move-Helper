@@ -19,14 +19,6 @@ def make_it_sleep(sleep_seconds):
             else:
                 log.error("Waked Early from sleep, sleeping the rest of the time")
                 sleep_remaining_time(must_wait_until_time)
-            #Force some screenshots after wake up. (Sometimes the bluestacks emulator didn't refresh the screen/hearts timer)
-            adb_commands.adb_run_screenshot()
-            time.sleep(5)
-            adb_commands.adb_run_screenshot()
-            time.sleep(5)
-            adb_commands.adb_run_screenshot()
-            time.sleep(10)
-            adb_commands.adb_run_screenshot()
         verify_keep_or_stop_loop()
     except Exception as ex:
         log.error(ex)
@@ -86,6 +78,8 @@ def schedule_wakeup(seconds):
 
 
 def sleep_computer():
+    log.info("Starting Sleep Command") 
     os.system(f"wosb /standby")
     time.sleep(2)
+    current_run.awakened_from_sleep = True
     log.info("Sleep Timeout Ended") 
