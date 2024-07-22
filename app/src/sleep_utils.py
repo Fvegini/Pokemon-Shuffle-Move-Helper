@@ -78,6 +78,9 @@ def schedule_wakeup(seconds):
 
 
 def sleep_computer():
+    # Run at Admin CMD "powercfg -hibernate off" ## This one altered the hibernate/sleep functions
+    # Run at Admin CMD "bcdedit /set useplatformclock true" ## This will activate High Precision Timer Event - There's something BIOS related i'm not sure
+    # But running this two commands into a new Windows 11 installation made things work (Since it is working i won't touch it anymore)
     log.info("Starting Sleep Command") 
     os.system(f"wosb /standby")
     time.sleep(2)
