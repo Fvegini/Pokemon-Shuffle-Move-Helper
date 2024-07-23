@@ -153,7 +153,11 @@ def verify_or_enter_stage(current_screen_image):
         if should_auto_next_stage():
             click_buttons_to_enter_new_stage(current_screen_image)
         else:
+            current_run.auto_disabled_count+= 1
             log.debug("Stage isn't active and next stage is disabled")
+            if current_run.auto_disabled_count > 20:
+                log.debug("Disabling Loop because auto next stage is disabled")
+                current_run.disable_loop = True
         return MatchResult()
     return None
 
@@ -220,6 +224,10 @@ def is_swipe_enabled(source):
         log.debug("Swipe enabled, last swipe timer don't exists")
         return True
     last_swipe_time = custom_utils.time_difference_in_seconds(current_run.last_swipe_timer)
+    if current_run.last_swipe_timer and custom_utils.is_meowth_stage() and last_swipe_time < 8:
+        log.debug(f"Meowth stage, waiting until last_swipe was 8 seconds")
+        time.sleep(abs(last_swipe_time - 8))
+        return False
     if current_run.last_swipe_timer and last_swipe_time > 2:
         log.debug(f"Swipe enabled, last swipe was {last_swipe_time} seconds")
         return True
@@ -388,6 +396,8 @@ def start_from_helper(pokemon_list: list[Pokemon], has_barriers, root=None, sour
             result = verify_or_enter_stage(current_screen_image)
             if result is not None:
                 return result
+        if custom_utils.custom_utils.is_meowth_stage() and not can_swipe:
+            return
         can_swipe = can_swipe and not forced_swipe_skip and is_swipe_enabled(source)
         initialize_run_flags()
 
