@@ -227,7 +227,7 @@ def is_swipe_enabled(source):
     if current_run.last_swipe_timer and custom_utils.is_meowth_stage() and last_swipe_time < 8:
         log.debug(f"Meowth stage, waiting until last_swipe was 8 seconds")
         time.sleep(abs(last_swipe_time - 8))
-        return False
+        return True
     if current_run.last_swipe_timer and last_swipe_time > 2:
         log.debug(f"Swipe enabled, last swipe was {last_swipe_time} seconds")
         return True
@@ -396,9 +396,9 @@ def start_from_helper(pokemon_list: list[Pokemon], has_barriers, root=None, sour
             result = verify_or_enter_stage(current_screen_image)
             if result is not None:
                 return result
-        if custom_utils.custom_utils.is_meowth_stage() and not can_swipe:
-            return
         can_swipe = can_swipe and not forced_swipe_skip and is_swipe_enabled(source)
+        if not can_swipe and (custom_utils.custom_utils.is_meowth_stage() or not custom_utils.is_tapper_active()):
+            return
         initialize_run_flags()
 
         cell_list = make_cell_list(adb_utils.crop_board(current_screen_image))

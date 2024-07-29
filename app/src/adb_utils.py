@@ -180,7 +180,7 @@ def process_time(mystring):
         return re.findall(custom_utils.time_pattern, mystring)[0]
     except:
         log.error(f"Hearts Timer problem, original string: {mystring}")
-        return 30, 0
+        return 0, 0
 
 def is_angry_active():
     return current_run.angry_mode_active

@@ -171,20 +171,43 @@ def update_current_stage(current_stage):
         file.writelines(lines)
     return
 
-def update_preferences(current_score=0, moves_left="5"):
-    #INTEGER STAGE_CURRENT_SCORE 1111
+def update_preferences(current_score=0, moves_left=5):
+    preferences = {
+        "INTEGER STAGE_CURRENT_SCORE": current_score,
+        "INTEGER STAGE_MOVES_REMAINING": moves_left
+    }
+
+    # Read existing lines from the file
     with open(PREFERENCES_PATH, 'r') as file:
         lines = file.readlines()
-    for i, line in enumerate(lines):
-        if line.startswith("INTEGER STAGE_CURRENT_SCORE"):
-            # Replace the line
-            lines[i] = f"INTEGER STAGE_CURRENT_SCORE {current_score}\n"
-        if line.startswith("INTEGER STAGE_MOVES_REMAINING"):
-            # Replace the line
-            lines[i] = f"INTEGER STAGE_MOVES_REMAINING {moves_left}\n"
+
+    # Flag to check if any lines were updated
+    lines_updated = False
+
+    # Iterate over each preference to update or append
+    for key, value in preferences.items():
+        found = False
+        for i, line in enumerate(lines):
+            if line.startswith(f"{key} "):
+                # Replace the line with updated value
+                lines[i] = f"{key} {value}\n"
+                lines_updated = True
+                found = True
+                break
+        
+        if not found:
+            # If the preference line was not found, append it
+            lines.append(f"{key} {value}\n")
+            lines_updated = True
+
+    # If no lines were updated (meaning no lines matched and were updated or appended),
+    # add all preferences at the beginning of the file
+    if not lines_updated:
+        lines = [f"{key} {value}\n" for key, value in preferences.items()] + lines
+
+    # Write the updated lines back to the file
     with open(PREFERENCES_PATH, 'w') as file:
         file.writelines(lines)
-    return 
 
 def update_board_file(names_list, barrier_list, mega_activated, stage):
     if not stage:
