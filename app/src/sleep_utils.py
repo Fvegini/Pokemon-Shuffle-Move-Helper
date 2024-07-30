@@ -3,6 +3,7 @@ from src import dropbox_utils, log_utils, custom_utils, config_utils, adb_comman
 import os
 from datetime import datetime, timedelta
 from src.execution_variables import current_run
+from src.telegram_utils import current_bot
 
 log = log_utils.get_logger()
 
@@ -19,7 +20,6 @@ def make_it_sleep(sleep_seconds):
             else:
                 log.error("Waked Early from sleep, sleeping the rest of the time")
                 sleep_remaining_time(must_wait_until_time)
-        verify_keep_or_stop_loop()
     except Exception as ex:
         log.error(ex)
         # Extract the last traceback object
@@ -31,24 +31,9 @@ def make_it_sleep(sleep_seconds):
             lineno = tb.tb_lineno
             filename = frame.f_code.co_filename
             name = frame.f_code.co_name
-            
-            print(f"File: {filename}, Line: {lineno}, Function: {name}")
-        
-        tb = tb.tb_next
+            log.debug(f"File: {filename}, Line: {lineno}, Function: {name}")
+            tb = tb.tb_next
         sleep_remaining_time(must_wait_until_time)
-
-def verify_keep_or_stop_loop():
-    should_pause = dropbox_utils.read_file_from_dropbox(dropbox_utils.PAUSE_EXECUTION_PATH)
-    dropbox_utils.clear_file_in_dropbox(dropbox_utils.PAUSE_EXECUTION_PATH)
-    if should_pause:
-        log.info("Activating Disable Loop Variable Test")
-        current_run.disable_loop = True
-    should_disable_sleep = dropbox_utils.read_file_from_dropbox(dropbox_utils.PAUSE_SLEEP_PATH)
-    dropbox_utils.clear_file_in_dropbox(dropbox_utils.PAUSE_SLEEP_PATH)
-    if should_disable_sleep:
-        log.info("Activating Disable Sleep Test")
-        config_utils.update_config("sleep_machine", False) 
-    return
 
 def sleep_remaining_time(must_wait_until_time):
     remaining_time = must_wait_until_time - datetime.now()
@@ -58,23 +43,27 @@ def sleep_remaining_time(must_wait_until_time):
 
 def schedule_wakeup(seconds):
     log.debug("Entered on schedule_wakeup function")
-    wakeup_time = datetime.now() + timedelta(seconds=seconds)
-    wakeup_time_str = wakeup_time.strftime("%H:%M:%S")
-    wakeup_date_str = wakeup_time.strftime("%d/%m/%Y")
-    wosb_wakeup_str = str(timedelta(seconds=seconds))
-    
-    dropbox_utils.update_file_with_new_content(dropbox_utils.NEXT_AWAKE_TIME_PATH, f"Next Awake Time: {wakeup_date_str} {wakeup_time_str}")
+    wakeup_time_str = (datetime.now() + timedelta(seconds=seconds)).strftime("%H:%M:%S")
+    send_telegram_message(f"Next Awake Time: {wakeup_time_str}")
 
     # https://dennisbabkin.com/wosb/
-
     command = f"wosb /closeall"
     log.info(f"Running '{command}'")
     os.system(command)
 
-    command = f'START wosb /run /ami /systray tm="+{wosb_wakeup_str}" file="cmd.exe" params="/c exit"'
-    # command = f'START wosb /run /ami /systray tm="+{wosb_wakeup_str}" file="Notepad" /screenon /keepscreenon'
-    log.info(f"Running '{command}'")
-    os.system(command)
+    for extra_time in [0, 60, 120]:
+        command = f'START wosb /run /ami /systray tm="+{str(timedelta(seconds=(seconds + extra_time)))}" file="cmd.exe" params="/c exit"'
+        log.info(f"Running '{command}'")
+        os.system(command)
+    return
+
+def send_telegram_message(text):
+    try:
+        log.debug("Sending message to telegram")
+        current_bot.send_message(text)
+        log.debug("Sent")
+    except Exception as ex:
+        log.error(f"Error on sending telegram message - {ex}")
 
 
 def sleep_computer():

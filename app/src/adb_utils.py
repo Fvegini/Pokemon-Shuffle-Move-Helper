@@ -47,7 +47,8 @@ def execute_play(result, board_results):
                 result = new_result
                 wrong_board = False
                 zero_result = False
-            if not wrong_board and not zero_result :
+            if not wrong_board and not zero_result:
+                current_run.bad_board_count = 0
                 red_row, red_column, blue_row, blue_column = custom_utils.extract_result_position(result)
 
                 from_x = math.floor(get_screen().board_x + (get_screen().board_w * red_column) - (get_screen().board_w / 2))
@@ -62,6 +63,8 @@ def execute_play(result, board_results):
                 current_run.last_swipe_timer = time.time()
                 current_run.last_execution_swiped = True
                 return True
+            else:
+                current_run.bad_board_count+= 1
     except Exception as ex:
         log.error(f"Error on execute_play: {ex}")
     return False

@@ -34,6 +34,7 @@ class ExecutionVariable:
         self.auto_disabled_count = 0
         self.disable_loop = False
         self.awakened_from_sleep = False
+        self.bad_board_count = 0
 
     def clear_stage_variables(self):
         if self.angry_mode_active:
@@ -54,6 +55,7 @@ class ExecutionVariable:
         self.non_stage_count = 0
         self.awakened_from_sleep = False
         self.auto_disabled_count = 0
+        self.bad_board_count = 0
         
     def load_fake_matchs(self, skip_icons):
         for image_path in Path(constants.IMAGES_PATH).glob("*.png"):
@@ -66,7 +68,7 @@ class ExecutionVariable:
         
     def get_next_timed_fake_icon(self):
         if len(self.fake_matches) == 0:
-            self.load_fake_matchs
+            self.load_fake_matchs([])
         self.current_fake_match_index = (self.current_fake_match_index + 1) % len(self.fake_matches)
         return self.fake_matches[self.current_fake_match_index]
 
