@@ -29,7 +29,8 @@ move_strategy = {
     "grading.coordinate": "Coordinates",
     "WeekendMeowth": "WeekendMeowth",
     "037MeowthEarlyGame": "037MeowthEarlyGame",
-    "037MeowthEndGame": "037MeowthEndGame"
+    "037MeowthEndGame": "037MeowthEndGame",
+    "MegaBoostedScore": "MegaBoostedScore"
 }
 
 move_stages = {

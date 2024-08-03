@@ -121,15 +121,25 @@ def test_timer_out_of_sync():
     while current_run.awakened_from_sleep:
         try:
             new_image = get_new_screenshot()
-            hearts_number = get_hearts_number(new_image)
-            if int(hearts_number) >= current_stage_hearts:
+            hearts_number = int(get_hearts_number(new_image))
+            hearts_timer = get_label(new_image, "HeartTimer")
+            minutes, seconds = process_time(hearts_timer)
+            current_sleep_counter = ((30 - int(minutes)) * 60) + int(seconds) + (hearts_number * 1800)
+            if current_sleep_counter >= current_run.awakened_expected_counter and hearts_number >= current_stage_hearts:
                 current_run.awakened_from_sleep = False
                 log.info("Hearts ok, exitting")
                 return
             log.info("Hearts number not ok, clicking on info and return icons")
-            has_icon_match(new_image, constants.INFO_ICON_IMAGE, extra_timeout=4, click=True, log_not_found=True)
-            new_image = get_new_screenshot()
-            click_return_buttons(new_image, timeout_increase=4)
+            if has_icon_match(new_image, constants.INFO_ICON_IMAGE, extra_timeout=4, click=True, log_not_found=True):
+                new_image = get_new_screenshot()
+            if click_return_buttons(new_image, timeout_increase=4):
+                new_image = get_new_screenshot()
+            if click_ok_buttons(new_image, timeout_increase=4):
+                new_image = get_new_screenshot()
+            if has_text_match(new_image, "No", extra_timeout=4):
+                new_image = get_new_screenshot()
+            if has_text_match(new_image, "No2", extra_timeout=4, custom_search_text="No"):
+                new_image = get_new_screenshot()
         except:
             pass
 
@@ -174,7 +184,8 @@ def escalation_hearts_processing(original_image, hearts_number):
         time_to_wait = max(time_to_wait, 0) # Avoid negative number when there's less than 5 minutes to next life.
         current_run.thread_sleep_timer = int(time_to_wait)
         log.debug(f"Escalation Hearts Management: Waiting until {time.strftime('%H:%M:%S', time.localtime(time.time() + current_run.thread_sleep_timer))} ({current_run.thread_sleep_timer / 60}) minutes")
-        sleep_utils.make_it_sleep(current_run.thread_sleep_timer)
+        current_run.awakened_expected_counter = 1800 + ((30 - 7) * 60)
+        sleep_utils.make_it_sleep(current_run.thread_sleep_timer, hearts_number)
         log.debug("Escalation sleep ended, continuing")
         current_run.thread_sleep_timer = 0
 
@@ -193,7 +204,9 @@ def wait_until_fill_hearts(original_image, current_hearts, aimed_hearts=2):
     minutes, seconds = process_time(hearts_timer)
     current_run.thread_sleep_timer = (int(minutes) * 60) + int(seconds) + 5 + ((aimed_hearts - current_hearts - 1) * 30 * 60)
     log.debug(f"Hearts Ended, waiting until {time.strftime('%H:%M:%S', time.localtime(time.time() + current_run.thread_sleep_timer))} ({current_run.thread_sleep_timer / 60}) minutes")
-    sleep_utils.make_it_sleep(current_run.thread_sleep_timer)
+
+    current_run.awakened_expected_counter = aimed_hearts * 1800
+    sleep_utils.make_it_sleep(current_run.thread_sleep_timer, current_hearts)
     current_run.thread_sleep_timer = 0
 
 def is_escalation_battle():
@@ -290,6 +303,7 @@ def verify_angry_mode(original_image, retry_count=0, max_retries=0):
     if is_angry or is_angry_text:
         current_run.angry_mode_active = True
         log.info("Angry Mode is ACTIVE")
+        custom_utils.send_telegram_message("Angry Mode is ACTIVE")
         return
     
     if retry_count < max_retries:

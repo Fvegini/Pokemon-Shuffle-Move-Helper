@@ -34,6 +34,7 @@ class ExecutionVariable:
         self.auto_disabled_count = 0
         self.disable_loop = False
         self.awakened_from_sleep = False
+        self.awakened_expected_counter = 0
         self.bad_board_count = 0
 
     def clear_stage_variables(self):
@@ -56,6 +57,7 @@ class ExecutionVariable:
         self.awakened_from_sleep = False
         self.auto_disabled_count = 0
         self.bad_board_count = 0
+        self.awakened_expected_counter = 0
         
     def load_fake_matchs(self, skip_icons):
         for image_path in Path(constants.IMAGES_PATH).glob("*.png"):

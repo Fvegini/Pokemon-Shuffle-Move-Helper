@@ -3,14 +3,17 @@ from src import dropbox_utils, log_utils, custom_utils, config_utils, adb_comman
 import os
 from datetime import datetime, timedelta
 from src.execution_variables import current_run
-from src.telegram_utils import current_bot
 
 log = log_utils.get_logger()
 
-def make_it_sleep(sleep_seconds):
+def make_it_sleep(sleep_seconds, current_hearts=0):
+    if not sleep_seconds:
+        return
     must_wait_until_time = datetime.now() + timedelta(seconds=sleep_seconds)
     try:
         if sleep_seconds < 180 or not custom_utils.is_sleep_machine_enabled():
+            wakeup_time_str = (datetime.now() + timedelta(seconds=sleep_seconds)).strftime("%H:%M:%S")
+            custom_utils.send_telegram_message(f"Waiting for next heart until: {wakeup_time_str}")
             time.sleep(sleep_seconds)
         else:
             schedule_wakeup(sleep_seconds)
@@ -44,7 +47,7 @@ def sleep_remaining_time(must_wait_until_time):
 def schedule_wakeup(seconds):
     log.debug("Entered on schedule_wakeup function")
     wakeup_time_str = (datetime.now() + timedelta(seconds=seconds)).strftime("%H:%M:%S")
-    send_telegram_message(f"Next Awake Time: {wakeup_time_str}")
+    custom_utils.send_telegram_message(f"Activating Standby, Awake Time: {wakeup_time_str}")
 
     # https://dennisbabkin.com/wosb/
     command = f"wosb /closeall"
@@ -56,15 +59,6 @@ def schedule_wakeup(seconds):
         log.info(f"Running '{command}'")
         os.system(command)
     return
-
-def send_telegram_message(text):
-    try:
-        log.debug("Sending message to telegram")
-        current_bot.send_message(text)
-        log.debug("Sent")
-    except Exception as ex:
-        log.error(f"Error on sending telegram message - {ex}")
-
 
 def sleep_computer():
     # Run at Admin CMD "powercfg -hibernate off" ## This one altered the hibernate/sleep functions

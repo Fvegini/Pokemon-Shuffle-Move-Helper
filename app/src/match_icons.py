@@ -335,6 +335,7 @@ def is_on_stage(original_image):
         current_run.first_move = False
         if not current_run.id:
             current_run.id = time.strftime('%Y_%m_%d_%H_%M')
+            custom_utils.send_telegram_message("Started a new Stage")
             current_run.first_move = True
             current_run.stage_timer = time.time()
             current_run.move_number = 0
@@ -350,6 +351,7 @@ def is_on_stage(original_image):
         if current_run.id is not None:
             if custom_utils.is_debug_mode_active():
                 save_debug_objects()
+            custom_utils.send_telegram_message("Ended Stage")
             current_run.clear_stage_variables()
     elif on_stage and not current_run.stage_timer:
         current_run.stage_timer = time.time()

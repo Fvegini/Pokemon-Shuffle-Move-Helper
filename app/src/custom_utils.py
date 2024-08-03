@@ -18,6 +18,9 @@ from thefuzz import fuzz
 import io
 import math
 
+from src.sleep_utils import log
+from src.telegram_utils import current_bot
+
 log = log_utils.get_logger()
 FROZEN_IMAGE = cv2.imread(Path(constants.ASSETS_PATH, "barrier.png").as_posix(), cv2.IMREAD_UNCHANGED)
 invalid_values = ["Wood", "Barrier", "Metal"]
@@ -722,3 +725,11 @@ def save_extra_debug_image(points_list, suffix):
     image_path = Path(constants.DEBUG_EXTRA_IMAGE_FOLDER, f"{datetime.now().strftime('%Y_%m_%d_%H_%M_%S_%f')[:-3]}_{suffix}.jpeg")
     image_with_markers = custom_utils.add_red_marker(constants.LAST_SCREEN_IMAGE_PATH, points_list)
     custom_utils.compress_image_and_save(image_with_markers, image_path.as_posix(), initial_quality=6)
+
+
+def send_telegram_message(text):
+    try:
+        log.debug(f"Sending message to telegram> {text}")
+        current_bot.send_message(text)
+    except Exception as ex:
+        log.error(f"Error on sending telegram message - {ex}")

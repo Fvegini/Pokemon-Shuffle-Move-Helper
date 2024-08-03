@@ -24,6 +24,7 @@ import numpy as np
 import threading
 import time
 from src import log_utils
+import sys
 
 log = log_utils.get_logger()
 warnings.filterwarnings("ignore", category=UserWarning, message="CTkButton Warning: Given image is not CTkImage but*")
@@ -999,7 +1000,14 @@ def merge_tooltip_pil_images(*args):
     
     return final_image
 
+def on_closing():
+   # Perform any cleanup here if necessary
+   root.destroy()
+   sys.exit()
+
+
 if __name__ == "__main__":    
     root = customtkinter.CTk()
+    root.protocol("WM_DELETE_WINDOW", on_closing)
     app = ImageSelectorApp(root)
     root.mainloop()
