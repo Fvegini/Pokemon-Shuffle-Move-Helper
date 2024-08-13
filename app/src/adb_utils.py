@@ -463,12 +463,16 @@ def get_moves_left(original_image):
     if ":" in moves:
         _, seconds = process_time(moves)
         seconds = int(seconds)
+        if seconds == 0:
+            moves = "0"
         if seconds <= 3:
             moves = "1"
         elif seconds <= 10:
             moves = "3"
-        else:
+        elif seconds > 10:
             moves = "5"
+        else:
+            moves = "0"
     return moves
 
 def get_current_score(original_image):

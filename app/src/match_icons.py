@@ -173,6 +173,7 @@ def verify_and_execute_tapper(source, current_board: Board):
 
 def update_board_with_stage_parameters(current_screen_image, current_board):
     current_board.moves_left = adb_utils.get_moves_left(current_screen_image)
+    log.debug(f"Stage Moves Left: {current_board.moves_left}")
     if not custom_utils.is_timed_stage():
         if custom_utils.is_meowth_stage():
             current_board.current_score = adb_utils.get_current_score(current_screen_image)
@@ -315,9 +316,11 @@ def match_cell_with_icons(icons_list, cell_list, has_barriers, combo_is_running=
         result = predict(cell, icons_list, has_barriers)
         if not timed_stage and not combo_is_running and not current_run.last_execution_swiped and result.name in ["Fog", "_Fog"]:
             result = update_fog_match(result, icons_list, has_barriers, idx)
+        elif timed_stage and result.name in ["Fog", "_Fog"]:
+            result = current_run.metal_match
         match_list.append(result)
     if timed_stage:
-        mask_already_existant_matches(match_list)
+        mask_already_existant_matches(match_list, icons_list)
     if current_run.bad_board_count > 10:
         mask_already_existant_matches(match_list, icons_list)
     return match_list
