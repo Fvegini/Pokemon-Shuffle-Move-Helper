@@ -42,6 +42,7 @@ class ImageSelectorApp():
         self.master.title(f"Pokemon Shuffle Helper {version.current_version}")
         self.create_tab_menu()
         
+        self.overlay = None
         self.appview = customtkinter.CTkFrame(self.master)
         self.appview.pack(expand=1, fill=tk.X, pady=0, padx=0, anchor="nw")
 
@@ -164,12 +165,7 @@ class ImageSelectorApp():
         
         customtkinter.CTkLabel(frame1_3_bottom, text="Other").pack(side=tk.BOTTOM, anchor=tk.S)
 
-        btn1_3_1 = customtkinter.CTkButton(frame1_3_top, text="Hide Main App", command=lambda: self.show_or_hide_widget(self.appview, expand=1, fill=tk.X, pady=0, padx=0, anchor="nw"), image=icon, **self.tab_button_style)        
-        btn1_3_2 = customtkinter.CTkButton(frame1_3_top, text="Save Screenshot", command=lambda: self.save_screenshot(), image=icon, **self.tab_button_style)        
-
-        btn1_3_1.pack(side=tk.LEFT)
-        btn1_3_2.pack(side=tk.LEFT)        
-
+        customtkinter.CTkButton(frame1_3_top, text="Save Screenshot", command=lambda: self.save_screenshot(), image=icon, **self.tab_button_style).pack(side=tk.LEFT)
 
     def set_stage_var(self, choice):
         current_run.current_stage = [k for k, v in constants.move_stages.items() if v == choice][0]
@@ -341,6 +337,7 @@ class ImageSelectorApp():
         CTkToolTip(btn2_1_1, delay=0.5, message="Load Team From Shuffle Move Config File")
         btn2_1_1.pack(side=tk.LEFT, padx=1)
         customtkinter.CTkButton(frame3_2_top, text="Current Board", command=self.show_current_board_with_matches, image=self.get_icon("search"), **self.tab_button_style).pack(side=tk.LEFT)
+        customtkinter.CTkButton(frame3_2_top, text="Hide Main App", command=lambda: self.show_or_hide_widget(self.appview), image=self.get_icon("eye-slash-regular"), **self.tab_button_style).pack(side=tk.LEFT)
 
         frame3_3 = customtkinter.CTkFrame(self.tab3, fg_color="transparent")
         frame3_3_top = customtkinter.CTkFrame(frame3_3, fg_color="transparent")
@@ -406,13 +403,13 @@ class ImageSelectorApp():
         frame4_1_top_4.pack(side=tk.LEFT)
 
         self.frame4_1_top_1_1_var = tk.BooleanVar(value=config_utils.config_values.get("greatball")) 
-        self.frame4_1_top_1_2_var = tk.BooleanVar(value=config_utils.config_values.get("placeholder"))
-        self.frame4_1_top_1_3_var = tk.BooleanVar(value=config_utils.config_values.get("placeholder")) 
+        self.frame4_1_top_1_2_var = tk.BooleanVar(value=config_utils.config_values.get("stage_pause"))
+        self.frame4_1_top_1_3_var = tk.BooleanVar(value=config_utils.config_values.get("check_drop")) 
         self.frame4_1_top_1_4_var = tk.BooleanVar(value=config_utils.config_values.get("placeholder"))
         
         self.frame4_1_top_1_1_switch = customtkinter.CTkSwitch(frame4_1_top_1, variable=self.frame4_1_top_1_1_var, command=lambda: self.update_switch_config(self.frame4_1_top_1_1_var, "greatball"), text="Great Ball", onvalue=True, offvalue=False)
-        self.frame4_1_top_1_2_switch = customtkinter.CTkSwitch(frame4_1_top_1, variable=self.frame4_1_top_1_2_var, command=lambda: self.update_switch_config(self.frame4_1_top_1_2_var, "placeholder"), text="placeholder", onvalue=True, offvalue=False)
-        self.frame4_1_top_1_3_switch = customtkinter.CTkSwitch(frame4_1_top_1, variable=self.frame4_1_top_1_3_var, command=lambda: self.update_switch_config(self.frame4_1_top_1_3_var, "placeholder"), text="placeholder", onvalue=True, offvalue=False)
+        self.frame4_1_top_1_2_switch = customtkinter.CTkSwitch(frame4_1_top_1, variable=self.frame4_1_top_1_2_var, command=lambda: self.update_switch_config(self.frame4_1_top_1_2_var, "stage_pause"), text="Stage Pause at Start", onvalue=True, offvalue=False)
+        self.frame4_1_top_1_3_switch = customtkinter.CTkSwitch(frame4_1_top_1, variable=self.frame4_1_top_1_3_var, command=lambda: self.update_switch_config(self.frame4_1_top_1_3_var, "check_drop"), text="Check Drops", onvalue=True, offvalue=False)
         self.frame4_1_top_1_4_switch = customtkinter.CTkSwitch(frame4_1_top_1, variable=self.frame4_1_top_1_4_var, command=lambda: self.update_switch_config(self.frame4_1_top_1_4_var, "placeholder"), text="placeholder", onvalue=True, offvalue=False)
         
 
@@ -506,7 +503,7 @@ class ImageSelectorApp():
         self.log_widget = customtkinter.CTkTextbox(self.master, font=("Courier", 13), width=500, height=500)
         self.log_widget.pack(side=tk.BOTTOM, fill=tk.X)
         
-        log_handler = log_utils.LogHandler(self.log_widget, max_lines=50)
+        log_handler = log_utils.LogHandler(self.log_widget, max_lines=150)
         log_utils.insert_new_handler(log_handler)
 
     def create_right_app_screen(self):
@@ -920,12 +917,14 @@ class ImageSelectorApp():
     def load_team(self):
         self.disable_loop()
         load_from_shuffle.TeamLoader(root=self)
-        
-    def show_or_hide_widget(self, widget, *args, **kwargs):
-        if widget.winfo_viewable():
-            widget.pack_forget()
+
+    def show_or_hide_widget(self, widget):
+        if self.overlay:
+            self.overlay.destroy()  # Remove the overlay
+            self.overlay = None
         else:
-            widget.pack(**kwargs)
+            self.overlay = tk.Canvas(widget, bg=customtkinter.ThemeManager.theme["CTkFrame"]["fg_color"][1], highlightthickness=0)
+            self.overlay.place(x=0, y=0, relwidth=1, relheight=1)
 
     def save_screenshot(self):
         current_screen_image = adb_utils.get_new_screenshot()

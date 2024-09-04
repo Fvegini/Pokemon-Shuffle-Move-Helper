@@ -719,6 +719,11 @@ def is_adb_move_enabled():
 def use_great_ball():
     return config_utils.config_values.get("greatball")
 
+def is_stage_pause():
+    return config_utils.config_values.get("stage_pause")
+
+def is_check_drops_enabled():
+    return config_utils.config_values.get("check_drop")
 
 def save_extra_debug_image(points_list, suffix):
     os.makedirs(constants.DEBUG_EXTRA_IMAGE_FOLDER, exist_ok=True)

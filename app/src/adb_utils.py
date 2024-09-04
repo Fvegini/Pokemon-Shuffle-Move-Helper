@@ -104,9 +104,10 @@ def check_hearts(original_image):
             return
         hearts_number = int(hearts_number_str)
         log.debug(f"Current Hearts amount is: {hearts_number}")
-        if hearts_number >= 5 or current_run.hearts_loop_counter > 20:
-            log.debug("Hearts maxed, small click test") #Try to skip the daily login bonus screen
+        if current_run.hearts_loop_counter > 20:
+            log.debug("loop at 20, small click test") #Try to skip the daily login bonus screen
             adb_run_tap(get_screen().get_position('Hearts')[0], get_screen().get_position('Hearts')[1])
+            current_run.hearts_loop_counter = 0
         if is_escalation_battle():
             escalation_hearts_processing(original_image, hearts_number)
         elif hearts_number < config_utils.config_values.get("stage_hearts", 1):
@@ -458,6 +459,12 @@ def get_current_stage_name(original_image):
         v = "{:03}".format(int(v))
     return v
 
+def get_end_stage_score(original_image):
+    v = get_label(original_image, "EndStageScore")
+    if v.isnumeric():
+        v = "{:03}".format(int(v))
+    return v
+
 def get_moves_left(original_image):
     moves = get_label(original_image, "MovesLeft")
     if ":" in moves:
@@ -470,7 +477,7 @@ def get_moves_left(original_image):
         elif seconds <= 10:
             moves = "3"
         elif seconds > 10:
-            moves = "5"
+            moves = str(seconds)
         else:
             moves = "0"
     return moves
@@ -530,3 +537,6 @@ def get_coordinates_from_board_index(idx):
     cell_x1 =  math.floor(get_screen().board_x + (get_screen().board_w * (column)))
     cell_y1 =  math.floor(get_screen().board_y + (get_screen().board_h * (row)))
     return cell_x0,cell_y0,cell_x1,cell_y1
+
+def check_if_has_drops(original_image):
+    return has_icon_match(original_image, constants.DROP_IMAGE, "Drops", extra_timeout=0, click=False, min_point=8)

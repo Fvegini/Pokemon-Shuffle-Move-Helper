@@ -129,6 +129,8 @@ RESOLUTIONS = {
         "StageName": (581, 546, 890, 586),
         "Score": (32, 187, 200, 222),
         "MovesLeft": (39, 551, 240, 620),
+        "EndStageScore": (103, 661, 832, 720),
+        "Drops": (613, 449, 892, 538),
     }
 }
 
@@ -151,4 +153,5 @@ RETURN_FLAG_IMAGE = r"assets\adb\return_flag1.png"
 RETURN_FLAG2_IMAGE = r"assets\adb\return_flag2.png"
 ANGRY_ICON_IMAGE = r"assets\adb\angry_1.png"
 ANGRY_ICON2_IMAGE = r"assets\adb\angry_2.png"
-POKEBALL_CAPTURE_IMAGE = r"assets\adb\pokeball_capture.png" 
+POKEBALL_CAPTURE_IMAGE = r"assets\adb\pokeball_capture.png"
+DROP_IMAGE = r"assets\adb\drop.png"

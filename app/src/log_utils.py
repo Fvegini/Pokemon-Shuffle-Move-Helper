@@ -18,12 +18,11 @@ class LogHandler(logging.Handler):
     def emit(self, record):
         msg = self.format(record)
         self.log_lines.append(msg)  # Append the message to the end
-        self.update_widget(msg)  # Pass only the new message
+        self.update_widget()  # Pass only the new message
 
-    def update_widget(self, new_message):
-        if len(self.log_lines) > self.max_lines:
-            self.widget.delete("1.0", "2.0")
-        self.widget.insert(tk.END, new_message + '\n')  # Insert the new message at the end
+    def update_widget(self):
+        self.widget.delete("1.0", tk.END)  # Clear the widget
+        self.widget.insert(tk.END, '\n'.join(self.log_lines) + '\n')  # Insert the last `max_lines` lines
         self.widget.see(tk.END)  # Ensure the latest message is visible
 
 

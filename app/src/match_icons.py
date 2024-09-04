@@ -338,7 +338,13 @@ def is_on_stage(original_image):
         current_run.first_move = False
         if not current_run.id:
             current_run.id = time.strftime('%Y_%m_%d_%H_%M')
-            custom_utils.send_telegram_message("Started a new Stage")
+            stage_text = adb_utils.get_current_stage(original_image)
+            if custom_utils.is_stage_pause():
+                if True:
+                    time.sleep(2)
+                    original_image = adb_utils.get_new_screenshot()
+                    stage_text = adb_utils.get_current_stage(original_image)
+            custom_utils.send_telegram_message(f"Started a new Stage - {stage_text}")
             current_run.first_move = True
             current_run.stage_timer = time.time()
             current_run.move_number = 0
@@ -354,7 +360,14 @@ def is_on_stage(original_image):
         if current_run.id is not None:
             if custom_utils.is_debug_mode_active():
                 save_debug_objects()
-            custom_utils.send_telegram_message("Ended Stage")
+            stage_text = adb_utils.get_end_stage_score(original_image)
+            if custom_utils.is_stage_pause():
+                time.sleep(2)
+                original_image = adb_utils.get_new_screenshot()
+                stage_text = adb_utils.get_end_stage_score(original_image)
+            if current_run.has_drops:
+                stage_text+= ". And had drops"
+            custom_utils.send_telegram_message(f"Ended Stage With Score {stage_text}")
             current_run.clear_stage_variables()
     elif on_stage and not current_run.stage_timer:
         current_run.stage_timer = time.time()
@@ -404,7 +417,8 @@ def start_from_helper(pokemon_list: list[Pokemon], has_barriers, root=None, sour
             if result is not None:
                 return result
         can_swipe = can_swipe and not forced_swipe_skip and is_swipe_enabled(source)
-        if not can_swipe and (custom_utils.custom_utils.is_meowth_stage() or not custom_utils.is_tapper_active()):
+        verify_drops_logic(current_screen_image)
+        if not can_swipe and (custom_utils.is_meowth_stage() or not custom_utils.is_tapper_active()):
             return
         initialize_run_flags()
 
@@ -433,3 +447,8 @@ def start_from_helper(pokemon_list: list[Pokemon], has_barriers, root=None, sour
     except Exception as ex:
         log.error(f"Unknown Error in main loop: {ex}")
         return MatchResult()
+
+def verify_drops_logic(current_screen_image):
+    if not current_run.has_drops and custom_utils.is_check_drops_enabled():
+        if adb_utils.check_if_has_drops(current_screen_image):
+            current_run.has_drops = True
