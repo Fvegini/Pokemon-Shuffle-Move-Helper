@@ -19,11 +19,22 @@ log = log_utils.get_logger()
 
 
 def get_new_screenshot():
-    pipe = adb_run_screenshot()
-    image_bytes = pipe.stdout.read().replace(b'\r\n', b'\n') #type: ignore
-    img = cv2.imdecode(np.fromstring(image_bytes, np.uint8), cv2.IMREAD_COLOR) #type: ignore
-    cv2.imwrite(constants.LAST_SCREEN_IMAGE_PATH, img)
-    return img
+    try:
+        pipe = adb_run_screenshot()
+        image_bytes = pipe.stdout.read().replace(b'\r\n', b'\n') #type: ignore
+        img = cv2.imdecode(np.fromstring(image_bytes, np.uint8), cv2.IMREAD_COLOR) #type: ignore
+        cv2.imwrite(constants.LAST_SCREEN_IMAGE_PATH, img)
+        current_run.abd_not_found_count = 0
+        return img
+    except:
+        current_run.abd_not_found_count+= 1
+        if current_run.abd_not_found_count >= 20:
+            log.debug("Disabling Loop because adb wasn't found")
+            custom_utils.send_telegram_message("Disabling Loop because adb wasn't found")
+            current_run.disable_loop = True
+        update_adb_connection(reconfigure_screen=True)
+        raise
+
 
 def crop_board(img):
     if not get_screen().loaded:
@@ -461,6 +472,12 @@ def get_current_stage_name(original_image):
 
 def get_end_stage_score(original_image):
     v = get_label(original_image, "EndStageScore")
+    if v.isnumeric():
+        v = "{:03}".format(int(v))
+    return v
+
+def get_end_stage_coins(original_image):
+    v = get_label(original_image, "EndStageCoins")
     if v.isnumeric():
         v = "{:03}".format(int(v))
     return v

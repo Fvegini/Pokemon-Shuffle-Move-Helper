@@ -130,6 +130,7 @@ RESOLUTIONS = {
         "Score": (32, 187, 200, 222),
         "MovesLeft": (39, 551, 240, 620),
         "EndStageScore": (103, 661, 832, 720),
+        "EndStageCoins": (511, 627, 607, 673),
         "Drops": (613, 449, 892, 538),
     }
 }

@@ -37,6 +37,7 @@ class ExecutionVariable:
         self.awakened_expected_counter = 0
         self.bad_board_count = 0
         self.has_drops = False
+        self.abd_not_found_count = 0
 
     def clear_stage_variables(self):
         if self.angry_mode_active:
@@ -60,6 +61,7 @@ class ExecutionVariable:
         self.bad_board_count = 0
         self.awakened_expected_counter = 0
         self.has_drops = False
+        self.abd_not_found_count = 0
         
     def load_fake_matchs(self, skip_icons):
         for image_path in Path(constants.IMAGES_PATH).glob("*.png"):

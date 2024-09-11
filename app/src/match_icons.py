@@ -367,6 +367,8 @@ def is_on_stage(original_image):
                 stage_text = adb_utils.get_end_stage_score(original_image)
             if current_run.has_drops:
                 stage_text+= ". And had drops"
+            if custom_utils.custom_utils.is_meowth_stage():
+                stage_text+= f"And {adb_utils.get_end_stage_coins(original_image)} coins"
             custom_utils.send_telegram_message(f"Ended Stage With Score {stage_text}")
             current_run.clear_stage_variables()
     elif on_stage and not current_run.stage_timer:

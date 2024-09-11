@@ -49,7 +49,8 @@ class ImageSelectorApp():
         self.create_left_app_screen()
         self.create_right_app_screen()
         self.create_bottom_message()
-        
+        self.hide_button.invoke()
+
         self.update_image_list()
         self.set_mega_list()
         self.load_last_team()
@@ -333,11 +334,12 @@ class ImageSelectorApp():
         btn3_2_1.pack(side=tk.LEFT)
         keyboard.add_hotkey('f2', lambda: self.execute_board_analysis_threaded(source="manual")) #type: ignore
         
-        btn2_1_1 = customtkinter.CTkButton(frame3_2_top, text="Load Team", command=self.load_team, image=self.get_icon("cloud-download-alt"), **self.tab_button_style)
-        CTkToolTip(btn2_1_1, delay=0.5, message="Load Team From Shuffle Move Config File")
-        btn2_1_1.pack(side=tk.LEFT, padx=1)
+        btn3_2_2 = customtkinter.CTkButton(frame3_2_top, text="Load Team", command=self.load_team, image=self.get_icon("cloud-download-alt"), **self.tab_button_style)
+        CTkToolTip(btn3_2_2, delay=0.5, message="Load Team From Shuffle Move Config File")
+        btn3_2_2.pack(side=tk.LEFT, padx=1)
         customtkinter.CTkButton(frame3_2_top, text="Current Board", command=self.show_current_board_with_matches, image=self.get_icon("search"), **self.tab_button_style).pack(side=tk.LEFT)
-        customtkinter.CTkButton(frame3_2_top, text="Hide Main App", command=lambda: self.show_or_hide_widget(self.appview), image=self.get_icon("eye-slash-regular"), **self.tab_button_style).pack(side=tk.LEFT)
+        self.hide_button = customtkinter.CTkButton(frame3_2_top, text="Hide Main App", command=lambda: self.show_or_hide_widget(self.appview), image=self.get_icon("eye-slash-regular"), **self.tab_button_style)
+        self.hide_button.pack(side=tk.LEFT)
 
         frame3_3 = customtkinter.CTkFrame(self.tab3, fg_color="transparent")
         frame3_3_top = customtkinter.CTkFrame(frame3_3, fg_color="transparent")
@@ -512,6 +514,9 @@ class ImageSelectorApp():
 
     def configure_initial_geometry(self):
         self.master.update()
+        self.master.state('zoomed')
+        self.check_current_position()
+        return
         screen_width = self.master.winfo_screenwidth()
         screen_height = self.master.winfo_screenheight() - custom_utils.get_taskbar_size()
 
