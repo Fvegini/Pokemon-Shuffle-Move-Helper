@@ -117,6 +117,7 @@ RESOLUTIONS = {
         "CoinStage": (153, 646, 742, 826),
         "CoinStageYes": (118, 1041, 225, 1093),
         "Close": (348, 1033, 544, 1096),
+        "Close2": (646, 1041, 806, 1093),
         "Angry": (70, 686, 826, 915), #The Grey Angry! text
         # "EscalationLevel": (558, 434, 841, 623),
         "Pokeball Capture": (320, 1028, 577, 1272),

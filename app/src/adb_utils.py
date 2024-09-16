@@ -282,6 +282,11 @@ def check_buttons_to_click(original_image):
     if has_text_match(original_image, "Close", extra_timeout=1+timeout_increase):
         was_clicked = True
         original_image = get_new_screenshot()
+        return click_return_buttons(original_image, timeout_increase)
+    if has_text_match(original_image, "Close2", extra_timeout=1+timeout_increase, custom_search_text="Close"):
+        was_clicked = True
+        original_image = get_new_screenshot()
+        return click_return_buttons(original_image, timeout_increase)
     if not was_clicked:
         return click_return_buttons(original_image, timeout_increase)
     if was_clicked:

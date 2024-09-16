@@ -4,7 +4,8 @@ from tkinter import ttk
 from typing import Any
 import customtkinter
 from PIL import Image
-import keyboard
+# import keyboard
+from pynput import keyboard
 from src import match_icons, screen_utils, shuffle_config_files
 from pathlib import Path
 from src.board_image_selector import BoardIconSelector, PokemonIconSelector
@@ -50,6 +51,9 @@ class ImageSelectorApp():
         self.create_right_app_screen()
         self.create_bottom_message()
         self.hide_button.invoke()
+
+        self.listener = keyboard.Listener(on_press=self.on_press)
+        self.listener.start()
 
         self.update_image_list()
         self.set_mega_list()
@@ -268,8 +272,8 @@ class ImageSelectorApp():
         self.frame3_1_top_1_4_switch.pack(side=tk.TOP, anchor=tk.W, padx=1)
 
 
-        keyboard.add_hotkey('f3', lambda:  self.frame3_1_top_1_1_switch_control_loop.toggle())
-        keyboard.add_hotkey('f4', lambda: self.frame3_1_top_1_2_switch.toggle())
+        # keyboard.add_hotkey('f3', lambda:  self.frame3_1_top_1_1_switch_control_loop.toggle())
+        # keyboard.add_hotkey('f4', lambda: self.frame3_1_top_1_2_switch.toggle())
         
         self.frame3_1_top_2_1_var = tk.BooleanVar(value=config_utils.config_values.get("auto_next_stage"))      
         self.frame3_1_top_2_2_var = tk.BooleanVar(value=config_utils.config_values.get("timed_stage")) 
@@ -332,7 +336,7 @@ class ImageSelectorApp():
         btn3_2_1 = customtkinter.CTkButton(frame3_2_top, text="Execute", command=lambda: self.execute_board_analysis_threaded(source="manual"), image=self.get_icon("play-circle"), **self.tab_button_style)
         CTkToolTip(btn3_2_1, delay=0.5, message="Execute (F2)")
         btn3_2_1.pack(side=tk.LEFT)
-        keyboard.add_hotkey('f2', lambda: self.execute_board_analysis_threaded(source="manual")) #type: ignore
+        # keyboard.add_hotkey('f2', lambda: self.execute_board_analysis_threaded(source="manual")) #type: ignore
         
         btn3_2_2 = customtkinter.CTkButton(frame3_2_top, text="Load Team", command=self.load_team, image=self.get_icon("cloud-download-alt"), **self.tab_button_style)
         CTkToolTip(btn3_2_2, delay=0.5, message="Load Team From Shuffle Move Config File")
@@ -407,12 +411,12 @@ class ImageSelectorApp():
         self.frame4_1_top_1_1_var = tk.BooleanVar(value=config_utils.config_values.get("greatball")) 
         self.frame4_1_top_1_2_var = tk.BooleanVar(value=config_utils.config_values.get("stage_pause"))
         self.frame4_1_top_1_3_var = tk.BooleanVar(value=config_utils.config_values.get("check_drop")) 
-        self.frame4_1_top_1_4_var = tk.BooleanVar(value=config_utils.config_values.get("placeholder"))
+        self.frame4_1_top_1_4_var = tk.BooleanVar(value=config_utils.config_values.get("mega_boosted_score"))
         
         self.frame4_1_top_1_1_switch = customtkinter.CTkSwitch(frame4_1_top_1, variable=self.frame4_1_top_1_1_var, command=lambda: self.update_switch_config(self.frame4_1_top_1_1_var, "greatball"), text="Great Ball", onvalue=True, offvalue=False)
         self.frame4_1_top_1_2_switch = customtkinter.CTkSwitch(frame4_1_top_1, variable=self.frame4_1_top_1_2_var, command=lambda: self.update_switch_config(self.frame4_1_top_1_2_var, "stage_pause"), text="Stage Pause at Start", onvalue=True, offvalue=False)
         self.frame4_1_top_1_3_switch = customtkinter.CTkSwitch(frame4_1_top_1, variable=self.frame4_1_top_1_3_var, command=lambda: self.update_switch_config(self.frame4_1_top_1_3_var, "check_drop"), text="Check Drops", onvalue=True, offvalue=False)
-        self.frame4_1_top_1_4_switch = customtkinter.CTkSwitch(frame4_1_top_1, variable=self.frame4_1_top_1_4_var, command=lambda: self.update_switch_config(self.frame4_1_top_1_4_var, "placeholder"), text="placeholder", onvalue=True, offvalue=False)
+        self.frame4_1_top_1_4_switch = customtkinter.CTkSwitch(frame4_1_top_1, variable=self.frame4_1_top_1_4_var, command=lambda: self.update_switch_config(self.frame4_1_top_1_4_var, "mega_boosted_score"), text="Mega Boosted Score", onvalue=True, offvalue=False)
         
 
         self.frame4_1_top_1_1_switch.pack(side=tk.TOP, anchor=tk.W, padx=1)
@@ -937,6 +941,15 @@ class ImageSelectorApp():
         os.makedirs(debug_folder, exist_ok=True)
         image_name = f"{time.strftime('%Y_%m_%d_%H_%M')}.jpeg"
         custom_utils.compress_image_and_save(current_screen_image, Path(debug_folder, f"screen_{image_name}").as_posix())
+
+    def on_press(self, key):
+        try:
+            if key == keyboard.Key.f3:  # Check if the key is F3
+                self.frame3_1_top_1_1_switch_control_loop.toggle()
+            elif key == keyboard.Key.f2:
+                    self.execute_board_analysis_threaded(source="manual")
+        except AttributeError:
+            pass  # Handle special keys if necessary
 
 def merge_pil_images(image1, image2):
     # Get the width and height of each image
