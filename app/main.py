@@ -732,6 +732,7 @@ class ImageSelectorApp():
 
     def clear_icons_cache(self):
         match_icons.loaded_icons_cache = {}
+        current_run.fake_matches = []
         current_run.has_modifications = True
 
     def get_selected_images_widgets_list(self):

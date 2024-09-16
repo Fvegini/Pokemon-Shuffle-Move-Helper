@@ -327,6 +327,7 @@ def match_cell_with_icons(icons_list, cell_list, has_barriers, combo_is_running=
 
 def mask_already_existant_matches(match_list: List[Match], icons_list) -> List[Match]:
     if len(current_run.fake_matches) == 0:
+        current_run.has_modifications = True
         current_run.load_fake_matchs([icon.name for icon in icons_list])
     match_list = custom_utils.replace_all_3_matches_indices_and_air(match_list, current_run.metal_match, current_run)
     return match_list
@@ -388,20 +389,20 @@ def update_fog_match(result, icons_list, has_barriers, idx):
         return predict(new_img, [current_run.metal_icon], False)
     return new_result
 
-def start_from_bot(pokemon_list: list[Pokemon], has_barriers, image, current_stage, source="bot", create_image=False):
-    icons_list = load_icon_classes(pokemon_list, has_barriers)
-    match_list: List[Match] = []
-    cell_list = custom_utils.make_cell_list_from_img(image)
-    for cell in cell_list:
-        result = predict(cell, icons_list, has_barriers)
-        match_list.append(result)
-    current_board = Board(match_list, pokemon_list, icons_list)
-    shuffle_config_files.update_shuffle_move_files(current_board, source, current_stage)
-    result = socket_utils.loadNewBoard()
-    result_image = None
-    if create_image:
-        result_image = custom_utils.make_match_image_comparison(result, match_list)
-    return MatchResult(result=result, match_image=result_image, match_list=match_list)
+# def start_from_bot(pokemon_list: list[Pokemon], has_barriers, image, current_stage, source="bot", create_image=False):
+#     icons_list = load_icon_classes(pokemon_list, has_barriers)
+#     match_list: List[Match] = []
+#     cell_list = custom_utils.make_cell_list_from_img(image)
+#     for cell in cell_list:
+#         result = predict(cell, icons_list, has_barriers)
+#         match_list.append(result)
+#     current_board = Board(match_list, pokemon_list, icons_list)
+#     shuffle_config_files.update_shuffle_move_files(current_board, source, current_stage)
+#     result = socket_utils.loadNewBoard()
+#     result_image = None
+#     if create_image:
+#         result_image = custom_utils.make_match_image_comparison(result, match_list)
+#     return MatchResult(result=result, match_image=result_image, match_list=match_list)
 
 def start_from_helper(pokemon_list: list[Pokemon], has_barriers, root=None, source=None, create_image=False, skip_shuffle_move=False, forced_board_image=None, forced_swipe_skip=False) -> MatchResult:
     try:
@@ -426,7 +427,7 @@ def start_from_helper(pokemon_list: list[Pokemon], has_barriers, root=None, sour
 
         cell_list = make_cell_list(adb_utils.crop_board(current_screen_image))
         match_list = match_cell_with_icons(icons_list, cell_list, has_barriers, current_run.is_combo_active)
-        current_board = Board(match_list, pokemon_list, icons_list)
+        current_board = Board(match_list, pokemon_list, icons_list, current_run.fake_matches)
         update_board_with_stage_parameters(current_screen_image, current_board)
         shuffle_config_files.update_shuffle_move_files(current_board, source)
 

@@ -29,7 +29,7 @@ class ExecutionVariable:
         self.id = None
         self.first_move = False
         self.move_number = 0
-        self.fake_matches = []
+        self.fake_matches: list[classes.Match] = []
         self.current_fake_match_index = -1
         self.auto_disabled_count = 0
         self.disable_loop = False
