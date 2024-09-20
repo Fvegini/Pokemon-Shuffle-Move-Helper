@@ -119,6 +119,7 @@ RESOLUTIONS = {
         "Close": (348, 1033, 544, 1096),
         "Close2": (646, 1041, 806, 1093),
         "Angry": (70, 686, 826, 915), #The Grey Angry! text
+        "Retry": (385, 1344, 515, 1409), #Retry Text when Connection Problem occurs
         # "EscalationLevel": (558, 434, 841, 623),
         "Pokeball Capture": (320, 1028, 577, 1272),
         "Greatball": (110, 1259, 803, 1308), #Do you want to use 3500 Coins

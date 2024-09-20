@@ -503,6 +503,8 @@ def replace_all_3_matches_indices_and_air(mylist: List[Match], replace_match, cu
                 continue
             if ignore_mega and value.name.startswith(constants.MEGA_PREFIX):
                 continue
+            if value == "Wood" or value == "Metal":
+                continue
             elif value == "Air" or value == "Fog":
                 matrix_air_index_list.extend([(i, j)])
                 continue

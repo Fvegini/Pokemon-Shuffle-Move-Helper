@@ -285,7 +285,7 @@ def update_gradingModes_file(source, mega_activated, current_board):
         strategy = current_run.current_strategy
     if strategy == constants.GRADING_MEGA_PROGRESS and mega_activated == MEGA_ACTIVATED:
         strategy = constants.GRADING_TOTAL_SCORE
-    if custom_utils.use_mega_boosted_score():
+    if custom_utils.use_mega_boosted_score() and strategy == constants.GRADING_TOTAL_SCORE:
         strategy = "MegaBoostedScore"
 
     prefix_to_replace = f"STRING CURRENT_MODE"

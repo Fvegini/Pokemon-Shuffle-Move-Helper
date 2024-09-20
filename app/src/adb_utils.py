@@ -20,9 +20,9 @@ log = log_utils.get_logger()
 
 def get_new_screenshot():
     try:
-        pipe = adb_run_screenshot()
-        image_bytes = pipe.stdout.read().replace(b'\r\n', b'\n') #type: ignore
-        img = cv2.imdecode(np.fromstring(image_bytes, np.uint8), cv2.IMREAD_COLOR) #type: ignore
+        pil_screenshot = adb_run_screenshot()
+        img = custom_utils.pil_to_cv2(pil_screenshot)
+
         cv2.imwrite(constants.LAST_SCREEN_IMAGE_PATH, img)
         current_run.abd_not_found_count = 0
         return img
@@ -228,7 +228,7 @@ def check_buttons_to_click(original_image):
     was_clicked = False
     
     if custom_utils.is_timed_stage():
-        timeout_increase = 3
+        timeout_increase = 5
     else:
         timeout_increase = 0
 
@@ -526,9 +526,9 @@ def update_fog_image(index):
     center_y = math.floor((cell_y0 + cell_y1) / 2)
     adb_run_swipe(center_x, center_y, center_x, center_y, 1000)
     time.sleep(0.5)
-    pipe = adb_run_screenshot()
-    image_bytes = pipe.stdout.read().replace(b'\r\n', b'\n') #type: ignore
-    img = cv2.imdecode(np.fromstring(image_bytes, np.uint8), cv2.IMREAD_COLOR) #type: ignore
+    screenshot_data = adb_run_screenshot()
+    screenshot_array = np.frombuffer(screenshot_data, np.uint8)
+    img = cv2.imdecode(screenshot_array, cv2.IMREAD_COLOR)
     new_img = expand_rectangle_and_cut_from_image(img, cell_x0, cell_y0, cell_x1, cell_y1, 0, 0)
 
     return new_img

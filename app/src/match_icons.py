@@ -316,8 +316,6 @@ def match_cell_with_icons(icons_list, cell_list, has_barriers, combo_is_running=
         result = predict(cell, icons_list, has_barriers)
         if not timed_stage and not combo_is_running and not current_run.last_execution_swiped and result.name in ["Fog", "_Fog"]:
             result = update_fog_match(result, icons_list, has_barriers, idx)
-        elif timed_stage and result.name in ["Fog", "_Fog"]:
-            result = current_run.metal_match
         match_list.append(result)
     if timed_stage:
         mask_already_existant_matches(match_list, icons_list)
@@ -376,6 +374,7 @@ def is_on_stage(original_image):
         current_run.stage_timer = time.time()
     elif on_stage and custom_utils.time_difference_in_seconds(current_run.stage_timer) > 60:
         adb_utils.has_text_match(original_image, "NoOutOfTime", custom_search_text="No")
+        adb_utils.has_text_match(original_image, "Retry")
         current_run.stage_timer = None
     return on_stage
 

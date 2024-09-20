@@ -67,6 +67,36 @@ class PokemonIconSelector(tk.Toplevel):
         row_index = 0
         col_index = 0
 
+        self.state('zoomed')
+
+        # Create a Canvas and a Scrollbar
+        canvas = tk.Canvas(self)
+        scrollbar = customtkinter.CTkScrollbar(self, command=canvas.yview)
+        
+        # Create a frame inside the canvas that will contain the images
+        scrollable_frame = tk.Frame(canvas)
+
+        # Bind the scrollbar to the canvas
+        scrollable_frame.bind(
+            "<Configure>",
+            lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
+        )
+
+        # Add the scrollable frame inside the canvas
+        canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+
+        # Configure the canvas to use the scrollbar
+        canvas.configure(yscrollcommand=scrollbar.set)
+
+        # Add the scrollbar and canvas to the grid
+        canvas.grid(row=0, column=0, sticky="nsew")
+        scrollbar.grid(row=0, column=1, sticky="ns")
+
+        # Ensure that the canvas expands to fill the available space
+        self.grid_rowconfigure(0, weight=1)
+        self.grid_columnconfigure(0, weight=1)
+
+        # Add the images to the scrollable frame
         widgets_list = self.root.get_selected_images_widgets_list()
         for widgets in widgets_list:
             if self.folder == "barrier":
@@ -77,7 +107,7 @@ class PokemonIconSelector(tk.Toplevel):
                 image = Image.open(custom_utils.verify_or_update_png_path(Path(constants.IMAGES_PATH, widgets[0].cget("text"))))
             tk_image = customtkinter.CTkImage(image, size=image.size)
 
-            label = customtkinter.CTkLabel(self, image=tk_image, text="", cursor="hand2")
+            label = customtkinter.CTkLabel(scrollable_frame, image=tk_image, text="", cursor="hand2")
             label.image = tk_image  # Keep a reference to avoid garbage collection
             label.bind("<Button-1>", lambda event, image_name=widgets[0].cget("text"): self.on_image_click(image_name))
             label.grid(row=row_index, column=col_index, padx=10, pady=10)

@@ -768,7 +768,7 @@ class ImageSelectorApp():
             return match_result #Avoid problem with older timed threads keeping a parallel loop.
         if config_utils.config_values.get("timed_stage"):
             log.debug("Timed, starting fast next play")
-            self.master.after(1, self.control_loop_function)
+            self.master.after(50, self.control_loop_function)
         else:
             if current_run.is_combo_active or custom_utils.is_tapper_active() or not match_result:
                 self.master.after(100, self.control_loop_function)
@@ -777,7 +777,7 @@ class ImageSelectorApp():
         return match_result
 
     def execute_board_analysis_threaded(self, source=None, create_image=False, skip_shuffle_move=False, forced_board_image=None):
-        threading.Thread(target=self.execute_board_analysis, args=(source, create_image, skip_shuffle_move, forced_board_image)).start()
+        threading.Thread(target=self.execute_board_analysis, args=(source, create_image, skip_shuffle_move, forced_board_image), daemon=True).start()
 
     def control_loop_function(self):
         if not self.frame3_1_top_1_1_var_control_loop.get():
@@ -850,7 +850,10 @@ class ImageSelectorApp():
                     image_widgets[0].master.destroy()
                     continue
                 label = image_widgets[0]
-                image = Image.open(Path(constants.IMAGES_PATH, label.cget("text")))
+                label_text = label.cget("text")
+                if not label_text.endswith(".png"):
+                    label_text+= ".png"
+                image = Image.open(Path(constants.IMAGES_PATH, label_text))
                 image.thumbnail((50, 50))
                 photo = customtkinter.CTkImage(image, size=image.size)
                 label.configure(image=photo)
@@ -859,7 +862,10 @@ class ImageSelectorApp():
             self.insert_image_widget(f"_Empty.png")
             for image_widgets in self.get_selected_images_widgets_list():
                 label = image_widgets[0]
-                image_path = Path(constants.IMAGES_PATH, label.cget("text"))
+                label_text = label.cget("text")
+                if not label_text.endswith(".png"):
+                    label_text+= ".png"
+                image_path = Path(constants.IMAGES_PATH, label_text)
                 if not image_path.suffix:
                     image_path = image_path.with_suffix('.png')
                 image = Image.open(image_path)
