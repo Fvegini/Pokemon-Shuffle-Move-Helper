@@ -785,10 +785,12 @@ class ImageSelectorApp():
                 self.analysis_lock = threading.Lock()
                 current_run.thread_sleep_timer = 0
             log.info("Loop Mode Off")
+            current_run.is_loop_active = False
             current_run.clear_stage_variables()
             return
         else:
             self.execute_board_analysis_threaded(source="loop")
+            current_run.is_loop_active = True
             if current_run.thread_sleep_timer:
                 log.debug(f"Thread is locked for {current_run.thread_sleep_timer} seconds, waiting to return the loop.")
                 self.master.after(current_run.thread_sleep_timer * 1000, self.control_loop_function)                
@@ -954,6 +956,7 @@ class ImageSelectorApp():
             if key == keyboard.Key.f3:  # Check if the key is F3
                 self.frame3_1_top_1_1_switch_control_loop.toggle()
             elif key == keyboard.Key.f2:
+                    current_run.clear_stage_variables()
                     self.execute_board_analysis_threaded(source="manual")
         except AttributeError:
             pass  # Handle special keys if necessary

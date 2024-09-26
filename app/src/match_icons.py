@@ -143,15 +143,15 @@ def get_metrics(match_list):
     "variance": statistics.variance(numbers_list),
     }
 
-def handle_skip_shuffle_move(icons_list, forced_board_image, has_barriers):
-    return MatchResult(match_list=match_cell_with_icons(icons_list, make_cell_list(forced_board_image), has_barriers, True))
+def handle_skip_shuffle_move(icons_list, forced_board_image, has_barriers, source):
+    return MatchResult(match_list=match_cell_with_icons(icons_list, make_cell_list(forced_board_image), has_barriers, source, True))
 
-def verify_or_enter_stage(current_screen_image):
-    if is_on_stage(current_screen_image):
-        current_run.is_combo_active = verify_active_combo(current_screen_image)
+def verify_or_enter_stage(current_screen_image, source):
+    if is_on_stage(current_screen_image, source):
+        current_run.is_combo_active = verify_active_combo(current_screen_image, source)
     else:
         if should_auto_next_stage():
-            click_buttons_to_enter_new_stage(current_screen_image)
+            click_buttons_to_enter_new_stage(current_screen_image, source)
         else:
             current_run.auto_disabled_count+= 1
             log.debug("Stage isn't active and next stage is disabled")
@@ -237,8 +237,8 @@ def is_swipe_enabled(source):
         log.debug("Can't Swipe, no options selected")
         return False
 
-def verify_active_combo(current_screen_image):
-    return adb_utils.has_icon_match(current_screen_image, constants.COMBO_IMAGE, "Combo", extra_timeout=0, click=False, min_point=30)
+def verify_active_combo(current_screen_image, source):
+    return adb_utils.has_icon_match(current_screen_image, constants.COMBO_IMAGE, source, "Combo", extra_timeout=0, click=False, min_point=30)
 
 def execute_tapper(current_board: Board, source):
     if current_board.has_mega:
@@ -278,9 +278,9 @@ def execute_tapper(current_board: Board, source):
                 logic = "make extra matches because no good play was found"
         for index in results_idx:
             if custom_utils.is_adb_move_enabled() and not source == "manual":
-                x, y = adb_utils.click_on_board_index(index)
-                x, y = adb_utils.click_on_board_index(index)
-                x, y = adb_utils.click_on_board_index(index)
+                x, y = adb_utils.click_on_board_index(index, source)
+                x, y = adb_utils.click_on_board_index(index, source)
+                x, y = adb_utils.click_on_board_index(index, source)
                 log.debug(f"Tapping at cell {index+1} - {x}, {y} with the {logic} logic")             
         return True
 
@@ -298,24 +298,24 @@ def process_tap_match(match: Match, stage_added_list: list[str]):
             return "Stage_Added"
     return match.name
 
-def click_buttons_to_enter_new_stage(current_screen_image):
+def click_buttons_to_enter_new_stage(current_screen_image, source):
     log.debug("Starting Click Buttons Check")
     current_run.non_stage_count+= 1
     if adb_utils.is_escalation_battle():
-        adb_utils.verify_angry_mode(current_screen_image)
-    adb_utils.check_hearts(current_screen_image)
+        adb_utils.verify_angry_mode(current_screen_image, source)
+    adb_utils.check_hearts(current_screen_image, source)
     if current_run.disable_loop or current_run.awakened_from_sleep: #Cancel Current loop run.
         return
-    adb_utils.check_buttons_to_click(current_screen_image)
+    adb_utils.check_buttons_to_click(current_screen_image, source)
     log.debug("Finished Click Buttons Check")
 
-def match_cell_with_icons(icons_list, cell_list, has_barriers, combo_is_running=False) -> List[Match]:
+def match_cell_with_icons(icons_list, cell_list, has_barriers, source, combo_is_running=False) -> List[Match]:
     match_list: List[Match] = []
     timed_stage = custom_utils.is_timed_stage()
     for idx, cell in enumerate(cell_list):
         result = predict(cell, icons_list, has_barriers)
         if not timed_stage and not combo_is_running and not current_run.last_execution_swiped and result.name in ["Fog", "_Fog"]:
-            result = update_fog_match(result, icons_list, has_barriers, idx)
+            result = update_fog_match(result, icons_list, has_barriers, idx, source)
         match_list.append(result)
     if timed_stage:
         mask_already_existant_matches(match_list, icons_list)
@@ -330,8 +330,8 @@ def mask_already_existant_matches(match_list: List[Match], icons_list) -> List[M
     match_list = custom_utils.replace_all_3_matches_indices_and_air(match_list, current_run.metal_match, current_run)
     return match_list
 
-def is_on_stage(original_image):
-    on_stage = adb_utils.has_icon_match(original_image, constants.ACTIVE_BOARD_IMAGE, "StageMenu", extra_timeout=0, click=False, min_point=8)
+def is_on_stage(original_image, source):
+    on_stage = adb_utils.has_icon_match(original_image, constants.ACTIVE_BOARD_IMAGE, source, "StageMenu", extra_timeout=0, click=False, min_point=8)
     if on_stage:
         current_run.non_stage_count = 0
         current_run.first_move = False
@@ -365,24 +365,24 @@ def is_on_stage(original_image):
                 original_image = adb_utils.get_new_screenshot()
                 stage_text = adb_utils.get_end_stage_score(original_image)
             if current_run.has_drops:
-                stage_text+= ". And had drops"
+                stage_text = f" DROPS and {stage_text}"
             if custom_utils.custom_utils.is_meowth_stage():
-                stage_text+= f"And {adb_utils.get_end_stage_coins(original_image)} coins"
-            custom_utils.send_telegram_message(f"Ended Stage With Score {stage_text}")
+                stage_text = f" {adb_utils.get_end_stage_coins(original_image)} COINS and {stage_text}"
+            custom_utils.send_telegram_message(f"Ended Stage With {stage_text}")
             current_run.clear_stage_variables()
     elif on_stage and not current_run.stage_timer:
         current_run.stage_timer = time.time()
     elif on_stage and custom_utils.time_difference_in_seconds(current_run.stage_timer) > 60:
-        adb_utils.has_text_match(original_image, "NoOutOfTime", custom_search_text="No")
-        adb_utils.has_text_match(original_image, "Retry")
+        adb_utils.has_text_match(original_image, "NoOutOfTime", source, custom_search_text="No")
+        adb_utils.has_text_match(original_image, "Retry", source)
         current_run.stage_timer = None
     return on_stage
 
 def should_auto_next_stage():
     return config_utils.config_values.get("auto_next_stage")
 
-def update_fog_match(result, icons_list, has_barriers, idx):
-    new_img = adb_utils.update_fog_image(idx)
+def update_fog_match(result, icons_list, has_barriers, idx, source):
+    new_img = adb_utils.update_fog_image(idx, source)
     new_result = predict(new_img, icons_list, has_barriers)
     if new_result.name == "Fog":
         return predict(new_img, [current_run.metal_icon], False)
@@ -412,20 +412,20 @@ def start_from_helper(pokemon_list: list[Pokemon], has_barriers, root=None, sour
         current_run.is_combo_active = False
         
         if skip_shuffle_move:
-            return handle_skip_shuffle_move(icons_list, forced_board_image, has_barriers)
+            return handle_skip_shuffle_move(icons_list, forced_board_image, has_barriers, source)
 
         if source == "loop":
-            result = verify_or_enter_stage(current_screen_image)
+            result = verify_or_enter_stage(current_screen_image, source)
             if result is not None:
                 return result
         can_swipe = can_swipe and not forced_swipe_skip and is_swipe_enabled(source)
         verify_drops_logic(current_screen_image)
         if not can_swipe and (custom_utils.is_meowth_stage() or not custom_utils.is_tapper_active()):
-            return
+            return MatchResult()
         initialize_run_flags()
 
         cell_list = make_cell_list(adb_utils.crop_board(current_screen_image))
-        match_list = match_cell_with_icons(icons_list, cell_list, has_barriers, current_run.is_combo_active)
+        match_list = match_cell_with_icons(icons_list, cell_list, has_barriers, source, current_run.is_combo_active)
         current_board = Board(match_list, pokemon_list, icons_list, current_run.fake_matches)
         update_board_with_stage_parameters(current_screen_image, current_board)
         shuffle_config_files.update_shuffle_move_files(current_board, source)
@@ -436,7 +436,7 @@ def start_from_helper(pokemon_list: list[Pokemon], has_barriers, root=None, sour
         result = socket_utils.loadNewBoard()
 
         if can_swipe and int(current_board.moves_left) > 0:
-            swiped = adb_utils.execute_play(result, current_board)
+            swiped = adb_utils.execute_play(result, current_board, source)
             if custom_utils.is_debug_mode_active() and swiped:
                 save_debug_objects(result, match_list, source == "manual")
 

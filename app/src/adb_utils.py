@@ -43,7 +43,7 @@ def crop_board(img):
     cv2.imwrite(constants.LAST_BOARD_IMAGE_PATH, img)
     return img
 
-def execute_play(result, board_results):
+def execute_play(result, board_results, source):
     try:
         adb_move = config_utils.config_values.get("adb_move")
         if result and adb_move:
@@ -70,7 +70,7 @@ def execute_play(result, board_results):
                 #The Idea of this one is to move not to the center of the cell, but a little more to the "end" of it, to
                 #increase the chances that the swipe input will move to the correct cell and not one before it.
                 new_to_x, new_to_y = move_second_point(from_x, from_y, to_x, to_y, get_screen().board_w/2.5, get_screen().board_h/2.5)
-                adb_run_swipe(from_x, from_y, new_to_x, new_to_y, 350)
+                adb_run_swipe(from_x, from_y, new_to_x, new_to_y, 350, source)
                 current_run.last_swipe_timer = time.time()
                 current_run.last_execution_swiped = True
                 return True
@@ -100,13 +100,13 @@ def check_if_close_to_same_color(pixel1, pixel2, threshold=10):
   diff = np.subtract(pixel1, pixel2)
   return np.all(np.abs(diff) < threshold)
 
-def check_hearts(original_image):
+def check_hearts(original_image, source):
     try:
         if custom_utils.is_coin_stage():
             log.debug("Coin Stage, skipping Hearts check")
             return
         if current_run.awakened_from_sleep:
-            test_timer_out_of_sync()
+            test_timer_out_of_sync(source)
             original_image = get_new_screenshot()
         hearts_number_str = get_hearts_number(original_image)
         current_run.hearts_loop_counter+= 1
@@ -117,17 +117,17 @@ def check_hearts(original_image):
         log.debug(f"Current Hearts amount is: {hearts_number}")
         if current_run.hearts_loop_counter > 20:
             log.debug("loop at 20, small click test") #Try to skip the daily login bonus screen
-            adb_run_tap(get_screen().get_position('Hearts')[0], get_screen().get_position('Hearts')[1])
+            adb_run_tap(get_screen().get_position('Hearts')[0], get_screen().get_position('Hearts')[1], source)
             current_run.hearts_loop_counter = 0
         if is_escalation_battle():
-            escalation_hearts_processing(original_image, hearts_number)
+            escalation_hearts_processing(original_image, hearts_number, source)
         elif hearts_number < config_utils.config_values.get("stage_hearts", 1):
             wait_until_fill_hearts(original_image, hearts_number)
     except Exception as ex:
         log.debug(f"Error checking hearts number: {ex}")
         return
 
-def test_timer_out_of_sync():
+def test_timer_out_of_sync(source):
     current_stage_hearts = config_utils.config_values.get("stage_hearts", 1)
     log.info("Starting the check timer out of sync logic")
     while current_run.awakened_from_sleep:
@@ -142,15 +142,15 @@ def test_timer_out_of_sync():
                 log.info("Hearts ok, exitting")
                 return
             log.info("Hearts number not ok, clicking on info and return icons")
-            if has_icon_match(new_image, constants.INFO_ICON_IMAGE, extra_timeout=4, click=True, log_not_found=True):
+            if has_icon_match(new_image, constants.INFO_ICON_IMAGE, source, extra_timeout=4, click=True, log_not_found=True):
                 new_image = get_new_screenshot()
-            if click_return_buttons(new_image, timeout_increase=4):
+            if click_return_buttons(new_image, 4, source):
                 new_image = get_new_screenshot()
-            if click_ok_buttons(new_image, timeout_increase=4):
+            if click_ok_buttons(new_image, 4, source):
                 new_image = get_new_screenshot()
-            if has_text_match(new_image, "No", extra_timeout=4):
+            if has_text_match(new_image, "No", source, extra_timeout=4):
                 new_image = get_new_screenshot()
-            if has_text_match(new_image, "No2", extra_timeout=4, custom_search_text="No"):
+            if has_text_match(new_image, "No2", source, extra_timeout=4, custom_search_text="No"):
                 new_image = get_new_screenshot()
         except:
             pass
@@ -166,7 +166,7 @@ def get_hearts_number(original_image) -> str:
             hearts_number_str = "1"
     return hearts_number_str
 
-def escalation_hearts_processing(original_image, hearts_number):
+def escalation_hearts_processing(original_image, hearts_number, source):
     if is_angry_active():
         if hearts_number == 0:
             wait_until_fill_hearts(original_image, hearts_number, 1)
@@ -175,9 +175,9 @@ def escalation_hearts_processing(original_image, hearts_number):
     elif hearts_number > 1:
         return
     else:
-        verify_angry_mode(original_image, max_retries=1)
+        verify_angry_mode(original_image, source, max_retries=1)
         if is_angry_active():
-            return escalation_hearts_processing(original_image, hearts_number)
+            return escalation_hearts_processing(original_image, hearts_number, source)
 
         start_with_n_minutes = 7
         
@@ -224,7 +224,7 @@ def wait_until_fill_hearts(original_image, current_hearts, aimed_hearts=2):
 def is_escalation_battle():
     return config_utils.config_values.get("escalation_battle")
 
-def check_buttons_to_click(original_image):
+def check_buttons_to_click(original_image, source):
     was_clicked = False
     
     if custom_utils.is_timed_stage():
@@ -233,80 +233,80 @@ def check_buttons_to_click(original_image):
         timeout_increase = 0
 
     if (current_run.non_stage_count % 5 == 0):
-        click_ok_buttons(original_image, timeout_increase)
-        click_return_buttons(original_image, timeout_increase)
+        click_ok_buttons(original_image, timeout_increase, source)
+        click_return_buttons(original_image, timeout_increase, source)
 
     if current_run.non_stage_count > 5:
-        run_capture_logic_test(original_image)
+        run_capture_logic_test(original_image, source)
 
     current_stage_image_path = constants.CURRENT_STAGE_IMAGE
     if custom_utils.is_meowth_stage():
         current_stage_image_path = constants.MEOWTH_STAGE_IMAGE
     elif custom_utils.is_survival_mode():
         current_stage_image_path = constants.SURVIVAL_MODE_STAGE_IMAGE
-    if has_icon_match(original_image, current_stage_image_path, extra_timeout=1+timeout_increase, click=True, min_point=40, log_not_found=True):
+    if has_icon_match(original_image, current_stage_image_path, source, extra_timeout=1+timeout_increase, click=True, min_point=40, log_not_found=True):
         was_clicked = True
         original_image = get_new_screenshot()
-    if has_text_match(original_image, "To Map", extra_timeout=1+timeout_increase):
+    if has_text_match(original_image, "To Map", source, extra_timeout=1+timeout_increase):
         if custom_utils.is_meowth_stage():
             os.makedirs(constants.MEOWTH_DEBUG_IMAGE_FOLDER, exist_ok=True)
             cv2.imwrite(os.path.join(constants.MEOWTH_DEBUG_IMAGE_FOLDER,f"{time.strftime('%Y_%m_%d_%H_%M')}.png") ,original_image)
         was_clicked = True
         original_image = get_new_screenshot()
-    if has_text_match(original_image, "Continue", extra_timeout=1+timeout_increase):
+    if has_text_match(original_image, "Continue", source, extra_timeout=1+timeout_increase):
         was_clicked = True
         original_image = get_new_screenshot()
-    if has_text_match(original_image, "Start!", 1):
+    if has_text_match(original_image, "Start!", source, 1):
         was_clicked = True
         original_image = get_new_screenshot()
-    if has_text_match(original_image, "Next", extra_timeout=1):
+    if has_text_match(original_image, "Next", source, extra_timeout=1):
         was_clicked = True
         original_image = get_new_screenshot()
     if custom_utils.is_coin_stage() or config_utils.config_values.get("stage_hearts",1) == 2:
-        if has_text_match(original_image, "CoinStage", custom_click="CoinStageYes", extra_timeout=1, custom_search_text="need to spend"):
+        if has_text_match(original_image, "CoinStage", source, custom_click="CoinStageYes", extra_timeout=1, custom_search_text="need to spend"):
             was_clicked = True
             original_image = get_new_screenshot()
     if custom_utils.is_survival_mode():
-        if has_text_match(original_image, "CoinStage", custom_click="CoinStageYes", extra_timeout=1, custom_search_text="challenging survival"):
+        if has_text_match(original_image, "CoinStage", source, custom_click="CoinStageYes", extra_timeout=1, custom_search_text="challenging survival"):
             was_clicked = True
             original_image = get_new_screenshot()  
-    if has_text_match(original_image, "No", extra_timeout=1+timeout_increase):
+    if has_text_match(original_image, "No", source, extra_timeout=1+timeout_increase):
         was_clicked = True
         original_image = get_new_screenshot()
-    if has_text_match(original_image, "No2", extra_timeout=1+timeout_increase, custom_search_text="No"):
+    if has_text_match(original_image, "No2", source, extra_timeout=1+timeout_increase, custom_search_text="No"):
         was_clicked = True
         original_image = get_new_screenshot()
-    if click_ok_buttons(original_image, timeout_increase):
+    if click_ok_buttons(original_image, timeout_increase, source):
         was_clicked = True
         original_image = get_new_screenshot()
-    if has_text_match(original_image, "Close", extra_timeout=1+timeout_increase):
+    if has_text_match(original_image, "Close", source, extra_timeout=1+timeout_increase):
         was_clicked = True
         original_image = get_new_screenshot()
-        return click_return_buttons(original_image, timeout_increase)
-    if has_text_match(original_image, "Close2", extra_timeout=1+timeout_increase, custom_search_text="Close"):
+        return click_return_buttons(original_image, timeout_increase, source)
+    if has_text_match(original_image, "Close2", source, extra_timeout=1+timeout_increase, custom_search_text="Close"):
         was_clicked = True
         original_image = get_new_screenshot()
-        return click_return_buttons(original_image, timeout_increase)
+        return click_return_buttons(original_image, timeout_increase, source)
     if not was_clicked:
-        return click_return_buttons(original_image, timeout_increase)
+        return click_return_buttons(original_image, timeout_increase, source)
     if was_clicked:
         current_run.hearts_loop_counter = 0
     return
 
-def click_ok_buttons(original_image, timeout_increase):
-    if has_icon_match(original_image, constants.OK_BUTTON_IMAGE, extra_timeout=1+timeout_increase, click=True, log_not_found=True):
+def click_ok_buttons(original_image, timeout_increase, source):
+    if has_icon_match(original_image, constants.OK_BUTTON_IMAGE, source, extra_timeout=1+timeout_increase, click=True, log_not_found=True):
         return True
-    if has_icon_match(original_image, constants.OK_BUTTON2_IMAGE, extra_timeout=1+timeout_increase, click=True, log_not_found=True):
+    if has_icon_match(original_image, constants.OK_BUTTON2_IMAGE, source, extra_timeout=1+timeout_increase, click=True, log_not_found=True):
         return True
     return False
 
-def click_return_buttons(original_image, timeout_increase):
-    if has_icon_match(original_image, constants.RETURN_FLAG_IMAGE, extra_timeout=1+timeout_increase, click=True, log_not_found=True):
+def click_return_buttons(original_image, timeout_increase, source):
+    if has_icon_match(original_image, constants.RETURN_FLAG_IMAGE, source, extra_timeout=1+timeout_increase, click=True, log_not_found=True):
         return True
-    if has_icon_match(original_image, constants.RETURN_FLAG2_IMAGE, extra_timeout=1+timeout_increase, click=True, log_not_found=True):
+    if has_icon_match(original_image, constants.RETURN_FLAG2_IMAGE, source, extra_timeout=1+timeout_increase, click=True, log_not_found=True):
         return True
 
-def verify_angry_mode(original_image, retry_count=0, max_retries=0):
+def verify_angry_mode(original_image, source, retry_count=0, max_retries=0):
     if current_run.angry_mode_active:
         return
     
@@ -314,8 +314,8 @@ def verify_angry_mode(original_image, retry_count=0, max_retries=0):
         log.info("Since the last stage was already angered, the current one can't be. This is a test to avoid false positives on the stage cleared screen.")
         return
     
-    is_angry = has_icon_match(original_image, constants.ANGRY_ICON_IMAGE, log_not_found=True) or has_icon_match(original_image, constants.ANGRY_ICON2_IMAGE, log_not_found=True)
-    is_angry_text = has_text_match(original_image, "Angry", custom_search_text="grew angry")
+    is_angry = has_icon_match(original_image, constants.ANGRY_ICON_IMAGE, source, log_not_found=True) or has_icon_match(original_image, constants.ANGRY_ICON2_IMAGE, source, log_not_found=True)
+    is_angry_text = has_text_match(original_image, "Angry", source, custom_search_text="grew angry")
     
     if is_angry or is_angry_text:
         current_run.angry_mode_active = True
@@ -326,29 +326,30 @@ def verify_angry_mode(original_image, retry_count=0, max_retries=0):
     if retry_count < max_retries:
         time.sleep(5)
         new_image = get_new_screenshot()
-        verify_angry_mode(new_image, retry_count + 1, max_retries)
+        verify_angry_mode(new_image, source, retry_count + 1, max_retries)
     return
 
-def run_capture_logic_test(original_image):
+def run_capture_logic_test(original_image, source):
     try:
-        if get_moves_left(original_image) == "0":
-            if has_icon_match(original_image, constants.POKEBALL_CAPTURE_IMAGE, "Pokeball Capture", min_point=30, log_not_found=True):
+        # if get_moves_left(original_image) == "0":
+        if has_icon_match(original_image, constants.POKEBALL_CAPTURE_IMAGE, source, "Pokeball Capture", min_point=30, log_not_found=True):
+            time.sleep(4)
+            log.info("found_capture_icon and clicked")
+            current_run.non_stage_count = 0
+        else:
+            log.info("capture_pokeball_not_found, checking for Great Ball")
+            if custom_utils.use_great_ball():
+                has_text_match(original_image, "Greatball", source, custom_click="GreatballYes", custom_search_text="Do you want to use 3500 Coins")
                 time.sleep(4)
-                log.info("found_capture_icon and clicked")
-                current_run.non_stage_count = 0
             else:
-                log.info("capture_pokeball_not_found, checking for Great Ball")
-                if custom_utils.use_great_ball():
-                    has_text_match(original_image, "Greatball", custom_click="GreatballYes", custom_search_text="Do you want to use 3500 Coins")
-                    time.sleep(4)
-                else:
-                    has_text_match(original_image, "Greatball", custom_click="GreatballNo", custom_search_text="Do you want to use 3500 Coins")
-                    time.sleep(4)
+                has_text_match(original_image, "Greatball", source, custom_click="GreatballNo", custom_search_text="Do you want to use 3500 Coins")
+                time.sleep(4)
+        return
     except Exception as ex:
         log.error(f"Erro: {ex}")
         pass
 
-def has_icon_match(original_image, icon_path, position="CompleteScreen", extra_timeout=1.0, click=True, min_point=10, debug=False, double_checked=False, log_not_found=False):
+def has_icon_match(original_image, icon_path, source, position="CompleteScreen", extra_timeout=1.0, click=True, min_point=10, debug=False, double_checked=False, log_not_found=False):
     try:
         r = get_screen().get_position(position)
         img = original_image.copy()
@@ -402,13 +403,13 @@ def has_icon_match(original_image, icon_path, position="CompleteScreen", extra_t
             cv2.imwrite(debug_image_path.as_posix(), final_img)
 
         if click and not double_checked:
-            return has_icon_match(get_new_screenshot(), icon_path, position, extra_timeout, click, min_point, debug, double_checked=True, log_not_found=log_not_found) #Add a double-check with a new ScreenShot before the click
+            return has_icon_match(get_new_screenshot(), icon_path, source, position, extra_timeout, click, min_point, debug, double_checked=True, log_not_found=log_not_found) #Add a double-check with a new ScreenShot before the click
         if double_checked:
             log.debug(f"Image Found with points: {Path(icon_path).stem} - {len(good)}")
         if click and double_checked:
             box_center_x = int((box[0][0] + box[2][0]) / 2)
             box_center_y = int((box[0][1] + box[2][1]) / 2)
-            adb_run_tap(r[0] + box_center_x ,r[1] + box_center_y)
+            adb_run_tap(r[0] + box_center_x ,r[1] + box_center_y, source)
             if extra_timeout > 0:
                 time.sleep(extra_timeout)
         return True
@@ -435,7 +436,7 @@ def text_visible(original_image, text, custom_click=None, custom_search_text=Non
             log.debug(f"Text Found for {text}: {result.strip()} - alternative {result2.strip()}")
     return found_text, postition
 
-def has_text_match(original_image, text, extra_timeout=1.0, click=True, custom_click=None, custom_search_text=None, double_checked=False):
+def has_text_match(original_image, text, source, extra_timeout=1.0, click=True, custom_click=None, custom_search_text=None, double_checked=False):
     visible, r = text_visible(original_image, text, custom_click, custom_search_text, should_print=double_checked)
     if visible and click:
         debug_image_path = Path(constants.ADB_IMAGE_FOLDER, "debug", f"{text}.png")
@@ -445,9 +446,9 @@ def has_text_match(original_image, text, extra_timeout=1.0, click=True, custom_c
             debug_image_path.parent.mkdir(parents=True, exist_ok=True)
             cv2.imwrite(debug_image_path.as_posix(), final_img)
         if not double_checked:
-            has_text_match(get_new_screenshot(), text, extra_timeout, click, custom_click, custom_search_text, double_checked=True)
+            has_text_match(get_new_screenshot(), text, source, extra_timeout, click, custom_click, custom_search_text, double_checked=True)
         else:
-            adb_run_tap(math.floor((r[0] + r[2])/2), math.floor((r[1] + r[3])/2))
+            adb_run_tap(math.floor((r[0] + r[2])/2), math.floor((r[1] + r[3])/2), source)
             if extra_timeout:
                 time.sleep(extra_timeout)
     return visible
@@ -520,11 +521,11 @@ def get_label_with_tuple(original_image, r, config=""):
         result = pytesseract.image_to_string(img, lang='eng',config='--psm 6').strip()
     return result
 
-def update_fog_image(index):
+def update_fog_image(index, source):
     cell_x0, cell_y0, cell_x1, cell_y1 = get_coordinates_from_board_index(index)
     center_x = math.floor((cell_x0 + cell_x1) / 2)
     center_y = math.floor((cell_y0 + cell_y1) / 2)
-    adb_run_swipe(center_x, center_y, center_x, center_y, 1000)
+    adb_run_swipe(center_x, center_y, center_x, center_y, 1000, source)
     time.sleep(0.5)
     screenshot_data = adb_run_screenshot()
     screenshot_array = np.frombuffer(screenshot_data, np.uint8)
@@ -543,11 +544,11 @@ def expand_rectangle_and_cut_from_image(img, x0, y0, x1, y1, width, height):
     
     return cropped_img
 
-def click_on_board_index(index):
+def click_on_board_index(index, source):
     cell_x0, cell_y0, cell_x1, cell_y1 = get_coordinates_from_board_index(index)
     center_x = math.floor((cell_x0 + cell_x1) / 2)
     center_y = math.floor((cell_y0 + cell_y1) / 2)
-    adb_run_tap(center_x, center_y)
+    adb_run_tap(center_x, center_y, source)
     time.sleep(0.1)
     return center_x, center_y
 

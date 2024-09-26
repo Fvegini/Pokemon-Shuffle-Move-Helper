@@ -33,7 +33,7 @@ def update_adb_connection(reconfigure_screen):
 
             # Test command: run a simple command (e.g., checking the screen size)
             output = device.shell("wm size")
-            log.info(f"Connected and ran command on device {device.serial}: {output}")
+            log.info(f"Connected and ran command on device {device.serial}: {str(output)}")
             current_run.adb_device = device
             break
         except Exception as e:
@@ -46,8 +46,11 @@ def update_adb_connection(reconfigure_screen):
     return
 
 
-def adb_run_swipe(from_x, from_y, to_x, to_y, delay, skip_on_error=False, skip_extra_debug=False):
+def adb_run_swipe(from_x, from_y, to_x, to_y, delay, source, skip_on_error=False, skip_extra_debug=False):
     try:
+        if source == "loop" and not current_run.is_loop_active:
+            log.info("Skipping Swipe Because Loop Was Deactivated")
+            return
         log.debug(f"Swiping at: {from_x} {from_y} {to_x} {to_y} {delay}")
         current_run.adb_device.shell(f"input swipe {from_x} {from_y} {to_x} {to_y} {delay}")
         if not skip_extra_debug and custom_utils.is_extra_debug_active():
@@ -56,11 +59,14 @@ def adb_run_swipe(from_x, from_y, to_x, to_y, delay, skip_on_error=False, skip_e
         if skip_on_error:
             return
         update_adb_connection(reconfigure_screen=True)
-        adb_run_swipe(from_x, from_y, to_x, to_y, delay, skip_on_error=True, skip_extra_debug=skip_extra_debug)
+        adb_run_swipe(from_x, from_y, to_x, to_y, delay, source, skip_on_error=True, skip_extra_debug=skip_extra_debug)
 
 
-def adb_run_tap(x ,y, skip_on_error=False, skip_extra_debug=False):
+def adb_run_tap(x ,y, source, skip_on_error=False, skip_extra_debug=False):
     try:
+        if source == "loop" and not current_run.is_loop_active:
+            log.info("Skipping Tap Because Loop Was Deactivated")
+            return
         log.debug(f"Tapping at: {x}, {y}")
         current_run.adb_device.shell(f"input tap {x} {y}")
         if not skip_extra_debug and custom_utils.is_extra_debug_active():
@@ -69,7 +75,7 @@ def adb_run_tap(x ,y, skip_on_error=False, skip_extra_debug=False):
         if skip_on_error:
             return
         update_adb_connection(reconfigure_screen=True)
-        adb_run_tap(x ,y, skip_on_error=True, skip_extra_debug=skip_extra_debug)
+        adb_run_tap(x ,y, source, skip_on_error=True, skip_extra_debug=skip_extra_debug)
 
 
 def adb_run_screenshot(skip_on_error=False):

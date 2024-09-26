@@ -15,6 +15,7 @@ class ExecutionVariable:
         self.non_stage_count = 0
         self.hearts_loop_counter = 0
         self.adb_shell_command = "adb shell"
+        self.adb_device = None
         self.angry_mode_active = False
         self.last_stage_had_anger = False
         self.thread_sleep_timer = 0
@@ -38,6 +39,7 @@ class ExecutionVariable:
         self.bad_board_count = 0
         self.has_drops = False
         self.abd_not_found_count = 0
+        self.is_loop_active = False
 
     def clear_stage_variables(self):
         if self.angry_mode_active:

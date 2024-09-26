@@ -17,6 +17,7 @@ BARRIER_TYPE_FAKE = "Fake"
 GRADING_TOTAL_SCORE = "grading.score"
 GRADING_MEGA_PROGRESS = "grading.megaprogress"
 GRADING_WEEKEND_MEOWTH = "WeekendMeowth"
+GRADING_MEGA_BOOSTED_SCORE = "MegaBoostedScore"
 
 move_strategy = {
     "grading.score": "Total Score",
