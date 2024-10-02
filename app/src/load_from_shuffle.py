@@ -127,13 +127,12 @@ class TeamLoader(tk.Toplevel):
             #First Append all Stage Added Pokemons
             for pokemon in selected_team.stage_added:
                 self.root.insert_image_widget(f"{pokemon}.png", stage_added=True)
-                self.update_idletasks()
             #Then Append the others
             for pokemon in selected_team.icons:
                 is_stage_added = pokemon in selected_team.stage_added
                 if not is_stage_added:
                     self.root.insert_image_widget(f"{pokemon}.png", stage_added=False)
-                    self.update_idletasks()
+            self.update_idletasks()
 
         self.root.stage_combobox.set(current_run.current_stage)
         self.root.strategy_combobox.set(current_run.current_strategy)
