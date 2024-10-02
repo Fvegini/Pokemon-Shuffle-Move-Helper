@@ -844,6 +844,8 @@ class ImageSelectorApp():
         self.reveal_or_hide_barrier_img()
 
     def reveal_or_hide_barrier_img(self):
+        if config_utils.config_values.get("fake_barrier"):
+            return
         has_barrier = self.frame3_1_top_1_2_var_control_barrier.get()
         config_utils.update_config("has_barrier", has_barrier)
         if not has_barrier:
