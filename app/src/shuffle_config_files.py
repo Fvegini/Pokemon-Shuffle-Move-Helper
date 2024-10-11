@@ -1,10 +1,12 @@
 from pathlib import Path
-from src import adb_utils, constants
+from src import adb_utils, constants, log_utils
 from src import custom_utils
 from src.discord import pokemon_names
 from src.execution_variables import current_run
 from src.classes import Pokemon, Board
 import re
+
+log = log_utils.get_logger()
 
 CROW = "false,false,false,false,false,false"
 KEYS_LIST = ','.join(['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e','f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o',
@@ -100,6 +102,8 @@ def update_shuffle_move_files(current_board: Board, source=None, stage=None):
     
     if custom_utils.is_survival_mode():
         stage = get_stage_name(current_board.stage_name)
+        log.info(f"Survival Mode Stage: {stage} - {current_board.stage_name}")
+        update_teams_file(complete_names_list, mega_name, current_board.extra_supports_list, stage)
     update_board_file(names_list, barrier_list, mega_activated, stage)
     update_preferences(current_board.current_score, current_board.moves_left)
     if current_run.has_modifications or source == "bot":

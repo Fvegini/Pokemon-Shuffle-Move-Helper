@@ -339,10 +339,12 @@ def is_on_stage(original_image, source):
             current_run.id = time.strftime('%Y_%m_%d_%H_%M')
             stage_text = adb_utils.get_current_stage(original_image)
             if custom_utils.is_stage_pause():
-                if True:
-                    time.sleep(2)
-                    original_image = adb_utils.get_new_screenshot()
-                    stage_text = adb_utils.get_current_stage(original_image)
+                time.sleep(2)
+                original_image = adb_utils.get_new_screenshot()
+                stage_text = adb_utils.get_current_stage(original_image)
+            if custom_utils.is_survival_mode():
+                stage = shuffle_config_files.get_stage_name(stage_text)
+                stage_text = f"{stage_text} - {stage}"
             custom_utils.send_telegram_message(f"Started a new Stage - {stage_text}")
             current_run.first_move = True
             current_run.stage_timer = time.time()

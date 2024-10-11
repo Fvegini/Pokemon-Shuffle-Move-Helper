@@ -472,6 +472,7 @@ def get_current_stage(original_image):
 
 def get_current_stage_name(original_image):
     v = get_label(original_image, "StageName")
+    v = re.sub(r'[^a-zA-Z0-9 ]', '', v)
     if v.isnumeric():
         v = "{:03}".format(int(v))
     return v
@@ -516,7 +517,7 @@ def get_label_with_tuple(original_image, r, config=""):
     img = original_image.copy()
     img = img[r[1]:r[3], r[0]:r[2]]
     img = 255 - cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    result = pytesseract.image_to_string(img, lang='eng', config="").strip()
+    result = pytesseract.image_to_string(img, lang='eng', config=config).strip()
     if not result:
         result = pytesseract.image_to_string(img, lang='eng',config='--psm 6').strip()
     return result
@@ -527,11 +528,9 @@ def update_fog_image(index, source):
     center_y = math.floor((cell_y0 + cell_y1) / 2)
     adb_run_swipe(center_x, center_y, center_x, center_y, 1000, source)
     time.sleep(0.5)
-    screenshot_data = adb_run_screenshot()
-    screenshot_array = np.frombuffer(screenshot_data, np.uint8)
-    img = cv2.imdecode(screenshot_array, cv2.IMREAD_COLOR)
+    pil_screenshot = adb_run_screenshot()
+    img = custom_utils.pil_to_cv2(pil_screenshot)
     new_img = expand_rectangle_and_cut_from_image(img, cell_x0, cell_y0, cell_x1, cell_y1, 0, 0)
-
     return new_img
 
 def expand_rectangle_and_cut_from_image(img, x0, y0, x1, y1, width, height):
