@@ -119,6 +119,7 @@ RESOLUTIONS = {
         "CoinStageYes": (118, 1041, 225, 1093),
         "Close": (348, 1033, 544, 1096),
         "Close2": (646, 1041, 806, 1093),
+        "Close3": (630, 1153, 823, 1232),
         "Angry": (70, 686, 826, 915), #The Grey Angry! text
         "Retry": (385, 1344, 515, 1409), #Retry Text when Connection Problem occurs
         # "EscalationLevel": (558, 434, 841, 623),

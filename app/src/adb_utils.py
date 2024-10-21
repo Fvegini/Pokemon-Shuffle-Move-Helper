@@ -15,6 +15,8 @@ from src.screen_utils import get_screen
 from pathlib import Path
 from src import log_utils, file_utils
 import re
+import threading
+
 log = log_utils.get_logger()
 
 
@@ -286,6 +288,9 @@ def check_buttons_to_click(original_image, source):
     if has_text_match(original_image, "Close2", source, extra_timeout=1+timeout_increase, custom_search_text="Close"):
         was_clicked = True
         original_image = get_new_screenshot()
+    if has_text_match(original_image, "Close3", source, extra_timeout=1+timeout_increase, custom_search_text="Close"):
+        was_clicked = True
+        original_image = get_new_screenshot()
         return click_return_buttons(original_image, timeout_increase, source)
     if not was_clicked:
         return click_return_buttons(original_image, timeout_increase, source)
@@ -526,7 +531,9 @@ def update_fog_image(index, source):
     cell_x0, cell_y0, cell_x1, cell_y1 = get_coordinates_from_board_index(index)
     center_x = math.floor((cell_x0 + cell_x1) / 2)
     center_y = math.floor((cell_y0 + cell_y1) / 2)
-    adb_run_swipe(center_x, center_y, center_x, center_y, 1000, source)
+    # adb_run_swipe(center_x, center_y, center_x, center_y, 1000, source)
+    swipe_thread = threading.Thread(target=adb_run_swipe, args=(center_x, center_y, center_x, center_y, 1000, source))
+    swipe_thread.start()
     time.sleep(0.5)
     pil_screenshot = adb_run_screenshot()
     img = custom_utils.pil_to_cv2(pil_screenshot)
