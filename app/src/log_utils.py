@@ -13,7 +13,7 @@ class LogHandler(logging.Handler):
         super().__init__()
         self.widget = widget
         self.max_lines = max_lines
-        self.log_lines = deque(maxlen=max_lines)
+        self.log_lines = deque(maxlen=max_lines) #type: ignore
         self.setFormatter(logging.Formatter(f'%(asctime)s.%(msecs)03d %(levelname)s - %(filename)s_%(lineno)d - %(message)s', "%Y-%m-%d %H:%M:%S"))
 
     def emit(self, record):

@@ -1,12 +1,16 @@
 from pathlib import Path
 from src import classes, constants, log_utils
+from adbutils import AdbDevice
+from typing import Optional
+
 
 log = log_utils.get_logger()
 class ExecutionVariable:
     
     current_stage: str
     current_strategy: str
-    
+    adb_device: Optional[AdbDevice]
+
     def __init__(self):
         self.current_stage = ""
         self.current_strategy = ""
@@ -15,7 +19,6 @@ class ExecutionVariable:
         self.non_stage_count = 0
         self.hearts_loop_counter = 0
         self.adb_shell_command = "adb shell"
-        self.adb_device = None
         self.angry_mode_active = False
         self.last_stage_had_anger = False
         self.thread_sleep_timer = 0

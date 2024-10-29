@@ -395,7 +395,7 @@ def has_icon_match(original_image, icon_path, source, position="CompleteScreen",
                 singlePointColor = None,
                 matchesMask = matchesMask, # draw only inliers
                 flags = 2)
-            cv2.drawContours(image_gray,[box],0,(0,0,255),2)
+            cv2.drawContours(image_gray,[box],0,(0,0,255),2) #type: ignore
             img3 = cv2.drawMatches(template_gray,kp1,image_gray,kp2,good,None,**draw_params) #type: ignore
             cv2.imwrite(constants.STAGE_FLANN_IMAGE_PATH, img3)
 
@@ -412,8 +412,8 @@ def has_icon_match(original_image, icon_path, source, position="CompleteScreen",
         if double_checked:
             log.debug(f"Image Found with points: {Path(icon_path).stem} - {len(good)}")
         if click and double_checked:
-            box_center_x = int((box[0][0] + box[2][0]) / 2)
-            box_center_y = int((box[0][1] + box[2][1]) / 2)
+            box_center_x = int((box[0][0] + box[2][0]) / 2) #type: ignore
+            box_center_y = int((box[0][1] + box[2][1]) / 2) #type: ignore
             adb_run_tap(r[0] + box_center_x ,r[1] + box_center_y, source)
             if extra_timeout > 0:
                 time.sleep(extra_timeout)

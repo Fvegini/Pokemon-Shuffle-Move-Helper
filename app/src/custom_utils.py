@@ -582,7 +582,7 @@ def search_space_to_fit_mega(mylist: List[Match], target_value):
 
 
 def split_list_to_dict(complete_list, interest_list):
-    result_dict = {key: [] for key in interest_list}
+    result_dict = {key: [] for key in interest_list} #type: ignore
     for idx, string in enumerate(complete_list):
         if string not in interest_list:
             continue

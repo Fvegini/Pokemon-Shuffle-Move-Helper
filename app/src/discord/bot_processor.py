@@ -85,7 +85,7 @@ async def process_with_image_url(ctx, url, target_user=None):
         if "Air" not in current_team:
             current_team.append(Pokemon("Air", False, False))
 
-        result, final_image = match_icons.start_from_bot(current_team, True, cropped_image, current_stage, create_image=True)
+        result, final_image = match_icons.start_from_bot(current_team, True, cropped_image, current_stage, create_image=True) #type: ignore
 
         image_bytes = cv2.imencode('.png', final_image)[1].tobytes()
         image_file = BytesIO(image_bytes)

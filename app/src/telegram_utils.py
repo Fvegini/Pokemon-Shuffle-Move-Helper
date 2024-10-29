@@ -6,8 +6,8 @@ import os
 from src.execution_variables import current_run
 from src import log_utils, custom_utils, config_utils, adb_commands
 
-BOT_TOKEN = os.getenv("DISCORD_BOT_TOKEN")
-USER_ID = os.getenv("DISCORD_USER_ID")
+BOT_TOKEN = os.getenv("DISCORD_BOT_TOKEN", "")
+USER_ID = os.getenv("DISCORD_USER_ID", "")
 
 class TelegramBot:
     def __init__(self):
@@ -38,7 +38,7 @@ class TelegramBot:
 
     def run_bot(self):
         asyncio.set_event_loop(self.loop)
-        self.loop.run_until_complete(self.application.run_polling())
+        self.loop.run_until_complete(self.application.run_polling()) #type: ignore
 
     def send_message(self, text):
         asyncio.run_coroutine_threadsafe(self.send_to_telegram(text), self.loop)

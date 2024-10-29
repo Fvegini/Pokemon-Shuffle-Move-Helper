@@ -120,7 +120,7 @@ def find_taps_to_make_extra_matches(final_sequence, shape="cross", num_points=2)
 
     marked_matrix_pair_cross = erase_shape(matrix, best_points, shape)
     second = np.array(marked_matrix_pair_cross.copy(), dtype=str) # Convert to string type
-    for point in best_points:
+    for point in best_points: #type: ignore
         second[point] = "X"
     final_matrix_pair_cross = apply_gravity(marked_matrix_pair_cross)
     final_matrix_pair_cross = replace_empty_spots(final_matrix_pair_cross)
@@ -129,7 +129,7 @@ def find_taps_to_make_extra_matches(final_sequence, shape="cross", num_points=2)
     log.debug(f"Score for this Extra Matches tap is: {best_score}")
     results_idx = []
     if best_score > 0:
-        for position in best_points:
+        for position in best_points: #type: ignore
             results_idx.append(custom_utils.coordinates_to_index(position[0], position[1], start_at_1=False))
     return results_idx
 

@@ -5,7 +5,7 @@ from src import log_utils
 
 log = log_utils.get_logger()
 
-socket_port = None
+socket_port = None #type: ignore
 PREFERENCES_PATH = Path.joinpath(Path.home(), "Shuffle-Move", "config", "preferences.txt")
 custom_utils.verify_shuffle_file(PREFERENCES_PATH)
 

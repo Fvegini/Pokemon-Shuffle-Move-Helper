@@ -52,7 +52,7 @@ def adb_run_swipe(from_x, from_y, to_x, to_y, delay, source, skip_on_error=False
             log.info("Skipping Swipe Because Loop Was Deactivated")
             return
         log.debug(f"Swiping at: {from_x} {from_y} {to_x} {to_y} {delay}")
-        current_run.adb_device.shell(f"input swipe {from_x} {from_y} {to_x} {to_y} {delay}")
+        current_run.adb_device.shell(f"input swipe {from_x} {from_y} {to_x} {to_y} {delay}") #type: ignore
         if not skip_extra_debug and custom_utils.is_extra_debug_active():
             custom_utils.save_extra_debug_image([[from_x, from_y], [to_x, to_y]], "swipe")
     except:
@@ -68,7 +68,7 @@ def adb_run_tap(x ,y, source, skip_on_error=False, skip_extra_debug=False):
             log.info("Skipping Tap Because Loop Was Deactivated")
             return
         log.debug(f"Tapping at: {x}, {y}")
-        current_run.adb_device.shell(f"input tap {x} {y}")
+        current_run.adb_device.shell(f"input tap {x} {y}") #type: ignore
         if not skip_extra_debug and custom_utils.is_extra_debug_active():
             custom_utils.save_extra_debug_image([[x, y]], "tap")
     except:
@@ -80,7 +80,7 @@ def adb_run_tap(x ,y, source, skip_on_error=False, skip_extra_debug=False):
 
 def adb_run_screenshot(skip_on_error=False):
     try:
-        return current_run.adb_device.screenshot()
+        return current_run.adb_device.screenshot() #type: ignore
     except:
         if skip_on_error:
             return
@@ -90,7 +90,7 @@ def adb_run_screenshot(skip_on_error=False):
 
 def adb_run_screen_size(skip_on_error=False):
     try:
-        return current_run.adb_device.shell("wm size")
+        return current_run.adb_device.shell("wm size") #type: ignore
     except:
         if skip_on_error:
             log.debug("Couldn't find ADB active connection")
@@ -100,9 +100,8 @@ def adb_run_screen_size(skip_on_error=False):
 
 def configure_screen():
     try:
-        response = current_run.adb_device.shell("wm size")
-        # response = str(pipe.stdout.read()).strip() #type: ignore
-        resolution = re.findall(r"\b\d{2,4}\s*x\s*\d{2,4}\b", response)[0]
+        response = current_run.adb_device.shell("wm size") #type: ignore
+        resolution = re.findall(r"\b\d{2,4}\s*x\s*\d{2,4}\b", response)[0] #type: ignore
         screen_utils.update_screen(constants.RESOLUTIONS[resolution])
     except Exception as ex:
         log.error(f"Couldn't load screen resolution: {ex}")

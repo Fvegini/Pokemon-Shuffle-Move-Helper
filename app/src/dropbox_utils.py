@@ -14,7 +14,7 @@ APP_KEY = os.getenv("DROPBOX_APP_KEY")
 APP_SECRET = os.getenv("DROPBOX_APP_SECRET")
 REFRESH_TOKEN = os.getenv("DROPBOX_REFRESH_TOKEN")
 
-dbx = None
+dbx = None #type: ignore
 
 def get_dbx_connection():
     global dbx
@@ -29,7 +29,7 @@ def get_dbx_connection():
 
 def is_token_valid():
     try:
-        dbx.users_get_current_account()
+        dbx.users_get_current_account() #type: ignore
         return True
     except dropbox.exceptions.AuthError:
         return False
