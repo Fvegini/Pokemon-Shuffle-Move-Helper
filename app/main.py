@@ -345,6 +345,9 @@ class ImageSelectorApp():
         self.hide_button = customtkinter.CTkButton(frame3_2_top, text="Hide Main App", command=lambda: self.show_or_hide_widget(self.appview), image=self.get_icon("eye-slash-regular"), **self.tab_button_style)
         self.hide_button.pack(side=tk.LEFT)
 
+        self.remove_button = customtkinter.CTkButton(frame3_2_top, text="Clear Current Team", command=lambda: self.remove_all_icons(), image=self.get_icon("trash-alt"), **self.tab_button_style)
+        self.remove_button.pack(side=tk.LEFT)
+
         frame3_3 = customtkinter.CTkFrame(self.tab3, fg_color="transparent")
         frame3_3_top = customtkinter.CTkFrame(frame3_3, fg_color="transparent")
         frame3_3_bottom = customtkinter.CTkFrame(frame3_3, fg_color="transparent")
@@ -425,12 +428,12 @@ class ImageSelectorApp():
         self.frame4_1_top_1_4_switch.pack(side=tk.TOP, anchor=tk.W, padx=1)
 
 
-        self.frame4_1_top_2_1_var = tk.BooleanVar(value=config_utils.config_values.get("placeholder"))      
+        self.frame4_1_top_2_1_var = tk.BooleanVar(value=config_utils.config_values.get("is_puzzle_stage"))      
         self.frame4_1_top_2_2_var = tk.BooleanVar(value=config_utils.config_values.get("placeholder")) 
         self.frame4_1_top_2_3_var = tk.BooleanVar(value=config_utils.config_values.get("placeholder")) 
         self.frame4_1_top_2_4_var = tk.BooleanVar(value=config_utils.config_values.get("placeholder"))
         
-        self.frame4_1_top_2_1_switch = customtkinter.CTkSwitch(frame4_1_top_2, variable=self.frame4_1_top_2_1_var, command=lambda: self.update_switch_config(self.frame4_1_top_2_1_var, "placeholder"), text="placeholder", onvalue=True, offvalue=False)
+        self.frame4_1_top_2_1_switch = customtkinter.CTkSwitch(frame4_1_top_2, variable=self.frame4_1_top_2_1_var, command=lambda: self.update_switch_config(self.frame4_1_top_2_1_var, "is_puzzle_stage"), text="Puzzle Stage", onvalue=True, offvalue=False)
         self.frame4_1_top_2_2_switch = customtkinter.CTkSwitch(frame4_1_top_2, variable=self.frame4_1_top_2_2_var, command=lambda: self.update_switch_config(self.frame4_1_top_2_2_var, "placeholder"), text="placeholder", onvalue=True, offvalue=False)
         self.frame4_1_top_2_3_switch = customtkinter.CTkSwitch(frame4_1_top_2, variable=self.frame4_1_top_2_3_var, command=lambda: self.update_switch_config(self.frame4_1_top_2_3_var, "placeholder"), text="placeholder", onvalue=True, offvalue=False)
         self.frame4_1_top_2_4_switch = customtkinter.CTkSwitch(frame4_1_top_2, variable=self.frame4_1_top_2_4_var, command=lambda: self.update_switch_config(self.frame4_1_top_2_4_var, "placeholder"), text="placeholder", onvalue=True, offvalue=False)
@@ -962,6 +965,10 @@ class ImageSelectorApp():
                     self.execute_board_analysis_threaded(source="manual")
         except AttributeError:
             pass  # Handle special keys if necessary
+    
+    def remove_all_icons(self):
+        for widget in self.get_selected_images_widgets_list():
+            widget[0].master.destroy()
 
 def merge_pil_images(image1, image2):
     # Get the width and height of each image

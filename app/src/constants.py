@@ -160,3 +160,6 @@ ANGRY_ICON_IMAGE = r"assets\adb\angry_1.png"
 ANGRY_ICON2_IMAGE = r"assets\adb\angry_2.png"
 POKEBALL_CAPTURE_IMAGE = r"assets\adb\pokeball_capture.png"
 DROP_IMAGE = r"assets\adb\drop.png"
+
+
+#TEAM SURVIVAL_MODE Shuckle,Ralts,Grimer,Togepi,Meowstic,Exploud,Meowstic_f,Machoke,Doublade,Jigglypuff,Slowbro,Gastly,Granbull,Goomy,Eevee,Treecko,Staraptor,Klefki,Bronzor,Togekiss,Roserade_w,Zorua,Charizard_x,Charmander,Illumise,Sliggoo,Joltik,Flaaffy,Snorlax,Metagross_s,Tyranitar,Chimchar,Metal,Pancham,Loudred,Galvantula,Staravia,Wood,Croagunk,Togetic,Buneary,Spritzee,Machop,Blitzle,Onix,Flareon,Budew,Kirlia,Froakie,Hawlucha_s,Starly,Dratini,Meditite,Roselia,Haunter,Espeon,Floatzel,Deoxys,Slowpoke 0,1,2,3,4,5,6,7,8,9,a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y,z,,,,,,,,,,,,,,,,,,,,,,, Charizard_x Blitzle,Bronzor,Budew,Buneary,Charmander,Chimchar,Croagunk,Deoxys,Doublade,Dratini,Eevee,Espeon,Exploud,Flaaffy,Flareon,Floatzel,Froakie,Galvantula,Gastly,Goomy,Granbull,Grimer,Haunter,Illumise,Jigglypuff,Joltik,Kirlia,Klefki,Loudred,Machoke,Machop,Meditite,Meowstic,Meowstic_f,Onix,Pancham,Ralts,Roselia,Shuckle,Sliggoo,Slowbro,Slowpoke,Snorlax,Spritzee,Staraptor,Staravia,Starly,Togekiss,Togepi,Togetic,Treecko,Tyranitar,Zorua

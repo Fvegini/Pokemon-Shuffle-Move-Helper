@@ -6,10 +6,12 @@ from src.embed import loaded_embedder
 from src import constants, custom_utils, config_utils, socket_utils, shuffle_config_files, adb_utils, log_utils, file_utils, tapper_utils
 from src.execution_variables import current_run
 from src.classes import Icon, Match, Pokemon, MatchResult, Board
+from src.puzzle_solver import move_data
 import statistics
 import time
 import os
 import shutil
+import math
 
 log = log_utils.get_logger()
 
@@ -344,7 +346,8 @@ def is_on_stage(original_image, source):
                 stage_text = adb_utils.get_current_stage(original_image)
             if custom_utils.is_survival_mode():
                 stage = shuffle_config_files.get_stage_name(stage_text)
-                stage_text = f"{stage_text} - {stage}"
+                moves = adb_utils.get_moves_left(original_image)
+                stage_text = f"{stage_text} - {stage} - {moves} moves remaining"
             custom_utils.send_telegram_message(f"Started a new Stage - {stage_text}")
             current_run.first_move = True
             current_run.stage_timer = time.time()
@@ -409,8 +412,9 @@ def start_from_helper(pokemon_list: list[Pokemon], has_barriers, root=None, sour
     try:
         log.debug(f"Starting a new {source} execution")
         icons_list = load_icon_classes(pokemon_list, has_barriers)
-        can_swipe = is_swipe_enabled(source)
         current_screen_image = adb_utils.get_new_screenshot()
+        can_swipe = is_swipe_enabled(source)
+
         current_run.is_combo_active = False
         
         if skip_shuffle_move:
@@ -437,6 +441,9 @@ def start_from_helper(pokemon_list: list[Pokemon], has_barriers, root=None, sour
         
         result = socket_utils.loadNewBoard()
 
+        if can_swipe and custom_utils.is_puzzle_stage():
+            can_swipe = execute_puzzle_logic(current_board, current_screen_image, source)
+
         if can_swipe and int(current_board.moves_left) > 0:
             swiped = adb_utils.execute_play(result, current_board, source)
             if custom_utils.is_debug_mode_active() and swiped:
@@ -456,3 +463,17 @@ def verify_drops_logic(current_screen_image):
     if not current_run.has_drops and custom_utils.is_check_drops_enabled():
         if adb_utils.check_if_has_drops(current_screen_image):
             current_run.has_drops = True
+
+def execute_puzzle_logic(current_board: Board, current_screen_image, source):
+    # stage = shuffle_config_files.get_stage_name(adb_utils.get_current_stage_name(current_screen_image))
+    stage = adb_utils.get_current_stage_name(current_screen_image)
+    result = move_data.get_result(stage, current_board.moves_left)
+    if result:
+        # index_from = custom_uls.coordinates_to_index(*result.get("From"))
+        # index_to = custom_utils.coordinates_to_index(*result.get("To"))
+        result_text = f'{result.get("From")} -> {result.get("To")}'
+        log.info(f"Executing Puzzle Solver from stage {stage} and move {current_board.moves_left}")
+        log.info(result_text)
+        adb_utils.execute_play(result_text, current_board, source)
+        return False
+    return True

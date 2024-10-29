@@ -730,6 +730,9 @@ def is_check_drops_enabled():
 def use_mega_boosted_score():
     return config_utils.config_values.get("mega_boosted_score")
 
+def is_puzzle_stage():
+    return config_utils.config_values.get("is_puzzle_stage")
+
 def save_extra_debug_image(points_list, suffix):
     os.makedirs(constants.DEBUG_EXTRA_IMAGE_FOLDER, exist_ok=True)
     image_path = Path(constants.DEBUG_EXTRA_IMAGE_FOLDER, f"{datetime.now().strftime('%Y_%m_%d_%H_%M_%S_%f')[:-3]}_{suffix}.jpeg")
