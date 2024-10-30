@@ -2,7 +2,7 @@ from pathlib import Path
 from src import classes, constants, log_utils
 from adbutils import AdbDevice
 from typing import Optional
-
+from datetime import datetime
 
 log = log_utils.get_logger()
 class ExecutionVariable:
@@ -43,6 +43,11 @@ class ExecutionVariable:
         self.has_drops = False
         self.abd_not_found_count = 0
         self.is_loop_active = False
+        self.survival_mode_current_stage = 0
+        self.survival_mode_current_running = False
+        self.survival_mode_run_started_time = datetime.now()
+        self.survival_mode_current_stage_started = datetime.now()
+        self.survival_mode_info = {}
 
     def clear_stage_variables(self):
         if self.angry_mode_active:

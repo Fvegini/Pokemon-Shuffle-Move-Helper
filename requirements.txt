@@ -16,3 +16,5 @@ dropbox==12.0.2
 pyinstaller
 python-telegram-bot==21.4
 adbutils==2.8.0
+pandas
+openpyxl

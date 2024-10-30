@@ -26,6 +26,8 @@ import threading
 import time
 from src import log_utils
 import sys
+import traceback
+
 
 log = log_utils.get_logger()
 warnings.filterwarnings("ignore", category=UserWarning, message="CTkButton Warning: Given image is not CTkImage but*")
@@ -429,12 +431,12 @@ class ImageSelectorApp():
 
 
         self.frame4_1_top_2_1_var = tk.BooleanVar(value=config_utils.config_values.get("is_puzzle_stage"))      
-        self.frame4_1_top_2_2_var = tk.BooleanVar(value=config_utils.config_values.get("placeholder")) 
+        self.frame4_1_top_2_2_var = tk.BooleanVar(value=config_utils.config_values.get("pause_survival")) 
         self.frame4_1_top_2_3_var = tk.BooleanVar(value=config_utils.config_values.get("placeholder")) 
         self.frame4_1_top_2_4_var = tk.BooleanVar(value=config_utils.config_values.get("placeholder"))
         
         self.frame4_1_top_2_1_switch = customtkinter.CTkSwitch(frame4_1_top_2, variable=self.frame4_1_top_2_1_var, command=lambda: self.update_switch_config(self.frame4_1_top_2_1_var, "is_puzzle_stage"), text="Puzzle Stage", onvalue=True, offvalue=False)
-        self.frame4_1_top_2_2_switch = customtkinter.CTkSwitch(frame4_1_top_2, variable=self.frame4_1_top_2_2_var, command=lambda: self.update_switch_config(self.frame4_1_top_2_2_var, "placeholder"), text="placeholder", onvalue=True, offvalue=False)
+        self.frame4_1_top_2_2_switch = customtkinter.CTkSwitch(frame4_1_top_2, variable=self.frame4_1_top_2_2_var, command=lambda: self.update_switch_config(self.frame4_1_top_2_2_var, "pause_survival"), text="Pause Survival", onvalue=True, offvalue=False)
         self.frame4_1_top_2_3_switch = customtkinter.CTkSwitch(frame4_1_top_2, variable=self.frame4_1_top_2_3_var, command=lambda: self.update_switch_config(self.frame4_1_top_2_3_var, "placeholder"), text="placeholder", onvalue=True, offvalue=False)
         self.frame4_1_top_2_4_switch = customtkinter.CTkSwitch(frame4_1_top_2, variable=self.frame4_1_top_2_4_var, command=lambda: self.update_switch_config(self.frame4_1_top_2_4_var, "placeholder"), text="placeholder", onvalue=True, offvalue=False)
         
@@ -922,7 +924,7 @@ class ImageSelectorApp():
 
             current_run.current_stage = stage_name
             current_run.current_strategy = constants.GRADING_TOTAL_SCORE
-            self.stage_combobox.set(constants.move_stages.get(current_run.current_stage))
+            self.stage_combobox.set(constants.move_stages.get(current_run.current_stage, "NONE"))
             self.strategy_combobox.set(constants.move_strategy.get(current_run.current_strategy))
             for pokemon in current_team:
                 if pokemon.name in load_from_shuffle.exception_list:
@@ -937,7 +939,9 @@ class ImageSelectorApp():
             if self.frame3_1_top_1_2_var_control_barrier.get():
                 self.reveal_or_hide_barrier_img()
         except Exception as ex:
-            log.error(ex)
+            log.error("An error occurred", exc_info=True)  # Logs the full traceback
+            log.error("Exception details: %s", traceback.format_exc())  # Optional additional traceback
+            # log.error(ex)
             pass
 
     def load_team(self):

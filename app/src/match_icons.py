@@ -340,15 +340,20 @@ def is_on_stage(original_image, source):
         if not current_run.id:
             current_run.id = time.strftime('%Y_%m_%d_%H_%M')
             stage_text = adb_utils.get_current_stage(original_image)
-            if custom_utils.is_stage_pause():
+            if custom_utils.is_survival_mode():
+                time.sleep(4)
+                original_image = adb_utils.get_new_screenshot()
+                current_run.survival_mode_current_stage+= 1
+                stage = adb_utils.get_current_stage_name(original_image)
+                moves = adb_utils.get_moves_left(original_image)
+                # custom_utils.create_or_append_to_file(current_run.survival_mode_current_stage, stage_text, stage, moves)
+                custom_utils.started_stage(current_run.survival_mode_current_stage, stage_text, stage, moves)
+                stage_text = f"{stage_text} - {stage} - {moves} moves"
+            elif custom_utils.is_stage_pause():
                 time.sleep(2)
                 original_image = adb_utils.get_new_screenshot()
                 stage_text = adb_utils.get_current_stage(original_image)
-            if custom_utils.is_survival_mode():
-                stage = shuffle_config_files.get_stage_name(stage_text)
-                moves = adb_utils.get_moves_left(original_image)
-                stage_text = f"{stage_text} - {stage} - {moves} moves remaining"
-            custom_utils.send_telegram_message(f"Started a new Stage - {stage_text}")
+            custom_utils.send_telegram_message(f"Stage - {stage_text}")
             current_run.first_move = True
             current_run.stage_timer = time.time()
             current_run.move_number = 0
@@ -373,7 +378,11 @@ def is_on_stage(original_image, source):
                 stage_text = f" DROPS and {stage_text}"
             if custom_utils.custom_utils.is_meowth_stage():
                 stage_text = f" {adb_utils.get_end_stage_coins(original_image)} COINS and {stage_text}"
-            custom_utils.send_telegram_message(f"Ended Stage With {stage_text}")
+            if custom_utils.is_survival_mode():
+                end_stage_moves = 0
+                custom_utils.end_stage(end_stage_moves)
+            else:
+                custom_utils.send_telegram_message(f"Ended Stage With {stage_text}")
             current_run.clear_stage_variables()
     elif on_stage and not current_run.stage_timer:
         current_run.stage_timer = time.time()
@@ -424,6 +433,8 @@ def start_from_helper(pokemon_list: list[Pokemon], has_barriers, root=None, sour
             result = verify_or_enter_stage(current_screen_image, source)
             if result is not None:
                 return result
+        if current_run.first_move and custom_utils.is_survival_mode():
+            current_screen_image = adb_utils.get_new_screenshot()
         can_swipe = can_swipe and not forced_swipe_skip and is_swipe_enabled(source)
         verify_drops_logic(current_screen_image)
         if not can_swipe and (custom_utils.is_meowth_stage() or not custom_utils.is_tapper_active()):

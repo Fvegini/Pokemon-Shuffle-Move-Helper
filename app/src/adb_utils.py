@@ -16,6 +16,7 @@ from pathlib import Path
 from src import log_utils, file_utils
 import re
 import threading
+from datetime import datetime
 
 log = log_utils.get_logger()
 
@@ -106,6 +107,8 @@ def check_hearts(original_image, source):
     try:
         if custom_utils.is_coin_stage():
             log.debug("Coin Stage, skipping Hearts check")
+            return
+        if current_run.survival_mode_current_running:
             return
         if current_run.awakened_from_sleep:
             test_timer_out_of_sync(source)
@@ -269,7 +272,15 @@ def check_buttons_to_click(original_image, source):
             was_clicked = True
             original_image = get_new_screenshot()
     if custom_utils.is_survival_mode():
+        if custom_utils.paused_survival_mode():
+            if has_text_match(original_image, "CoinStage", source, extra_timeout=1, custom_search_text="challenging survival", skip_click=True):
+                current_run.disable_loop = True
+                log.info("Disabling loop because of paused_survival_mode")
+                return
         if has_text_match(original_image, "CoinStage", source, custom_click="CoinStageYes", extra_timeout=1, custom_search_text="challenging survival"):
+            current_run.survival_mode_current_stage = 0
+            current_run.survival_mode_current_running = True
+            current_run.survival_mode_run_started_time = datetime.now()
             was_clicked = True
             original_image = get_new_screenshot()  
     if has_text_match(original_image, "No", source, extra_timeout=1+timeout_increase):
@@ -299,6 +310,11 @@ def check_buttons_to_click(original_image, source):
     return
 
 def click_ok_buttons(original_image, timeout_increase, source):
+    if custom_utils.custom_utils.is_survival_mode():
+        if has_text_match(original_image, "SurvivalModeText", source, extra_timeout=1, custom_search_text="You cleared"):
+            log.info("survival mode stage ended")
+            current_run.survival_mode_current_running = False
+            current_run.survival_mode_current_stage = 0
     if has_icon_match(original_image, constants.OK_BUTTON_IMAGE, source, extra_timeout=1+timeout_increase, click=True, log_not_found=True):
         return True
     if has_icon_match(original_image, constants.OK_BUTTON2_IMAGE, source, extra_timeout=1+timeout_increase, click=True, log_not_found=True):
@@ -441,8 +457,10 @@ def text_visible(original_image, text, custom_click=None, custom_search_text=Non
             log.debug(f"Text Found for {text}: {result.strip()} - alternative {result2.strip()}")
     return found_text, postition
 
-def has_text_match(original_image, text, source, extra_timeout=1.0, click=True, custom_click=None, custom_search_text=None, double_checked=False):
+def has_text_match(original_image, text, source, extra_timeout=1.0, click=True, custom_click=None, custom_search_text=None, double_checked=False, skip_click=False):
     visible, r = text_visible(original_image, text, custom_click, custom_search_text, should_print=double_checked)
+    if visible and skip_click:
+        return True
     if visible and click:
         debug_image_path = Path(constants.ADB_IMAGE_FOLDER, "debug", f"{text}.png")
         if not debug_image_path.exists():

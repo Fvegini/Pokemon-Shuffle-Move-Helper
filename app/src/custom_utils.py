@@ -17,9 +17,10 @@ from src.screen_utils import get_screen
 from thefuzz import fuzz
 import io
 import math
-
+from src.execution_variables import current_run
 from src.sleep_utils import log
 from src.telegram_utils import current_bot
+import pandas as pd
 
 log = log_utils.get_logger()
 FROZEN_IMAGE = cv2.imread(Path(constants.ASSETS_PATH, "barrier.png").as_posix(), cv2.IMREAD_UNCHANGED)
@@ -683,6 +684,70 @@ def add_red_marker(image_path, points_list, marker_radius=20, transparency=0.7):
 
     return image
 
+latest_time = datetime.now()
+
+# def create_or_append_to_file(stage_number, stage_text, stage, moves, file_path='survival_mode_data.xlsx', sheet_name='Stage Data'):
+#     global latest_time
+
+#     # Create a DataFrame for the new row
+#     current_time = datetime.now()
+#     time_difference = (current_time - latest_time).total_seconds()  # Get the time difference in seconds
+#     new_data = pd.DataFrame({
+#         "Stage Number": [stage_number],
+#         'Stage Text': [stage_text],
+#         'Stage': [stage],
+#         'Moves': [moves],
+#         'Time(seconds)': [time_difference]
+#     })
+#     latest_time = current_time
+
+#     # Check if the file exists
+#     if os.path.exists(file_path):
+#         with pd.ExcelWriter(file_path, mode='a', engine="openpyxl", if_sheet_exists="overlay") as writer:
+#             # Append data without writing headers, start at the next empty row
+#             new_data.to_excel(writer, sheet_name=sheet_name, index=False, header=False, startrow=writer.sheets[sheet_name].max_row)
+#     else:
+#         # Create a new file and write headers if it doesn't exist
+#         with pd.ExcelWriter(file_path, mode='w', engine="openpyxl") as writer:
+#             new_data.to_excel(writer, sheet_name=sheet_name, index=False)
+
+
+
+def started_stage(stage_number, stage_text, stage, moves):
+   current_run.survival_mode_current_stage_started = datetime.now()
+   current_run.survival_mode_info = {
+       "Stage Number": stage_number,
+       'Stage Text': stage_text,
+       'Stage': stage,
+       'Starting Moves': moves
+   }
+
+def end_stage(moves, file_path='survival_mode_data.xlsx', sheet_name='Stage Data'):
+   # Calculate the time difference
+   end_time = datetime.now()
+   stage_time = int((end_time - current_run.survival_mode_current_stage_started).total_seconds())
+   global_time = int((end_time - current_run.survival_mode_run_started_time).total_seconds() / 60)
+   # Create a DataFrame for the new row
+   new_data = pd.DataFrame({
+       "Stage Number": [current_run.survival_mode_info['Stage Number']],
+       'Stage Text': [current_run.survival_mode_info['Stage Text']],
+       'Stage': [current_run.survival_mode_info['Stage']],
+       "Starting Moves": [current_run.survival_mode_info["Starting Moves"]],
+       'End Moves': [moves],
+       'Stage Time (s)': [stage_time],
+       "Run Time (min)": [global_time],
+
+   })
+
+   # Check if the file exists
+   if os.path.exists(file_path):
+       with pd.ExcelWriter(file_path, mode='a', engine="openpyxl", if_sheet_exists="overlay") as writer:
+           # Append data without writing headers, start at the next empty row
+           new_data.to_excel(writer, sheet_name=sheet_name, index=False, header=False, startrow=writer.sheets[sheet_name].max_row)
+   else:
+       # Create a new file and write headers if it doesn't exist
+       with pd.ExcelWriter(file_path, mode='w', engine="openpyxl") as writer:
+           new_data.to_excel(writer, sheet_name=sheet_name, index=False)
 
 
 def is_timed_stage():
@@ -732,6 +797,10 @@ def use_mega_boosted_score():
 
 def is_puzzle_stage():
     return config_utils.config_values.get("is_puzzle_stage")
+
+def paused_survival_mode():
+    return config_utils.config_values.get("pause_survival")
+
 
 def save_extra_debug_image(points_list, suffix):
     os.makedirs(constants.DEBUG_EXTRA_IMAGE_FOLDER, exist_ok=True)

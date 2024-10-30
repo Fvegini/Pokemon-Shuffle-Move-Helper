@@ -127,9 +127,10 @@ RESOLUTIONS = {
         "Greatball": (110, 1259, 803, 1308), #Do you want to use 3500 Coins
         "GreatballNo": (691, 1453, 772, 1509),
         "GreatballYes": (123, 1460, 217, 1506),
+        "SurvivalModeText": (126, 720, 780, 813),
         # Stage
         "Board": (16, 716, 886, 1586),
-        "Stage": (34, 87, 202, 125),
+        "Stage": (37, 85, 195, 126),
         "StageName": (581, 546, 890, 586),
         "Score": (32, 187, 200, 222),
         "MovesLeft": (39, 551, 240, 620),
@@ -162,4 +163,6 @@ POKEBALL_CAPTURE_IMAGE = r"assets\adb\pokeball_capture.png"
 DROP_IMAGE = r"assets\adb\drop.png"
 
 
-#TEAM SURVIVAL_MODE Shuckle,Ralts,Grimer,Togepi,Meowstic,Exploud,Meowstic_f,Machoke,Doublade,Jigglypuff,Slowbro,Gastly,Granbull,Goomy,Eevee,Treecko,Staraptor,Klefki,Bronzor,Togekiss,Roserade_w,Zorua,Charizard_x,Charmander,Illumise,Sliggoo,Joltik,Flaaffy,Snorlax,Metagross_s,Tyranitar,Chimchar,Metal,Pancham,Loudred,Galvantula,Staravia,Wood,Croagunk,Togetic,Buneary,Spritzee,Machop,Blitzle,Onix,Flareon,Budew,Kirlia,Froakie,Hawlucha_s,Starly,Dratini,Meditite,Roselia,Haunter,Espeon,Floatzel,Deoxys,Slowpoke 0,1,2,3,4,5,6,7,8,9,a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y,z,,,,,,,,,,,,,,,,,,,,,,, Charizard_x Blitzle,Bronzor,Budew,Buneary,Charmander,Chimchar,Croagunk,Deoxys,Doublade,Dratini,Eevee,Espeon,Exploud,Flaaffy,Flareon,Floatzel,Froakie,Galvantula,Gastly,Goomy,Granbull,Grimer,Haunter,Illumise,Jigglypuff,Joltik,Kirlia,Klefki,Loudred,Machoke,Machop,Meditite,Meowstic,Meowstic_f,Onix,Pancham,Ralts,Roselia,Shuckle,Sliggoo,Slowbro,Slowpoke,Snorlax,Spritzee,Staraptor,Staravia,Starly,Togekiss,Togepi,Togetic,Treecko,Tyranitar,Zorua
+SURVIVAL_TEAM_STRING = '''
+TEAM SURVIVAL_MODE Absol,Togetic,Espeon,Staraptor,Skitty,Accelgor,Buneary,Klefki,Abra,Altaria,Amaura,Joltik,Snorlax,Anorith,Bronzor,Metagross_s,Meditite,Loudred,Air,Treecko,Flareon,Ambipom,Meowstic,Illumise,Aerodactyl,Shuckle,Goomy,Flaaffy,Machop,Floatzel,Abomasnow,Slowpoke,Haunter,Pancham,Jigglypuff,Coin,Galvantula,Croagunk,Meowstic_f,Wood,Roserade_w,Medicham,Ampharos,Blitzle,Machoke,Dratini,Spritzee,Gastly,Shelgon,Onix,Sliggoo,Aipom,Granbull,Tyranitar,Togepi,Starly,Froakie,Staravia,Metal,Doublade,Kirlia,Charizard_x,Chimchar,Ralts,Togekiss,Slowbro,Aegislash,Zorua,Grimer,Aggron,Alakazam,Roselia,Hawlucha_s,Charmander,Deoxys,Alomomola,Exploud,Budew,Eevee,Amoonguss 0,1,2,3,4,5,6,7,8,9,a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y,z Charizard_x Abra,Absol,Accelgor,Aipom,Altaria,Amaura,Ampharos,Aggron,Amoonguss,Abomasnow,Anorith,Ambipom,Alakazam,Alomomola,Aegislash,Aerodactyl
+'''
