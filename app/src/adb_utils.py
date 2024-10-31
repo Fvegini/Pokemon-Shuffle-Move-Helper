@@ -279,7 +279,7 @@ def check_buttons_to_click(original_image, source):
                 return
         if has_text_match(original_image, "CoinStage", source, custom_click="CoinStageYes", extra_timeout=1, custom_search_text="challenging survival"):
             current_run.survival_mode_current_stage = 0
-            current_run.survival_mode_current_running = True
+            # current_run.survival_mode_current_running = True
             current_run.survival_mode_run_started_time = datetime.now()
             was_clicked = True
             original_image = get_new_screenshot()  

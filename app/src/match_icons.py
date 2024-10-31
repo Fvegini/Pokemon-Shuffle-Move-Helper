@@ -12,6 +12,8 @@ import time
 import os
 import shutil
 import math
+from datetime import datetime
+import traceback
 
 log = log_utils.get_logger()
 
@@ -151,6 +153,10 @@ def handle_skip_shuffle_move(icons_list, forced_board_image, has_barriers, sourc
 def verify_or_enter_stage(current_screen_image, source):
     if is_on_stage(current_screen_image, source):
         current_run.is_combo_active = verify_active_combo(current_screen_image, source)
+        if not current_run.survival_mode_current_running and custom_utils.is_survival_mode():
+            current_run.survival_mode_current_running = True
+            current_run.survival_mode_current_id = datetime.now().strftime('%Y_%m_%d_%H_%M')
+            current_run.survival_mode_current_running_path = Path(constants.DEBUG_EXTRA_IMAGE_FOLDER, current_run.survival_mode_current_id)
     else:
         if should_auto_next_stage():
             click_buttons_to_enter_new_stage(current_screen_image, source)
@@ -346,7 +352,6 @@ def is_on_stage(original_image, source):
                 current_run.survival_mode_current_stage+= 1
                 stage = adb_utils.get_current_stage_name(original_image)
                 moves = adb_utils.get_moves_left(original_image)
-                # custom_utils.create_or_append_to_file(current_run.survival_mode_current_stage, stage_text, stage, moves)
                 custom_utils.started_stage(current_run.survival_mode_current_stage, stage_text, stage, moves)
                 stage_text = f"{stage_text} - {stage} - {moves} moves"
             elif custom_utils.is_stage_pause():
@@ -370,19 +375,23 @@ def is_on_stage(original_image, source):
             if custom_utils.is_debug_mode_active():
                 save_debug_objects()
             stage_text = adb_utils.get_end_stage_score(original_image)
-            if custom_utils.is_stage_pause():
+            if custom_utils.is_survival_mode():
                 time.sleep(2)
                 original_image = adb_utils.get_new_screenshot()
-                stage_text = adb_utils.get_end_stage_score(original_image)
-            if current_run.has_drops:
-                stage_text = f" DROPS and {stage_text}"
-            if custom_utils.custom_utils.is_meowth_stage():
-                stage_text = f" {adb_utils.get_end_stage_coins(original_image)} COINS and {stage_text}"
-            if custom_utils.is_survival_mode():
-                end_stage_moves = 0
-                custom_utils.end_stage(end_stage_moves)
+                custom_utils.ended_the_stage()
+                if "---" in adb_utils.get_end_stage_score(original_image) or current_run.survival_mode_current_stage == 60:
+                    custom_utils.ended_the_stage(False)
+                    current_run.survival_old_stage_info = {}
             else:
-                custom_utils.send_telegram_message(f"Ended Stage With {stage_text}")
+                if custom_utils.is_stage_pause():
+                    time.sleep(2)
+                    original_image = adb_utils.get_new_screenshot()
+                    stage_text = adb_utils.get_end_stage_score(original_image)
+                if current_run.has_drops:
+                    stage_text = f" DROPS and {stage_text}"
+                if custom_utils.custom_utils.is_meowth_stage():
+                    stage_text = f" {adb_utils.get_end_stage_coins(original_image)} COINS and {stage_text}"
+            custom_utils.send_telegram_message(f"Ended Stage With {stage_text}")
             current_run.clear_stage_variables()
     elif on_stage and not current_run.stage_timer:
         current_run.stage_timer = time.time()
@@ -457,6 +466,8 @@ def start_from_helper(pokemon_list: list[Pokemon], has_barriers, root=None, sour
 
         if can_swipe and int(current_board.moves_left) > 0:
             swiped = adb_utils.execute_play(result, current_board, source)
+            if custom_utils.is_survival_mode() and swiped:
+                time.sleep(1)
             if custom_utils.is_debug_mode_active() and swiped:
                 save_debug_objects(result, match_list, source == "manual")
 
@@ -467,7 +478,9 @@ def start_from_helper(pokemon_list: list[Pokemon], has_barriers, root=None, sour
 
         return MatchResult(result=result, match_image=result_image, match_list=match_list)
     except Exception as ex:
-        log.error(f"Unknown Error in main loop: {ex}")
+        log.error("Unknown Error in main loop", exc_info=True)  # Logs the full traceback
+        log.error("Exception details: %s", traceback.format_exc())  # Optional additional traceback
+        # log.error(f"Unknown Error in main loop: {ex}")
         return MatchResult()
 
 def verify_drops_logic(current_screen_image):

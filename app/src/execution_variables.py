@@ -47,7 +47,10 @@ class ExecutionVariable:
         self.survival_mode_current_running = False
         self.survival_mode_run_started_time = datetime.now()
         self.survival_mode_current_stage_started = datetime.now()
-        self.survival_mode_info = {}
+        self.survival_old_stage_info = {}
+        self.survival_current_stage_info = {}
+        self.survival_mode_current_running_path = None
+        self.survival_mode_current_id = ""
 
     def clear_stage_variables(self):
         if self.angry_mode_active:

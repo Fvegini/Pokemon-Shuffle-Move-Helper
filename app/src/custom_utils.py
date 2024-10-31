@@ -711,43 +711,72 @@ latest_time = datetime.now()
 #         with pd.ExcelWriter(file_path, mode='w', engine="openpyxl") as writer:
 #             new_data.to_excel(writer, sheet_name=sheet_name, index=False)
 
+def safe_convert_to_int(s: str, default=99999) -> int:
+    # Clean the string, remove unwanted characters like commas or decimal points
+    cleaned_string = re.match(r'-?\d+', s.strip())
+    
+    if cleaned_string:
+        try:
+            # Convert the cleaned portion of the string to an integer
+            return int(cleaned_string.group())
+        except ValueError:
+            pass  # Just in case anything goes wrong, fall through to return None
+    
+    # Return None if conversion fails
+    print(f"Conversion failed for: {s}")
+    return default 
 
 
 def started_stage(stage_number, stage_text, stage, moves):
-   current_run.survival_mode_current_stage_started = datetime.now()
-   current_run.survival_mode_info = {
+   current_run.survival_current_stage_info = {
        "Stage Number": stage_number,
        'Stage Text': stage_text,
        'Stage': stage,
-       'Starting Moves': moves
+       'Starting Moves': safe_convert_to_int(moves),
+       'Start Time': datetime.now()
    }
 
-def end_stage(moves, file_path='survival_mode_data.xlsx', sheet_name='Stage Data'):
-   # Calculate the time difference
-   end_time = datetime.now()
-   stage_time = int((end_time - current_run.survival_mode_current_stage_started).total_seconds())
-   global_time = int((end_time - current_run.survival_mode_run_started_time).total_seconds() / 60)
-   # Create a DataFrame for the new row
-   new_data = pd.DataFrame({
-       "Stage Number": [current_run.survival_mode_info['Stage Number']],
-       'Stage Text': [current_run.survival_mode_info['Stage Text']],
-       'Stage': [current_run.survival_mode_info['Stage']],
-       "Starting Moves": [current_run.survival_mode_info["Starting Moves"]],
-       'End Moves': [moves],
-       'Stage Time (s)': [stage_time],
-       "Run Time (min)": [global_time],
+def ended_the_stage(won_stage=True, file_path='survival_mode_data.xlsx', sheet_name='Stage Data'):
+    current_run.survival_current_stage_info["End Time"] = datetime.now()
+    current_run.survival_current_stage_info["Stage Time"] = int((current_run.survival_current_stage_info.get("End Time") - current_run.survival_current_stage_info.get("Start Time")).total_seconds()) #type: ignore
+    current_run.survival_current_stage_info["Global Time"] = int((current_run.survival_current_stage_info.get("End Time") - current_run.survival_mode_run_started_time).total_seconds() / 60) #type: ignore
+    current_run.survival_current_stage_info["won_stage"] = won_stage
+    
+    if won_stage and current_run.survival_old_stage_info.get('Stage Number') == 60:
+        last_stage = True
+    if won_stage:
+        last_stage = False
+    else:
+        last_stage = True
 
-   })
 
-   # Check if the file exists
-   if os.path.exists(file_path):
-       with pd.ExcelWriter(file_path, mode='a', engine="openpyxl", if_sheet_exists="overlay") as writer:
-           # Append data without writing headers, start at the next empty row
-           new_data.to_excel(writer, sheet_name=sheet_name, index=False, header=False, startrow=writer.sheets[sheet_name].max_row)
-   else:
-       # Create a new file and write headers if it doesn't exist
-       with pd.ExcelWriter(file_path, mode='w', engine="openpyxl") as writer:
-           new_data.to_excel(writer, sheet_name=sheet_name, index=False)
+    if current_run.survival_old_stage_info:
+        current_run.survival_old_stage_info['End Moves'] = current_run.survival_old_stage_info.get('Starting Moves') - (current_run.survival_current_stage_info.get("Starting Moves") - 5) #type: ignore
+
+        old_stage_data = pd.DataFrame({
+            "id": [current_run.survival_mode_current_id],
+            "Stage Number": [current_run.survival_old_stage_info.get('Stage Number')],
+            'Stage Text': [current_run.survival_old_stage_info.get('Stage Text')],
+            'Stage': [current_run.survival_old_stage_info.get('Stage')],
+            "Starting Moves": [current_run.survival_old_stage_info.get('Starting Moves')],
+            'Moves': [current_run.survival_old_stage_info.get('End Moves')],
+            'Stage Time (s)': [current_run.survival_old_stage_info.get('Stage Time')],
+            "Run Time (min)": [current_run.survival_old_stage_info.get('Global Time')],
+            "Start Time": [current_run.survival_old_stage_info.get('Start Time')],
+            "Won Stage": won_stage,
+            "Last Run Stage": last_stage
+        })
+        
+        # Check if the file exists and append the modified old stage data
+        if os.path.exists(file_path):
+            with pd.ExcelWriter(file_path, mode='a', engine="openpyxl", if_sheet_exists="overlay") as writer:
+                old_stage_data.to_excel(writer, sheet_name=sheet_name, index=False, header=False, startrow=writer.sheets[sheet_name].max_row)
+        else:
+            with pd.ExcelWriter(file_path, mode='w', engine="openpyxl") as writer:
+                old_stage_data.to_excel(writer, sheet_name=sheet_name, index=False)
+    
+    # Update the old stage info with the current stage info
+    current_run.survival_old_stage_info = current_run.survival_current_stage_info
 
 
 def is_timed_stage():
@@ -804,7 +833,11 @@ def paused_survival_mode():
 
 def save_extra_debug_image(points_list, suffix):
     os.makedirs(constants.DEBUG_EXTRA_IMAGE_FOLDER, exist_ok=True)
-    image_path = Path(constants.DEBUG_EXTRA_IMAGE_FOLDER, f"{datetime.now().strftime('%Y_%m_%d_%H_%M_%S_%f')[:-3]}_{suffix}.jpeg")
+    if is_survival_mode() and current_run.survival_mode_current_running_path:
+        os.makedirs(current_run.survival_mode_current_running_path, exist_ok=True)
+        image_path = Path(current_run.survival_mode_current_running_path, f"{datetime.now().strftime('%Y_%m_%d_%H_%M_%S_%f')[:-3]}_{suffix}.jpeg")
+    else:
+        image_path = Path(constants.DEBUG_EXTRA_IMAGE_FOLDER, f"{datetime.now().strftime('%Y_%m_%d_%H_%M_%S_%f')[:-3]}_{suffix}.jpeg")
     image_with_markers = custom_utils.add_red_marker(constants.LAST_SCREEN_IMAGE_PATH, points_list)
     custom_utils.compress_image_and_save(image_with_markers, image_path.as_posix(), initial_quality=6)
 
