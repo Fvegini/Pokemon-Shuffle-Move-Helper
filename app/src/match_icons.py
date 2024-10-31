@@ -224,25 +224,25 @@ def is_swipe_enabled(source):
     if source == "manual":
         return True
     if custom_utils.is_fast_swipe() or custom_utils.is_timed_stage():
-        log.debug("Fast Swipe or Timed Stage Enabled")
+        # log.debug("Fast Swipe or Timed Stage Enabled")
         return True
     elif current_run.is_combo_active:
-        log.debug("Can't Swipe because of active Combo")
+        # log.debug("Can't Swipe because of active Combo")
         return False
     elif not current_run.last_swipe_timer:
-        log.debug("Swipe enabled, last swipe timer don't exists")
+        # log.debug("Swipe enabled, last swipe timer don't exists")
         return True
     last_swipe_time = custom_utils.time_difference_in_seconds(current_run.last_swipe_timer)
     if current_run.last_swipe_timer and custom_utils.is_meowth_stage() and last_swipe_time < 8:
-        log.debug(f"Meowth stage, waiting until last_swipe was 8 seconds")
+        # log.debug(f"Meowth stage, waiting until last_swipe was 8 seconds")
         time.sleep(abs(last_swipe_time - 8))
         return True
     if current_run.last_swipe_timer and last_swipe_time > 2:
-        log.debug(f"Swipe enabled, last swipe was {last_swipe_time} seconds")
+        # log.debug(f"Swipe enabled, last swipe was {last_swipe_time} seconds")
         return True
     else:
-        log.debug(f"Can't Swipe, last swipe was {last_swipe_time} seconds")
-        log.debug("Can't Swipe, no options selected")
+        # log.debug(f"Can't Swipe, last swipe was {last_swipe_time} seconds")
+        # log.debug("Can't Swipe, no options selected")
         return False
 
 def verify_active_combo(current_screen_image, source):
@@ -315,7 +315,7 @@ def click_buttons_to_enter_new_stage(current_screen_image, source):
     if current_run.disable_loop or current_run.awakened_from_sleep: #Cancel Current loop run.
         return
     adb_utils.check_buttons_to_click(current_screen_image, source)
-    log.debug("Finished Click Buttons Check")
+    # log.debug("Finished Click Buttons Check")
 
 def match_cell_with_icons(icons_list, cell_list, has_barriers, source, combo_is_running=False) -> List[Match]:
     match_list: List[Match] = []
@@ -391,7 +391,7 @@ def is_on_stage(original_image, source):
                     stage_text = f" DROPS and {stage_text}"
                 if custom_utils.custom_utils.is_meowth_stage():
                     stage_text = f" {adb_utils.get_end_stage_coins(original_image)} COINS and {stage_text}"
-            custom_utils.send_telegram_message(f"Ended Stage With {stage_text}")
+                custom_utils.send_telegram_message(f"Ended Stage With {stage_text}")
             current_run.clear_stage_variables()
     elif on_stage and not current_run.stage_timer:
         current_run.stage_timer = time.time()

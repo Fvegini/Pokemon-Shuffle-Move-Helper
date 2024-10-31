@@ -712,28 +712,25 @@ latest_time = datetime.now()
 #             new_data.to_excel(writer, sheet_name=sheet_name, index=False)
 
 def safe_convert_to_int(s: str, default=99999) -> int:
-    # Clean the string, remove unwanted characters like commas or decimal points
-    cleaned_string = re.match(r'-?\d+', s.strip())
-    
-    if cleaned_string:
+    try:
+        return int(s)
+    except:
         try:
-            # Convert the cleaned portion of the string to an integer
-            return int(cleaned_string.group())
-        except ValueError:
-            pass  # Just in case anything goes wrong, fall through to return None
-    
-    # Return None if conversion fails
-    print(f"Conversion failed for: {s}")
-    return default 
+            numeric_string = re.sub(r'\D', '', s)
+            return int(numeric_string)
+        except:
+            return 999999
 
 
 def started_stage(stage_number, stage_text, stage, moves):
    current_run.survival_current_stage_info = {
        "Stage Number": stage_number,
        'Stage Text': stage_text,
+       "Stage Number Test": safe_convert_to_int(stage_text),
        'Stage': stage,
        'Starting Moves': safe_convert_to_int(moves),
-       'Start Time': datetime.now()
+       'Start Time': datetime.now(),
+       'Start Time Text': datetime.now().strftime('%Y_%m_%d_%H_%M')
    }
 
 def ended_the_stage(won_stage=True, file_path='survival_mode_data.xlsx', sheet_name='Stage Data'):
@@ -742,7 +739,7 @@ def ended_the_stage(won_stage=True, file_path='survival_mode_data.xlsx', sheet_n
     current_run.survival_current_stage_info["Global Time"] = int((current_run.survival_current_stage_info.get("End Time") - current_run.survival_mode_run_started_time).total_seconds() / 60) #type: ignore
     current_run.survival_current_stage_info["won_stage"] = won_stage
     
-    if won_stage and current_run.survival_old_stage_info.get('Stage Number') == 60:
+    if won_stage and (current_run.survival_old_stage_info.get('Stage Number') == 60 or current_run.survival_old_stage_info.get('Stage Number Test') == 60):
         last_stage = True
     if won_stage:
         last_stage = False
@@ -757,12 +754,13 @@ def ended_the_stage(won_stage=True, file_path='survival_mode_data.xlsx', sheet_n
             "id": [current_run.survival_mode_current_id],
             "Stage Number": [current_run.survival_old_stage_info.get('Stage Number')],
             'Stage Text': [current_run.survival_old_stage_info.get('Stage Text')],
+            'Stage Number Test': [current_run.survival_old_stage_info.get('Stage Number Test')],
             'Stage': [current_run.survival_old_stage_info.get('Stage')],
             "Starting Moves": [current_run.survival_old_stage_info.get('Starting Moves')],
             'Moves': [current_run.survival_old_stage_info.get('End Moves')],
             'Stage Time (s)': [current_run.survival_old_stage_info.get('Stage Time')],
             "Run Time (min)": [current_run.survival_old_stage_info.get('Global Time')],
-            "Start Time": [current_run.survival_old_stage_info.get('Start Time')],
+            "Start Time": [current_run.survival_old_stage_info.get('Start Time Text')],
             "Won Stage": won_stage,
             "Last Run Stage": last_stage
         })

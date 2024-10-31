@@ -635,24 +635,21 @@ class ImageSelectorApp():
         remove_button = customtkinter.CTkButton(selected_image_frame, text="Remove", width=80, command=lambda: self.remove_selected_image(selected_image_frame, image_path))
         remove_button.pack(pady=5)
 
-        selected_image_frame.pokemon = Pokemon(selected_image_frame.name, False, False)
+        selected_image_frame.pokemon = Pokemon(selected_image_frame.name, disabled, stage_added)
 
-        checkbox_disable = customtkinter.CTkCheckBox(selected_image_frame, text="Disable", checkbox_width=12, checkbox_height=12, corner_radius=0, onvalue=True, offvalue=False)
-        checkbox_disable.configure(command=lambda: self.checkbox_disable_clicked(checkbox_disable, selected_image_frame))
+        checkbox_disable = customtkinter.CTkCheckBox(selected_image_frame, text="Disable", checkbox_width=12, checkbox_height=12, corner_radius=0, onvalue=True, offvalue=False, command=lambda: self.checkbox_disable_clicked(checkbox_disable, selected_image_frame)) #type: ignore
         checkbox_disable.pack(padx=(25, 0))
 
         if disabled:
             checkbox_disable.toggle()
 
-        checkbox_stage_added = customtkinter.CTkCheckBox(selected_image_frame, text="Stage Add", checkbox_width=12, checkbox_height=12, corner_radius=0, onvalue=True, offvalue=False)
-        checkbox_disable.configure(command=lambda: self.checkbox_stage_add_clicked(checkbox_stage_added, selected_image_frame))
+        checkbox_stage_added = customtkinter.CTkCheckBox(selected_image_frame, text="Stage Add", checkbox_width=12, checkbox_height=12, corner_radius=0, onvalue=True, offvalue=False, command=lambda: self.checkbox_stage_add_clicked(checkbox_stage_added, selected_image_frame)) #type: ignore
         checkbox_stage_added.pack(padx=(25, 0))
         if stage_added:
             checkbox_stage_added.toggle()
 
         if selected_file in self.mega_list:
-            checkbox_mega = customtkinter.CTkCheckBox(selected_image_frame, text="Mega", checkbox_width=12, checkbox_height=12, corner_radius=0, onvalue=True, offvalue=False)
-            checkbox_mega.configure(command=lambda: self.checkbox_mega_click(checkbox_mega, selected_image_frame))
+            checkbox_mega = customtkinter.CTkCheckBox(selected_image_frame, text="Mega", checkbox_width=12, checkbox_height=12, corner_radius=0, onvalue=True, offvalue=False, command=lambda: self.checkbox_mega_click(checkbox_mega, selected_image_frame)) #type: ignore
             checkbox_mega.pack(padx=(25, 0))
             selected_image_frame.megaed = False
             selected_image_frame.checkbox_mega = checkbox_mega
@@ -920,7 +917,10 @@ class ImageSelectorApp():
         try:
             self.destroy_selected_pokemons()
 
-            current_team, stage_name = shuffle_config_files.get_current_stage_and_team()
+            if custom_utils.is_survival_mode():
+                current_team, stage_name = shuffle_config_files.get_team_from_stage_name("SURVIVAL_MODE", False), "SURVIVAL_MODE"
+            else:
+                current_team, stage_name = shuffle_config_files.get_current_stage_and_team()
 
             current_run.current_stage = stage_name
             current_run.current_strategy = constants.GRADING_TOTAL_SCORE

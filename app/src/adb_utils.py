@@ -315,16 +315,16 @@ def click_ok_buttons(original_image, timeout_increase, source):
             log.info("survival mode stage ended")
             current_run.survival_mode_current_running = False
             current_run.survival_mode_current_stage = 0
-    if has_icon_match(original_image, constants.OK_BUTTON_IMAGE, source, extra_timeout=1+timeout_increase, click=True, log_not_found=True):
+    if has_icon_match(original_image, constants.OK_BUTTON_IMAGE, source, extra_timeout=1+timeout_increase, click=True, log_not_found=False):
         return True
-    if has_icon_match(original_image, constants.OK_BUTTON2_IMAGE, source, extra_timeout=1+timeout_increase, click=True, log_not_found=True):
+    if has_icon_match(original_image, constants.OK_BUTTON2_IMAGE, source, extra_timeout=1+timeout_increase, click=True, log_not_found=False):
         return True
     return False
 
 def click_return_buttons(original_image, timeout_increase, source):
-    if has_icon_match(original_image, constants.RETURN_FLAG_IMAGE, source, extra_timeout=1+timeout_increase, click=True, log_not_found=True):
+    if has_icon_match(original_image, constants.RETURN_FLAG_IMAGE, source, extra_timeout=1+timeout_increase, click=True, log_not_found=False):
         return True
-    if has_icon_match(original_image, constants.RETURN_FLAG2_IMAGE, source, extra_timeout=1+timeout_increase, click=True, log_not_found=True):
+    if has_icon_match(original_image, constants.RETURN_FLAG2_IMAGE, source, extra_timeout=1+timeout_increase, click=True, log_not_found=False):
         return True
 
 def verify_angry_mode(original_image, source, retry_count=0, max_retries=0):
