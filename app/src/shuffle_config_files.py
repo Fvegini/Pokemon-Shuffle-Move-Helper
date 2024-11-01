@@ -109,6 +109,8 @@ def update_shuffle_move_files(current_board: Board, source=None, stage=None):
     if current_run.has_modifications or source == "bot":
         update_teams_file(complete_names_list, mega_name, current_board.extra_supports_list, stage)
         update_gradingModes_file(source, mega_activated, current_board)
+        if custom_utils.custom_utils.is_survival_mode():
+            current_run.survival_mode_current_team = ",".join(sorted(set(complete_names_list) - set(current_board.extra_supports_list) - set(constants.NON_POKEMON_NAMES_LIST)))
         current_run.has_modifications = False
     elif custom_utils.is_meowth_stage():
         update_gradingModes_file(source, mega_activated, current_board)
@@ -250,7 +252,7 @@ def update_teams_file_with_pokemon_list(pokemon_list, stage_name):
 def update_teams_file(names_list, mega_name, extra_supports_list, stage):
     if not stage:
         stage = current_run.current_stage
-    move_string = f"TEAM {stage} {','.join(list(set(names_list)))} {KEYS_LIST} {mega_name} {','.join(list(set(extra_supports_list)))}\n"
+    move_string = f"TEAM {stage} {','.join(sorted(set(names_list)))} {KEYS_LIST} {mega_name} {','.join(sorted(set(extra_supports_list)))}\n"
     return update_teams_file_with_move_string(move_string, stage)
 
 def update_teams_file_with_move_string(move_string, stage_name):

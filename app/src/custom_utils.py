@@ -21,6 +21,7 @@ from src.execution_variables import current_run
 from src.sleep_utils import log
 from src.telegram_utils import current_bot
 import pandas as pd
+import sqlite3
 
 log = log_utils.get_logger()
 FROZEN_IMAGE = cv2.imread(Path(constants.ASSETS_PATH, "barrier.png").as_posix(), cv2.IMREAD_UNCHANGED)
@@ -723,7 +724,7 @@ def safe_convert_to_int(s: str, default=99999) -> int:
 
 
 def started_stage(stage_number, stage_text, stage, moves):
-   log.debug("entered the started_stage_function")
+   log.debug("Executing started_stage_function")
    current_run.survival_current_stage_info = {
        "Stage Number": current_run.survival_mode_current_stage,
        'Stage Text': stage_text,
@@ -735,7 +736,7 @@ def started_stage(stage_number, stage_text, stage, moves):
    }
 
 def ended_the_stage(won_stage=True, file_path='survival_mode_data.xlsx', sheet_name='Stage Data'):
-    log.debug("entered the ended_the_stage function")
+    log.debug("Executing ended_the_stage function")
     current_run.survival_current_stage_info["End Time"] = datetime.now()
     current_run.survival_current_stage_info["Stage Time"] = int((current_run.survival_current_stage_info.get("End Time") - current_run.survival_current_stage_info.get("Start Time")).total_seconds()) #type: ignore
     current_run.survival_current_stage_info["Global Time"] = int((current_run.survival_current_stage_info.get("End Time") - current_run.survival_mode_run_started_time).total_seconds() / 60) #type: ignore
@@ -743,11 +744,10 @@ def ended_the_stage(won_stage=True, file_path='survival_mode_data.xlsx', sheet_n
     
     if won_stage and (current_run.survival_old_stage_info.get('Stage Number') == 60 or current_run.survival_old_stage_info.get('Stage Number Test') == 60):
         last_stage = True
-    if won_stage:
+    elif won_stage:
         last_stage = False
     else:
         last_stage = True
-
 
     if current_run.survival_old_stage_info:
         if last_stage:
@@ -767,20 +767,65 @@ def ended_the_stage(won_stage=True, file_path='survival_mode_data.xlsx', sheet_n
             "Run Time (min)": [current_run.survival_old_stage_info.get('Global Time')],
             "Start Time": [current_run.survival_old_stage_info.get('Start Time Text')],
             "Won Stage": won_stage,
-            "Last Run Stage": last_stage
+            "Last Run Stage": last_stage,
+            "Current Team": current_run.survival_mode_current_team
         })
         
-        # Check if the file exists and append the modified old stage data
-        if os.path.exists(file_path):
-            with pd.ExcelWriter(file_path, mode='a', engine="openpyxl", if_sheet_exists="overlay") as writer:
-                old_stage_data.to_excel(writer, sheet_name=sheet_name, index=False, header=False, startrow=writer.sheets[sheet_name].max_row)
-        else:
-            with pd.ExcelWriter(file_path, mode='w', engine="openpyxl") as writer:
-                old_stage_data.to_excel(writer, sheet_name=sheet_name, index=False)
-    
-    # Update the old stage info with the current stage info
+        append_to_excel(file_path, sheet_name, old_stage_data)
+        append_to_sqlite("shuffle.sqlite3", "survival_mode", old_stage_data)
     current_run.survival_old_stage_info = current_run.survival_current_stage_info
 
+def append_to_excel(file_path, sheet_name, data):
+    try:
+        """Appends data to an Excel file."""
+        if os.path.exists(file_path):
+            with pd.ExcelWriter(file_path, mode='a', engine="openpyxl", if_sheet_exists="overlay") as writer:
+                data.to_excel(writer, sheet_name=sheet_name, index=False, header=False, startrow=writer.sheets[sheet_name].max_row)
+        else:
+            with pd.ExcelWriter(file_path, mode='w', engine="openpyxl") as writer:
+                data.to_excel(writer, sheet_name=sheet_name, index=False)
+    except Exception as ex:
+        log.error(f"Error appending to excel: {ex}")
+
+def append_to_sqlite(db_path, table_name, df: pd.DataFrame):
+    try:
+        """Appends data to an SQLite database."""
+        conn = sqlite3.connect(db_path)
+        
+        df.to_sql(table_name, conn, if_exists='append')
+        # cursor = conn.cursor()
+        
+        # # Create table if it does not exist
+        # cursor.execute(f"""
+        # CREATE TABLE IF NOT EXISTS {table_name} (
+        #     id INTEGER,
+        #     stage_number INTEGER,
+        #     stage_text TEXT,
+        #     stage_number_test INTEGER,
+        #     stage TEXT,
+        #     starting_moves INTEGER,
+        #     moves INTEGER,
+        #     stage_time INTEGER,
+        #     run_time INTEGER,
+        #     start_time TEXT,
+        #     won_stage BOOLEAN,
+        #     last_run_stage BOOLEAN,
+        #     team TEXT
+        # )
+        # """)
+        
+        # # Insert data into SQLite table
+        # cursor.executemany(f"""
+        # INSERT INTO {table_name} (
+        #     id, stage_number, stage_text, stage_number_test, stage, starting_moves,
+        #     moves, stage_time, run_time, start_time, won_stage, last_run_stage, team
+        # ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        # """, data.to_records(index=False))
+        
+        conn.commit()
+        conn.close()
+    except Exception as ex:
+        log.error(f"Error with sqlite: {ex}")
 
 def is_timed_stage():
     return config_utils.config_values.get("timed_stage")

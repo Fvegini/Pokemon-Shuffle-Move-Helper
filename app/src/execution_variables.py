@@ -51,6 +51,7 @@ class ExecutionVariable:
         self.survival_current_stage_info = {}
         self.survival_mode_current_running_path = None
         self.survival_mode_current_id = ""
+        self.survival_mode_current_team = ""
 
     def clear_survival_variables(self):
         log.warning("Clearing Survival Mode Variables")
