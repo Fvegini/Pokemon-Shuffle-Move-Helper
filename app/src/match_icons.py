@@ -379,9 +379,12 @@ def is_on_stage(original_image, source):
                 time.sleep(2)
                 original_image = adb_utils.get_new_screenshot()
                 custom_utils.ended_the_stage()
-                if "---" in adb_utils.get_end_stage_score(original_image) or current_run.survival_mode_current_stage == 60:
+                if "---" in adb_utils.get_end_stage_score(original_image):
                     custom_utils.ended_the_stage(False)
-                    current_run.survival_old_stage_info = {}
+                    current_run.clear_survival_variables()
+                elif current_run.survival_mode_current_stage == 60:
+                    custom_utils.ended_the_stage(True)
+                    current_run.clear_survival_variables()
             else:
                 if custom_utils.is_stage_pause():
                     time.sleep(2)

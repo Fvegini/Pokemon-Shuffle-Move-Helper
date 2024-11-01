@@ -52,6 +52,17 @@ class ExecutionVariable:
         self.survival_mode_current_running_path = None
         self.survival_mode_current_id = ""
 
+    def clear_survival_variables(self):
+        log.warning("Clearing Survival Mode Variables")
+        self.survival_mode_current_stage = 0
+        self.survival_mode_current_running = False
+        self.survival_mode_run_started_time = datetime.now()
+        self.survival_mode_current_stage_started = datetime.now()
+        self.survival_old_stage_info = {}
+        self.survival_current_stage_info = {}
+        self.survival_mode_current_running_path = None
+        self.survival_mode_current_id = ""
+
     def clear_stage_variables(self):
         if self.angry_mode_active:
             log.warning("ANGRY MODE IS BEING DEACTIVATED BY CLEAR_STAGE_VARIABLES")

@@ -25,3 +25,4 @@ assets/adb/current_stage.png
 assets/adb/new.png
 debug/*
 ztests/
+*.xlsx

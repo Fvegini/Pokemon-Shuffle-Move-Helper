@@ -723,8 +723,9 @@ def safe_convert_to_int(s: str, default=99999) -> int:
 
 
 def started_stage(stage_number, stage_text, stage, moves):
+   log.debug("entered the started_stage_function")
    current_run.survival_current_stage_info = {
-       "Stage Number": stage_number,
+       "Stage Number": current_run.survival_mode_current_stage,
        'Stage Text': stage_text,
        "Stage Number Test": safe_convert_to_int(stage_text),
        'Stage': stage,
@@ -734,6 +735,7 @@ def started_stage(stage_number, stage_text, stage, moves):
    }
 
 def ended_the_stage(won_stage=True, file_path='survival_mode_data.xlsx', sheet_name='Stage Data'):
+    log.debug("entered the ended_the_stage function")
     current_run.survival_current_stage_info["End Time"] = datetime.now()
     current_run.survival_current_stage_info["Stage Time"] = int((current_run.survival_current_stage_info.get("End Time") - current_run.survival_current_stage_info.get("Start Time")).total_seconds()) #type: ignore
     current_run.survival_current_stage_info["Global Time"] = int((current_run.survival_current_stage_info.get("End Time") - current_run.survival_mode_run_started_time).total_seconds() / 60) #type: ignore
@@ -748,7 +750,10 @@ def ended_the_stage(won_stage=True, file_path='survival_mode_data.xlsx', sheet_n
 
 
     if current_run.survival_old_stage_info:
-        current_run.survival_old_stage_info['End Moves'] = current_run.survival_old_stage_info.get('Starting Moves') - (current_run.survival_current_stage_info.get("Starting Moves") - 5) #type: ignore
+        if last_stage:
+            current_run.survival_old_stage_info['Used Moves'] = 0
+        else:
+            current_run.survival_old_stage_info['Used Moves'] = current_run.survival_old_stage_info.get('Starting Moves') - (current_run.survival_current_stage_info.get("Starting Moves") - 5) #type: ignore
 
         old_stage_data = pd.DataFrame({
             "id": [current_run.survival_mode_current_id],
@@ -757,7 +762,7 @@ def ended_the_stage(won_stage=True, file_path='survival_mode_data.xlsx', sheet_n
             'Stage Number Test': [current_run.survival_old_stage_info.get('Stage Number Test')],
             'Stage': [current_run.survival_old_stage_info.get('Stage')],
             "Starting Moves": [current_run.survival_old_stage_info.get('Starting Moves')],
-            'Moves': [current_run.survival_old_stage_info.get('End Moves')],
+            'Moves': [current_run.survival_old_stage_info.get('Used Moves')],
             'Stage Time (s)': [current_run.survival_old_stage_info.get('Stage Time')],
             "Run Time (min)": [current_run.survival_old_stage_info.get('Global Time')],
             "Start Time": [current_run.survival_old_stage_info.get('Start Time Text')],
