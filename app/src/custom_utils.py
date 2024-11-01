@@ -757,18 +757,19 @@ def ended_the_stage(won_stage=True, file_path='survival_mode_data.xlsx', sheet_n
 
         old_stage_data = pd.DataFrame({
             "id": [current_run.survival_mode_current_id],
-            "Stage Number": [current_run.survival_old_stage_info.get('Stage Number')],
-            'Stage Text': [current_run.survival_old_stage_info.get('Stage Text')],
-            'Stage Number Test': [current_run.survival_old_stage_info.get('Stage Number Test')],
-            'Stage': [current_run.survival_old_stage_info.get('Stage')],
-            "Starting Moves": [current_run.survival_old_stage_info.get('Starting Moves')],
-            'Moves': [current_run.survival_old_stage_info.get('Used Moves')],
-            'Stage Time (s)': [current_run.survival_old_stage_info.get('Stage Time')],
-            "Run Time (min)": [current_run.survival_old_stage_info.get('Global Time')],
-            "Start Time": [current_run.survival_old_stage_info.get('Start Time Text')],
-            "Won Stage": won_stage,
-            "Last Run Stage": last_stage,
-            "Current Team": current_run.survival_mode_current_team
+            "stage_number": [current_run.survival_old_stage_info.get('Stage Number')],
+            "stage_text": [current_run.survival_old_stage_info.get('Stage Text')],
+            "stage_number_test": [current_run.survival_old_stage_info.get('Stage Number Test')],
+            "stage": [current_run.survival_old_stage_info.get('Stage')],
+            "starting_moves": [current_run.survival_old_stage_info.get('Starting Moves')],
+            "moves": [current_run.survival_old_stage_info.get('Used Moves')],
+            "stage_time": [current_run.survival_old_stage_info.get('Stage Time')],
+            "accumulated_time": [current_run.survival_old_stage_info.get('Global Time')],
+            "start_time": [current_run.survival_old_stage_info.get('Start Time Text')],
+            "won_stage": won_stage,
+            "lost_stage": not won_stage,
+            "last_run_stage": last_stage,
+            "current_team": current_run.survival_mode_current_team
         })
         
         append_to_excel(file_path, sheet_name, old_stage_data)
@@ -793,37 +794,18 @@ def append_to_sqlite(db_path, table_name, df: pd.DataFrame):
         conn = sqlite3.connect(db_path)
         
         df.to_sql(table_name, conn, if_exists='append')
-        # cursor = conn.cursor()
-        
-        # # Create table if it does not exist
-        # cursor.execute(f"""
-        # CREATE TABLE IF NOT EXISTS {table_name} (
-        #     id INTEGER,
-        #     stage_number INTEGER,
-        #     stage_text TEXT,
-        #     stage_number_test INTEGER,
-        #     stage TEXT,
-        #     starting_moves INTEGER,
-        #     moves INTEGER,
-        #     stage_time INTEGER,
-        #     run_time INTEGER,
-        #     start_time TEXT,
-        #     won_stage BOOLEAN,
-        #     last_run_stage BOOLEAN,
-        #     team TEXT
-        # )
-        # """)
-        
-        # # Insert data into SQLite table
-        # cursor.executemany(f"""
-        # INSERT INTO {table_name} (
-        #     id, stage_number, stage_text, stage_number_test, stage, starting_moves,
-        #     moves, stage_time, run_time, start_time, won_stage, last_run_stage, team
-        # ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        # """, data.to_records(index=False))
         
         conn.commit()
         conn.close()
+
+        # ALTER TABLE survival_mode ADD COLUMN final_result INTEGER DEFAULT -1
+#         SELECT "Id", "Stage Number", "Stage", "Moves", "Stage Time (s)", "Current Team" from survival_mode
+# WHERE "Moves" > 5
+# ORDER BY "Moves" DESC;
+
+# SELECT "Id", "Stage Number", "Stage", "Starting Moves", "Moves", "Stage Time (s)", "Run Time (min)", "Won Stage", "Last Run Stage", "Current Team" from survival_mode
+# WHERE "Last Run Stage" = 1
+# ORDER BY ROWID DESC;
     except Exception as ex:
         log.error(f"Error with sqlite: {ex}")
 
