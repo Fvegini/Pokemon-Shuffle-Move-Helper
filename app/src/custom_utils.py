@@ -732,7 +732,7 @@ def started_stage(stage_number, stage_text, stage, moves):
        'Stage': stage,
        'Starting Moves': safe_convert_to_int(moves),
        'Start Time': datetime.now(),
-       'Start Time Text': datetime.now().strftime('%Y_%m_%d_%H_%M')
+       'Start Time Text': datetime.now()
    }
 
 def ended_the_stage(won_stage=True, file_path='survival_mode_data.xlsx', sheet_name='Stage Data'):
@@ -864,8 +864,9 @@ def paused_survival_mode():
 def save_extra_debug_image(points_list, suffix):
     os.makedirs(constants.DEBUG_EXTRA_IMAGE_FOLDER, exist_ok=True)
     if is_survival_mode() and current_run.survival_mode_current_running_path:
-        os.makedirs(current_run.survival_mode_current_running_path, exist_ok=True)
-        image_path = Path(current_run.survival_mode_current_running_path, f"{datetime.now().strftime('%Y_%m_%d_%H_%M_%S_%f')[:-3]}_{suffix}.jpeg")
+        newpath = Path(current_run.survival_mode_current_running_path, str(current_run.survival_mode_current_stage))
+        os.makedirs(newpath, exist_ok=True)
+        image_path = Path(newpath, f"{datetime.now().strftime('%Y_%m_%d_%H_%M_%S_%f')[:-3]}_{suffix}.jpeg")
     else:
         image_path = Path(constants.DEBUG_EXTRA_IMAGE_FOLDER, f"{datetime.now().strftime('%Y_%m_%d_%H_%M_%S_%f')[:-3]}_{suffix}.jpeg")
     image_with_markers = custom_utils.add_red_marker(constants.LAST_SCREEN_IMAGE_PATH, points_list)

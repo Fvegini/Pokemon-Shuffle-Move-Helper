@@ -275,10 +275,12 @@ def check_buttons_to_click(original_image, source):
         if custom_utils.paused_survival_mode():
             if has_text_match(original_image, "CoinStage", source, extra_timeout=1, custom_search_text="challenging survival", skip_click=True):
                 current_run.disable_loop = True
+                current_run.clear_survival_variables()
                 config_utils.update_config("pause_survival", False)
                 log.info("Disabling loop because of paused_survival_mode")
                 return
         if has_text_match(original_image, "CoinStage", source, custom_click="CoinStageYes", extra_timeout=1, custom_search_text="challenging survival"):
+            current_run.clear_survival_variables()
             current_run.survival_mode_current_stage = 0
             # current_run.survival_mode_current_running = True
             current_run.survival_mode_run_started_time = datetime.now()

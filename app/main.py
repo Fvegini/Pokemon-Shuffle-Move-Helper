@@ -792,6 +792,7 @@ class ImageSelectorApp():
             log.info("Loop Mode Off")
             current_run.is_loop_active = False
             current_run.clear_stage_variables()
+            current_run.clear_survival_variables()
             return
         else:
             self.execute_board_analysis_threaded(source="loop")

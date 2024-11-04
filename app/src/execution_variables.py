@@ -50,7 +50,7 @@ class ExecutionVariable:
         self.survival_old_stage_info = {}
         self.survival_current_stage_info = {}
         self.survival_mode_current_running_path = None
-        self.survival_mode_current_id = ""
+        self.survival_mode_current_id = datetime.now()
         self.survival_mode_current_team = ""
 
     def clear_survival_variables(self):
@@ -62,7 +62,7 @@ class ExecutionVariable:
         self.survival_old_stage_info = {}
         self.survival_current_stage_info = {}
         self.survival_mode_current_running_path = None
-        self.survival_mode_current_id = ""
+        self.survival_mode_current_id = datetime.now()
 
     def clear_stage_variables(self):
         if self.angry_mode_active:

@@ -155,8 +155,8 @@ def verify_or_enter_stage(current_screen_image, source):
         current_run.is_combo_active = verify_active_combo(current_screen_image, source)
         if not current_run.survival_mode_current_running and custom_utils.is_survival_mode():
             current_run.survival_mode_current_running = True
-            current_run.survival_mode_current_id = datetime.now().strftime('%Y_%m_%d_%H_%M')
-            current_run.survival_mode_current_running_path = Path(constants.DEBUG_EXTRA_IMAGE_FOLDER, current_run.survival_mode_current_id)
+            current_run.survival_mode_current_id = datetime.now()
+            current_run.survival_mode_current_running_path = Path(constants.DEBUG_EXTRA_IMAGE_FOLDER, current_run.survival_mode_current_id.strftime('%Y_%m_%d_%H_%M'))
     else:
         if should_auto_next_stage():
             click_buttons_to_enter_new_stage(current_screen_image, source)
@@ -344,7 +344,7 @@ def is_on_stage(original_image, source):
         current_run.non_stage_count = 0
         current_run.first_move = False
         if not current_run.id:
-            current_run.id = time.strftime('%Y_%m_%d_%H_%M')
+            current_run.id = datetime.now()
             stage_text = adb_utils.get_current_stage(original_image)
             if custom_utils.is_survival_mode():
                 time.sleep(4)
