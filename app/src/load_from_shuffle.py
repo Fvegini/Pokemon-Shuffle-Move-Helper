@@ -116,6 +116,20 @@ class TeamLoader(tk.Toplevel):
                 new_pokemon_list = custom_utils.load_file_as_list(constants.SURVIVAL_MODE_TXT)
                 self.teams[selected_index[0]].stage_added.extend(new_pokemon_list)
                 self.teams[selected_index[0]].icons.extend(new_pokemon_list)
+                self.root.disable_switch(self.root.frame4_1_top_1_3_switch) #check_drop
+                self.root.disable_switch(self.root.frame4_1_top_2_1_switch) #is_puzzle_stage
+                self.root.disable_switch(self.root.frame4_1_top_2_2_switch) #pause_survival
+                self.root.disable_switch(self.root.frame3_1_top_4_1_switch) #debug_mode
+                self.root.disable_switch(self.root.frame3_1_top_3_3_switch) #coin_stage
+                self.root.disable_switch(self.root.frame3_1_top_3_2_switch) #escalation_battle
+                self.root.disable_switch(self.root.frame3_1_top_2_4_switch) #meowth_37
+                self.root.disable_switch(self.root.frame3_1_top_2_2_switch) #timed_stage
+                self.root.disable_switch(self.root.frame3_1_top_2_3_switch) #tapper
+                self.root.enable_switch(self.root.frame3_1_top_3_4_switch) #survival_mode
+                self.root.enable_switch(self.root.frame3_1_top_2_1_switch) #auto_next_stage
+                self.root.enable_switch(self.root.frame3_1_top_3_1_switch) #fast_swipe
+
+
             if current_run.current_stage == "MEOWTH COIN MANIA":
                 current_run.current_stage = "SP_084"
             if current_run.current_stage == "SP_084":

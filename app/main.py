@@ -829,7 +829,14 @@ class ImageSelectorApp():
     def disable_loop(self):
         if self.frame3_1_top_1_1_var_control_loop.get():
             self.frame3_1_top_1_1_switch_control_loop.toggle()
-        
+
+    def disable_switch(self, frame_widget):
+        if frame_widget.get():
+            frame_widget.toggle()
+
+    def enable_switch(self, frame_widget):
+        if not frame_widget.get():
+            frame_widget.toggle()
 
     def get_icon(self, icon_name):
         if customtkinter.get_appearance_mode() == "Dark":
@@ -977,6 +984,9 @@ class ImageSelectorApp():
     def remove_all_icons(self):
         for widget in self.get_selected_images_widgets_list():
             widget[0].master.destroy()
+        self.insert_image_widget(f"_Empty.png")
+        self.insert_image_widget(f"_Metal.png")
+        self.insert_image_widget(f"_Wood.png")
 
 def merge_pil_images(image1, image2):
     # Get the width and height of each image

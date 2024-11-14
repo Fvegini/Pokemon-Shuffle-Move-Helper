@@ -469,7 +469,7 @@ def start_from_helper(pokemon_list: list[Pokemon], has_barriers, root=None, sour
 
         if can_swipe and int(current_board.moves_left) > 0:
             swiped = adb_utils.execute_play(result, current_board, source)
-            if custom_utils.is_survival_mode() and swiped:
+            if custom_utils.is_survival_mode() and swiped and not custom_utils.is_tapper_active():
                 time.sleep(1)
             if custom_utils.is_debug_mode_active() and swiped:
                 save_debug_objects(result, match_list, source == "manual")
