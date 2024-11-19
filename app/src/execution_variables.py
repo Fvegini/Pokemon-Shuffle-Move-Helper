@@ -54,7 +54,6 @@ class ExecutionVariable:
         self.survival_mode_current_team = ""
 
     def clear_survival_variables(self):
-        log.warning("Clearing Survival Mode Variables")
         self.survival_mode_current_stage = 0
         self.survival_mode_current_running = False
         self.survival_mode_run_started_time = datetime.now()
@@ -89,6 +88,7 @@ class ExecutionVariable:
         self.abd_not_found_count = 0
         
     def load_fake_matchs(self, skip_icons):
+        log.info("RUNNING THE LOAD_FAKE_MATCHS LOGIC")
         for image_path in Path(constants.IMAGES_PATH).glob("*.png"):
             if image_path.stem not in skip_icons:
                 icon = classes.Icon(image_path.stem, image_path, False)

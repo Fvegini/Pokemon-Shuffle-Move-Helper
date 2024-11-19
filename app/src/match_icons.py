@@ -163,7 +163,7 @@ def verify_or_enter_stage(current_screen_image, source):
         else:
             current_run.auto_disabled_count+= 1
             log.debug("Stage isn't active and next stage is disabled")
-            if current_run.auto_disabled_count > 20:
+            if current_run.auto_disabled_count > 2:
                 log.debug("Disabling Loop because auto next stage is disabled")
                 current_run.disable_loop = True
         return MatchResult()
@@ -185,7 +185,7 @@ def update_board_with_stage_parameters(current_screen_image, current_board):
     if not custom_utils.is_timed_stage():
         if custom_utils.is_meowth_stage():
             current_board.current_score = adb_utils.get_current_score(current_screen_image)
-        if custom_utils.is_survival_mode():
+        if custom_utils.is_survival_mode() or current_run.current_stage == "RANDOM":
             current_board.stage_name = adb_utils.get_current_stage_name(current_screen_image)
 
 def save_debug_objects(result="", match_list=[], is_manual=False):
@@ -328,7 +328,8 @@ def match_cell_with_icons(icons_list, cell_list, has_barriers, source, combo_is_
     if timed_stage:
         mask_already_existant_matches(match_list, icons_list)
     if current_run.bad_board_count > 10:
-        mask_already_existant_matches(match_list, icons_list)
+        log.info("WOULD RUN THE BAD_BOARD_COUNT > 10 LOGIC, IGNORING")
+        # mask_already_existant_matches(match_list, icons_list)
     return match_list
 
 def mask_already_existant_matches(match_list: List[Match], icons_list) -> List[Match]:
@@ -345,19 +346,25 @@ def is_on_stage(original_image, source):
         current_run.first_move = False
         if not current_run.id:
             current_run.id = datetime.now()
-            stage_text = adb_utils.get_current_stage(original_image)
             if custom_utils.is_survival_mode():
                 time.sleep(4)
                 original_image = adb_utils.get_new_screenshot()
                 current_run.survival_mode_current_stage+= 1
                 stage = adb_utils.get_current_stage_name(original_image)
+                if shuffle_config_files.get_stage_real_number(stage) == "NONE":
+                    time.sleep(4)
+                    original_image = adb_utils.get_new_screenshot()
+                    stage = adb_utils.get_current_stage_name(original_image)
                 moves = adb_utils.get_moves_left(original_image)
+                stage_text = adb_utils.get_current_stage_number(original_image)
                 custom_utils.started_stage(current_run.survival_mode_current_stage, stage_text, stage, moves)
                 stage_text = f"{stage_text} - {stage} - {moves} moves"
             elif custom_utils.is_stage_pause():
                 time.sleep(2)
                 original_image = adb_utils.get_new_screenshot()
-                stage_text = adb_utils.get_current_stage(original_image)
+                stage_text = adb_utils.get_current_stage_number(original_image)
+            else:
+                stage_text = adb_utils.get_current_stage_number(original_image)
             custom_utils.send_telegram_message(f"Stage - {stage_text}")
             current_run.first_move = True
             current_run.stage_timer = time.time()
@@ -469,8 +476,8 @@ def start_from_helper(pokemon_list: list[Pokemon], has_barriers, root=None, sour
 
         if can_swipe and int(current_board.moves_left) > 0:
             swiped = adb_utils.execute_play(result, current_board, source)
-            if custom_utils.is_survival_mode() and swiped and not custom_utils.is_tapper_active():
-                time.sleep(1)
+            if (custom_utils.is_survival_mode() or custom_utils.is_fast_swipe()) and swiped and not custom_utils.is_tapper_active():
+                time.sleep(2)
             if custom_utils.is_debug_mode_active() and swiped:
                 save_debug_objects(result, match_list, source == "manual")
 
@@ -492,12 +499,9 @@ def verify_drops_logic(current_screen_image):
             current_run.has_drops = True
 
 def execute_puzzle_logic(current_board: Board, current_screen_image, source):
-    # stage = shuffle_config_files.get_stage_name(adb_utils.get_current_stage_name(current_screen_image))
     stage = adb_utils.get_current_stage_name(current_screen_image)
     result = move_data.get_result(stage, current_board.moves_left)
     if result:
-        # index_from = custom_uls.coordinates_to_index(*result.get("From"))
-        # index_to = custom_utils.coordinates_to_index(*result.get("To"))
         result_text = f'{result.get("From")} -> {result.get("To")}'
         log.info(f"Executing Puzzle Solver from stage {stage} and move {current_board.moves_left}")
         log.info(result_text)

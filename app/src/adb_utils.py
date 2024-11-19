@@ -356,13 +356,13 @@ def verify_angry_mode(original_image, source, retry_count=0, max_retries=0):
 def run_capture_logic_test(original_image, source):
     try:
         # if get_moves_left(original_image) == "0":
-        if has_icon_match(original_image, constants.POKEBALL_CAPTURE_IMAGE, source, "Pokeball Capture", min_point=30, log_not_found=True):
+        if has_icon_match(original_image, constants.POKEBALL_CAPTURE_IMAGE, source, "Pokeball Capture", min_point=20, log_not_found=True, click_type="swipe"):
             time.sleep(4)
             log.info("found_capture_icon and clicked")
             current_run.non_stage_count = 0
         else:
-            log.info("capture_pokeball_not_found, checking for Great Ball")
             if custom_utils.use_great_ball():
+                log.info("capture_pokeball_not_found, using GreatBall")
                 has_text_match(original_image, "Greatball", source, custom_click="GreatballYes", custom_search_text="Do you want to use 3500 Coins")
                 time.sleep(4)
             else:
@@ -373,7 +373,7 @@ def run_capture_logic_test(original_image, source):
         log.error(f"Erro: {ex}")
         pass
 
-def has_icon_match(original_image, icon_path, source, position="CompleteScreen", extra_timeout=1.0, click=True, min_point=10, debug=False, double_checked=False, log_not_found=False):
+def has_icon_match(original_image, icon_path, source, position="CompleteScreen", extra_timeout=1.0, click=True, min_point=10, debug=False, double_checked=False, log_not_found=False, click_type="tap"):
     try:
         r = get_screen().get_position(position)
         img = original_image.copy()
@@ -427,13 +427,20 @@ def has_icon_match(original_image, icon_path, source, position="CompleteScreen",
             cv2.imwrite(debug_image_path.as_posix(), final_img)
 
         if click and not double_checked:
-            return has_icon_match(get_new_screenshot(), icon_path, source, position, extra_timeout, click, min_point, debug, double_checked=True, log_not_found=log_not_found) #Add a double-check with a new ScreenShot before the click
+            return has_icon_match(get_new_screenshot(), icon_path, source, position, extra_timeout, click, min_point, debug, double_checked=True, log_not_found=log_not_found, click_type=click_type) #Add a double-check with a new ScreenShot before the click
         if double_checked:
             log.debug(f"Image Found with points: {Path(icon_path).stem} - {len(good)}")
         if click and double_checked:
             box_center_x = int((box[0][0] + box[2][0]) / 2) #type: ignore
             box_center_y = int((box[0][1] + box[2][1]) / 2) #type: ignore
-            adb_run_tap(r[0] + box_center_x ,r[1] + box_center_y, source)
+            
+            click_x = r[0] + box_center_x
+            click_y = r[1] + box_center_y
+
+            if click_type == "swipe":
+                adb_run_swipe(click_x, click_y, click_x, click_y, 500, source)
+            else:
+                adb_run_tap(click_x, click_y, source)
             if extra_timeout > 0:
                 time.sleep(extra_timeout)
         return True
@@ -490,7 +497,7 @@ def search_template(main_image, template):
 
     return top_left, bottom_right, max_probability
 
-def get_current_stage(original_image):
+def get_current_stage_number(original_image):
     v = get_label(original_image, "Stage")
     if v.isnumeric():
         v = "{:03}".format(int(v))

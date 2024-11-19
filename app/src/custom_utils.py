@@ -612,7 +612,7 @@ def load_file_as_list(file_path):
     return lines
 
 def find_similar_key(ocr_key, dictionary):
-    max_ratio = -1
+    max_ratio = 70
     closest_key = None
     for key in dictionary.keys():
         ratio = fuzz.ratio(ocr_key, key)

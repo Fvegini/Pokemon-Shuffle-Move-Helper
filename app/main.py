@@ -930,6 +930,7 @@ class ImageSelectorApp():
             else:
                 current_team, stage_name = shuffle_config_files.get_current_stage_and_team()
 
+            current_team = custom_utils.sort_by_class_attribute(current_team, "name", reverse=True)
             current_run.current_stage = stage_name
             current_run.current_strategy = constants.GRADING_TOTAL_SCORE
             self.stage_combobox.set(constants.move_stages.get(current_run.current_stage, "NONE"))
