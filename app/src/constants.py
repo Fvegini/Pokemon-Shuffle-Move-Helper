@@ -18,6 +18,7 @@ GRADING_TOTAL_SCORE = "grading.score"
 GRADING_MEGA_PROGRESS = "grading.megaprogress"
 GRADING_WEEKEND_MEOWTH = "WeekendMeowth"
 GRADING_MEGA_BOOSTED_SCORE = "MegaBoostedScore"
+GRADING_DISRUPTION_BOOSTED_SCORE = "disruptionBoostedScore"
 
 move_strategy = {
     "grading.score": "Total Score",
@@ -31,7 +32,9 @@ move_strategy = {
     "WeekendMeowth": "WeekendMeowth",
     "037MeowthEarlyGame": "037MeowthEarlyGame",
     "037MeowthEndGame": "037MeowthEndGame",
-    "MegaBoostedScore": "MegaBoostedScore"
+    "MegaBoostedScore": "MegaBoostedScore",
+    "disruptionBoostedScore": "disruptionBoostedScore"
+
 }
 
 move_stages = {
@@ -148,6 +151,7 @@ ADB_IMAGE_FOLDER = r"assets\adb"
 MEOWTH_DEBUG_IMAGE_FOLDER = r"debug\meowth"
 DEBUG_STAGES_IMAGE_FOLDER = r"debug\complete"
 DEBUG_EXTRA_IMAGE_FOLDER = r"debug\extra"
+DEBUG_SURVIVAL_IMAGE_FOLDER = r"debug\survival"
 CURRENT_STAGE_IMAGE = r"assets\adb\current_stage.png"
 MEOWTH_STAGE_IMAGE = r"assets\adb\meowth_037.png"
 SURVIVAL_MODE_STAGE_IMAGE = r"assets\adb\survival_mode.png"
@@ -166,6 +170,6 @@ DROP_IMAGE = r"assets\adb\drop.png"
 NON_POKEMON_NAMES_LIST = ["Empty", "Coin", "Metal", "Wood", "Fog", "Air"]
 SURVIVAL_TEAM_STRING = '''
 
-TEAM SURVIVAL_MODE Aerodactyl,Air,Bellsprout,Blitzle,Bronzor,Budew,Buneary,Charizard_x,Charmander,Chespin,Chimchar,Coin,Croagunk,Deoxys,Doublade,Dratini,Eevee,Espeon,Exploud,Flaaffy,Flareon,Floatzel,Fog,Froakie,Galvantula,Gastly,Goomy,Granbull,Grimer,Happiny,Haunter,Hawlucha_s,Illumise,Jigglypuff,Joltik,Kirlia,Klefki,Lickilicky,Lickitung,Litwick,Loudred,Machoke,Machop,Medicham,Meditite,Meowstic,Meowstic_f,Metagross_s,Metal,Monferno,Onix,Pancham,Probopass,Pupitar,Ralts,Rayquaza,Roselia,Roserade_w,Scyther,Shelgon,Shuckle,Skarmory,Skiddo,Skitty,Sliggoo,Slowbro,Slowpoke,Snorlax,Spritzee,Staraptor,Staravia,Starly,Swablu,Sylveon,Togekiss,Togepi,Togetic,Treecko,Tyranitar,Whismur,Wood,Zorua 0,1,2,3,4,5,6,7,8,9,a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y,z Charizard_x Aerodactyl,Bellsprout,Blitzle,Bronzor,Budew,Buneary,Charmander,Chespin,Chimchar,Croagunk,Deoxys,Doublade,Dratini,Eevee,Espeon,Exploud,Flaaffy,Flareon,Floatzel,Froakie,Galvantula,Gastly,Goomy,Granbull,Grimer,Happiny,Haunter,Illumise,Jigglypuff,Joltik,Kirlia,Klefki,Lickilicky,Lickitung,Litwick,Loudred,Machoke,Machop,Medicham,Meditite,Meowstic,Meowstic_f,Monferno,Onix,Pancham,Probopass,Pupitar,Ralts,Rayquaza,Roselia,Scyther,Shelgon,Shuckle,Skarmory,Skiddo,Skitty,Sliggoo,Slowbro,Slowpoke,Snorlax,Spritzee,Staraptor,Staravia,Starly,Swablu,Togekiss,Togepi,Togetic,Treecko,Tyranitar,Whismur,Zorua
+TEAM SURVIVAL_MODE Aerodactyl,Air,Bellsprout,Blitzle,Bronzor,Budew,Buneary,Charizard_x,Charmander,Chespin,Chimchar,Coin,Croagunk,Deoxys,Doublade,Dratini,Eevee,Espeon,Exploud,Feebas,Flaaffy,Flareon,Floatzel,Fog,Froakie,Galvantula,Gastly,Gogoat,Goomy,Granbull,Grimer,Happiny,Haunter,Hawlucha_s,Honedge,Illumise,Jigglypuff,Joltik,Kirlia,Klang,Klefki,Klinklang,Lickilicky,Lickitung,Lilligant,Litwick,Loudred,Machoke,Machop,Medicham,Meditite,Meowstic,Meowstic_f,Metagross_s,Metal,Monferno,Munna,Onix,Pancham,Petilil,Probopass,Pupitar,Ralts,Rayquaza,Roselia,Scyther,Shelgon,Shuckle,Skarmory,Skiddo,Skitty,Sliggoo,Slowbro,Slowpoke,Snorlax,Spritzee,Staraptor,Staravia,Starly,Swablu,Sylveon,Taillow,Togekiss,Togepi,Togetic,Treecko,Tyranitar,Whismur,Wood,Zorua 0,1,2,3,4,5,6,7,8,9,a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y,z Charizard_x Aerodactyl,Bellsprout,Blitzle,Bronzor,Budew,Buneary,Charmander,Chespin,Chimchar,Croagunk,Deoxys,Doublade,Dratini,Eevee,Espeon,Exploud,Feebas,Flaaffy,Flareon,Floatzel,Froakie,Galvantula,Gastly,Gogoat,Goomy,Granbull,Grimer,Happiny,Haunter,Honedge,Illumise,Jigglypuff,Joltik,Kirlia,Klang,Klefki,Klinklang,Lickilicky,Lickitung,Lilligant,Litwick,Loudred,Machoke,Machop,Medicham,Meditite,Meowstic,Meowstic_f,Monferno,Munna,Onix,Pancham,Petilil,Probopass,Pupitar,Ralts,Rayquaza,Roselia,Scyther,Shelgon,Shuckle,Skarmory,Skiddo,Skitty,Sliggoo,Slowbro,Slowpoke,Snorlax,Spritzee,Staraptor,Staravia,Starly,Swablu,Taillow,Togekiss,Togepi,Togetic,Treecko,Tyranitar,Whismur,Zorua
 
 '''
