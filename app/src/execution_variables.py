@@ -44,9 +44,11 @@ class ExecutionVariable:
         self.abd_not_found_count = 0
         self.is_loop_active = False
         self.survival_mode_current_stage = 0
+        self.survival_mode_current_stage_name = ""
         self.survival_mode_current_running = False
         self.survival_mode_run_started_time = datetime.now()
         self.survival_mode_current_stage_started = datetime.now()
+        self.survival_mode_current_stage_loop_count = 0
         self.survival_old_stage_info = {}
         self.survival_current_stage_info = {}
         self.survival_mode_current_running_path = None
@@ -54,7 +56,9 @@ class ExecutionVariable:
         self.survival_mode_current_team = ""
 
     def clear_survival_variables(self):
+        self.survival_mode_current_stage_loop_count = 0
         self.survival_mode_current_stage = 0
+        self.survival_mode_current_stage_name = ""
         self.survival_mode_current_running = False
         self.survival_mode_run_started_time = datetime.now()
         self.survival_mode_current_stage_started = datetime.now()
@@ -86,11 +90,12 @@ class ExecutionVariable:
         self.awakened_expected_counter = 0
         self.has_drops = False
         self.abd_not_found_count = 0
+        self.survival_mode_current_stage_loop_count = 0
         
-    def load_fake_matchs(self, skip_icons):
+    def load_fake_matchs(self, original_icons, keep_current_stage_add=False):
         log.info("RUNNING THE LOAD_FAKE_MATCHS LOGIC")
         for image_path in Path(constants.IMAGES_PATH).glob("*.png"):
-            if image_path.stem not in skip_icons:
+            if image_path.stem not in original_icons:
                 icon = classes.Icon(image_path.stem, image_path, False)
                 match = classes.Match(None, None, icon)
                 self.fake_matches.append(match)

@@ -114,7 +114,7 @@ class ImageSelectorApp():
         # btn1_1_1 = customtkinter.CTkButton(frame1_1_top, text="Board Position", command=lambda: self.show_board_position_selector_app(), image=icon, **self.tab_button_style)
         btn1_1_2 = customtkinter.CTkButton(frame1_1_top, text="Select Current Stage", command=lambda: self.show_select_current_stage(), image=icon, **self.tab_button_style)
         btn1_1_3 = customtkinter.CTkButton(frame1_1_top, text="Get Coordinates", command=lambda: self.show_add_auto_click_icon(), image=icon, **self.tab_button_style)
-        btn1_1_4 = customtkinter.CTkButton(frame1_1_top, text="Reload ADB", command=lambda: src.adb_commands.update_adb_connection(True), image=icon, **self.tab_button_style)
+        btn1_1_4 = customtkinter.CTkButton(frame1_1_top, text="Reload ADB", command=lambda: adb_commands.update_adb_connection(True), image=icon, **self.tab_button_style)
 
         # CTkToolTip(btn1_1_1, delay=0.5, message="Configure Shuffle Move Board Position")
         CTkToolTip(btn1_1_2, delay=0.5, message="Configure Current Stage for the Auto loop")
@@ -932,7 +932,7 @@ class ImageSelectorApp():
 
             current_team = custom_utils.sort_by_class_attribute(current_team, "name", reverse=True)
             current_run.current_stage = stage_name
-            current_run.current_strategy = constants.GRADING_TOTAL_SCORE
+            current_run.current_strategy = constants.GRADING_DISRUPTION_BOOSTED_SCORE
             self.stage_combobox.set(constants.move_stages.get(current_run.current_stage, "NONE"))
             self.strategy_combobox.set(constants.move_strategy.get(current_run.current_strategy))
             for pokemon in current_team:

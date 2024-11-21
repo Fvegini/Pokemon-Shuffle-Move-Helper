@@ -9,7 +9,7 @@ socket_port = None #type: ignore
 PREFERENCES_PATH = Path.joinpath(Path.home(), "Shuffle-Move", "config", "preferences.txt")
 custom_utils.verify_shuffle_file(PREFERENCES_PATH)
 
-def load_socker_port():
+def load_socket_port():
     global socket_port
     try:
         with open(PREFERENCES_PATH, "r") as file:
@@ -26,17 +26,18 @@ def load_socker_port():
     return
     
 
-def loadNewBoard():
+def loadNewBoard(method="loadNewBoard"):
     global socket_port
     try:
         if not socket_port:
-            load_socker_port()
+            load_socket_port()
         # log.debug("Making socket call to Shuffle Move")
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             s.settimeout(50)
             s.connect(('localhost', socket_port))  # Use the same port as in the Java application
-            s.sendall(b'loadNewBoard\n')
-            result = s.recv(1024).decode('utf-8')
+            message = f"{method}\n".encode('utf-8')
+            s.sendall(message)
+            result = s.recv(10000).decode('utf-8')
             if not result:
                 log.error(f"Socket connected on port {socket_port} but without any response.")
             else:

@@ -687,31 +687,6 @@ def add_red_marker(image_path, points_list, marker_radius=20, transparency=0.7):
 
 latest_time = datetime.now()
 
-# def create_or_append_to_file(stage_number, stage_text, stage, moves, file_path='survival_mode_data.xlsx', sheet_name='Stage Data'):
-#     global latest_time
-
-#     # Create a DataFrame for the new row
-#     current_time = datetime.now()
-#     time_difference = (current_time - latest_time).total_seconds()  # Get the time difference in seconds
-#     new_data = pd.DataFrame({
-#         "Stage Number": [stage_number],
-#         'Stage Text': [stage_text],
-#         'Stage': [stage],
-#         'Moves': [moves],
-#         'Time(seconds)': [time_difference]
-#     })
-#     latest_time = current_time
-
-#     # Check if the file exists
-#     if os.path.exists(file_path):
-#         with pd.ExcelWriter(file_path, mode='a', engine="openpyxl", if_sheet_exists="overlay") as writer:
-#             # Append data without writing headers, start at the next empty row
-#             new_data.to_excel(writer, sheet_name=sheet_name, index=False, header=False, startrow=writer.sheets[sheet_name].max_row)
-#     else:
-#         # Create a new file and write headers if it doesn't exist
-#         with pd.ExcelWriter(file_path, mode='w', engine="openpyxl") as writer:
-#             new_data.to_excel(writer, sheet_name=sheet_name, index=False)
-
 def safe_convert_to_int(s: str, default=99999) -> int:
     try:
         return int(s)
@@ -772,9 +747,10 @@ def ended_the_stage(won_stage=True, file_path='survival_mode_data.xlsx', sheet_n
             "current_team": current_run.survival_mode_current_team
         })
         
-        append_to_excel(file_path, sheet_name, old_stage_data)
+        # append_to_excel(file_path, sheet_name, old_stage_data)
         append_to_sqlite("shuffle.sqlite3", "survival_mode", old_stage_data)
     current_run.survival_old_stage_info = current_run.survival_current_stage_info
+    log.debug("Finished ended_the_stage function")
 
 def append_to_excel(file_path, sheet_name, data):
     try:
@@ -864,7 +840,7 @@ def paused_survival_mode():
 def save_extra_debug_image(points_list, suffix):
     os.makedirs(constants.DEBUG_EXTRA_IMAGE_FOLDER, exist_ok=True)
     if is_survival_mode() and current_run.survival_mode_current_running_path:
-        newpath = Path(current_run.survival_mode_current_running_path, str(current_run.survival_mode_current_stage))
+        newpath = Path(current_run.survival_mode_current_running_path, f"{str(current_run.survival_mode_current_stage)}_{current_run.survival_mode_current_stage_name}")
         os.makedirs(newpath, exist_ok=True)
         image_path = Path(newpath, f"{datetime.now().strftime('%Y_%m_%d_%H_%M_%S_%f')[:-3]}_{suffix}.jpeg")
     else:

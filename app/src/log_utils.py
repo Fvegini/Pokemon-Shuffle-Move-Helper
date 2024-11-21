@@ -47,7 +47,7 @@ log.addHandler(console_handler)
 # log.addHandler(file_handler)
 
 # Create a rotating file handler (by size)
-log_file_size = "debug/app_size.log"
+log_file_size = "debug/logs.log"
 Path(log_file_size).parent.mkdir(parents=True, exist_ok=True)
 rotating_file_handler = RotatingFileHandler(log_file_size, maxBytes=10*1024*1024, backupCount=5)  # 10MB per file, keep 5 backups
 rotating_file_handler.setFormatter(logging.Formatter(f'%(asctime)s.%(msecs)03d %(levelname)s - %(filename)s_%(lineno)d - %(message)s', "%Y-%m-%d %H:%M:%S"))

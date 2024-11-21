@@ -128,14 +128,14 @@ class TeamLoader(tk.Toplevel):
                 self.root.enable_switch(self.root.frame3_1_top_3_4_switch) #survival_mode
                 self.root.enable_switch(self.root.frame3_1_top_2_1_switch) #auto_next_stage
                 self.root.enable_switch(self.root.frame3_1_top_3_1_switch) #fast_swipe
-
-
+            else:
+                self.root.disable_switch(self.root.frame3_1_top_3_4_switch) #survival_mode
             if current_run.current_stage == "MEOWTH COIN MANIA":
                 current_run.current_stage = "SP_084"
             if current_run.current_stage == "SP_084":
                 current_run.current_strategy = constants.move_strategy.get(constants.GRADING_WEEKEND_MEOWTH, "")
             else:
-                current_run.current_strategy = constants.move_strategy.get(constants.GRADING_TOTAL_SCORE, "")
+                current_run.current_strategy = constants.move_strategy.get(constants.GRADING_DISRUPTION_BOOSTED_SCORE, "")
             current_run.has_modifications = True
             selected_team: TeamData = self.teams[selected_index[0]]
             #First Append all Stage Added Pokemons

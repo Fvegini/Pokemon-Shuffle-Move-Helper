@@ -11,9 +11,9 @@ import statistics
 import time
 import os
 import shutil
-import math
 from datetime import datetime
 import traceback
+import re
 
 log = log_utils.get_logger()
 
@@ -41,6 +41,14 @@ def load_icon_classes(values_to_execute: list[Pokemon], has_barriers):
                 new_icon = Icon(pokemon.name, pokemon.path, True)
                 icons_list.append(new_icon)
                 loaded_icons_cache[new_icon.name] = new_icon
+    if custom_utils.is_survival_mode():
+        for pokemon in values_to_execute:
+            if pokemon.stage_added:
+                icon = Icon(pokemon.name, pokemon.path, False)
+                match = Match(None, None, icon)
+                current_run.fake_matches.append(match)
+                if len(current_run.fake_matches) > 20:
+                    break
     return icons_list
 
 
@@ -156,7 +164,7 @@ def verify_or_enter_stage(current_screen_image, source):
         if not current_run.survival_mode_current_running and custom_utils.is_survival_mode():
             current_run.survival_mode_current_running = True
             current_run.survival_mode_current_id = datetime.now()
-            current_run.survival_mode_current_running_path = Path(constants.DEBUG_EXTRA_IMAGE_FOLDER, current_run.survival_mode_current_id.strftime('%Y_%m_%d_%H_%M'))
+            current_run.survival_mode_current_running_path = Path(constants.DEBUG_SURVIVAL_IMAGE_FOLDER, current_run.survival_mode_current_id.strftime('%Y_%m_%d_%H_%M'))
     else:
         if should_auto_next_stage():
             click_buttons_to_enter_new_stage(current_screen_image, source)
@@ -330,6 +338,8 @@ def match_cell_with_icons(icons_list, cell_list, has_barriers, source, combo_is_
     if current_run.bad_board_count > 10:
         log.info("WOULD RUN THE BAD_BOARD_COUNT > 10 LOGIC, IGNORING")
         # mask_already_existant_matches(match_list, icons_list)
+    if current_run.survival_mode_current_stage_loop_count > 200:
+        mask_already_existant_matches(match_list, icons_list)
     return match_list
 
 def mask_already_existant_matches(match_list: List[Match], icons_list) -> List[Match]:
@@ -350,15 +360,19 @@ def is_on_stage(original_image, source):
                 time.sleep(4)
                 original_image = adb_utils.get_new_screenshot()
                 current_run.survival_mode_current_stage+= 1
-                stage = adb_utils.get_current_stage_name(original_image)
-                if shuffle_config_files.get_stage_real_number(stage) == "NONE":
+                read_stage_name = adb_utils.get_current_stage_name(original_image)
+                real_stage_name = shuffle_config_files.get_stage_real_number(read_stage_name, True)
+                if real_stage_name == "NONE":
                     time.sleep(4)
                     original_image = adb_utils.get_new_screenshot()
-                    stage = adb_utils.get_current_stage_name(original_image)
+                    read_stage_name = adb_utils.get_current_stage_name(original_image)
+                    real_stage_name = shuffle_config_files.get_stage_real_number(read_stage_name, True)
                 moves = adb_utils.get_moves_left(original_image)
                 stage_text = adb_utils.get_current_stage_number(original_image)
-                custom_utils.started_stage(current_run.survival_mode_current_stage, stage_text, stage, moves)
-                stage_text = f"{stage_text} - {stage} - {moves} moves"
+                current_run.survival_mode_current_stage_name = real_stage_name
+                custom_utils.started_stage(current_run.survival_mode_current_stage, stage_text, real_stage_name, moves)
+                stage_text = f"{stage_text} - {real_stage_name} - {moves} moves"
+                first_move_survival_test(real_stage_name)
             elif custom_utils.is_stage_pause():
                 time.sleep(2)
                 original_image = adb_utils.get_new_screenshot()
@@ -383,7 +397,7 @@ def is_on_stage(original_image, source):
                 save_debug_objects()
             stage_text = adb_utils.get_end_stage_score(original_image)
             if custom_utils.is_survival_mode():
-                time.sleep(2)
+                time.sleep(1)
                 original_image = adb_utils.get_new_screenshot()
                 custom_utils.ended_the_stage()
                 if "---" in adb_utils.get_end_stage_score(original_image):
@@ -474,12 +488,20 @@ def start_from_helper(pokemon_list: list[Pokemon], has_barriers, root=None, sour
         if can_swipe and custom_utils.is_puzzle_stage():
             can_swipe = execute_puzzle_logic(current_board, current_screen_image, source)
 
+        if source == "loop" and custom_utils.is_survival_mode():
+        # if True:
+            restart_loop = survival_mode_custom_logics(current_screen_image, current_board, source)
+            if restart_loop:
+                return MatchResult()
+
         if can_swipe and int(current_board.moves_left) > 0:
             swiped = adb_utils.execute_play(result, current_board, source)
-            if (custom_utils.is_survival_mode() or custom_utils.is_fast_swipe()) and swiped and not custom_utils.is_tapper_active():
+            if source == "loop" and (custom_utils.is_survival_mode() or custom_utils.is_fast_swipe()) and swiped and not custom_utils.is_tapper_active():
                 time.sleep(2)
             if custom_utils.is_debug_mode_active() and swiped:
                 save_debug_objects(result, match_list, source == "manual")
+
+
 
         result_image = None
 
@@ -508,3 +530,50 @@ def execute_puzzle_logic(current_board: Board, current_screen_image, source):
         adb_utils.execute_play(result_text, current_board, source)
         return False
     return True
+
+def survival_mode_custom_logics(original_image, current_board, source):
+    if not current_run.survival_mode_current_stage_loop_count > 200:
+        current_run.survival_mode_current_stage_loop_count+= 1
+    else:
+        log.error("ENTERED ON THE 200 LOOP COUNT LOGIC")
+        current_run.survival_mode_current_stage_loop_count = 0
+
+        original_move_number = custom_utils.safe_convert_to_int(adb_utils.get_moves_left(original_image))
+        results = socket_utils.loadNewBoard("getAllResults")
+        pattern = r'\d+,\d+\s*->\s*\d+,\d+'
+        matches = re.findall(pattern, results)
+
+        for match in matches:
+            adb_utils.execute_play(match, current_board, source)
+            log.info("trying to make a new move")
+            new_image = adb_utils.get_new_screenshot()
+            new_move_number = custom_utils.safe_convert_to_int(adb_utils.get_moves_left(new_image))
+            if new_move_number != original_move_number:
+                log.info("move made with success, exiting logic")
+                return True
+        return False
+
+def first_move_survival_test(stage_name):
+    if stage_name == "Snorlax":
+        log.info("Executando a lógica para a fase do Snorlax")
+        adb_utils.execute_play("4,1 -> 4,2", None, "loop")
+        time.sleep(3)
+        adb_utils.execute_play("4,6 -> 4,5", None, "loop")
+        time.sleep(3)
+
+
+        #     #Alterar o Shuffle Move para pegar a lista de jogadas
+
+
+        #     initial_moves = get_moves_left(original_image)
+
+        #     if if_has_mega():
+        #         try_a_mega_match()
+            
+
+        #     execute_move_on_non_freeze_cells() #Check moves number on every try
+
+        #     if final_moves == initial_moves:
+        #         execute_move_on_all_cells()
+
+        # print()

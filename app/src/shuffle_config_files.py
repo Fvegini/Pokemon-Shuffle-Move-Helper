@@ -120,15 +120,19 @@ def update_shuffle_move_files(current_board: Board, source=None, stage=None):
     current_board.has_mega = has_mega
     return
 
-def get_stage_real_number(stage_name):
+def get_stage_real_number(stage_name, get_stage_name=False):
     global stages_dict
     if len(stages_dict) == 0:
         stages_dict = load_stages_dict()
     exact_value = stages_dict.get(stage_name)
     if exact_value:
+        if get_stage_name:
+            return stage_name
         return exact_value
     similar_key = custom_utils.find_similar_key(stage_name, stages_dict)
     if similar_key:
+        if get_stage_name:
+            return similar_key
         return stages_dict.get(similar_key)
     else:
         return "NONE"
@@ -281,7 +285,7 @@ def update_teams_file_with_move_string(move_string, stage_name):
 
 def update_gradingModes_file(source, mega_activated, current_board):
     if source == "bot":
-        strategy = constants.GRADING_TOTAL_SCORE
+        strategy = constants.GRADING_DISRUPTION_BOOSTED_SCORE
     elif custom_utils.is_meowth_stage():
         if current_board.moves_left.isnumeric() and int(current_board.moves_left) <= 2:
             strategy = '037MeowthEndGame'
@@ -290,7 +294,7 @@ def update_gradingModes_file(source, mega_activated, current_board):
     else:
         strategy = current_run.current_strategy
     if strategy == constants.GRADING_MEGA_PROGRESS and mega_activated == MEGA_ACTIVATED:
-        strategy = constants.GRADING_TOTAL_SCORE
+        strategy = constants.GRADING_DISRUPTION_BOOSTED_SCORE
     if custom_utils.use_mega_boosted_score() and mega_activated == MEGA_ACTIVATED:
         strategy = constants.GRADING_MEGA_BOOSTED_SCORE
 
