@@ -169,10 +169,22 @@ class ImageSelectorApp():
         frame1_3_top.pack(side=tk.TOP)
         frame1_3_bottom.pack(side=tk.BOTTOM)
         ttk.Separator(self.tab1, orient='vertical').pack(side=tk.LEFT, fill='y', anchor=tk.W)
-        
         customtkinter.CTkLabel(frame1_3_bottom, text="Other").pack(side=tk.BOTTOM, anchor=tk.S)
 
         customtkinter.CTkButton(frame1_3_top, text="Save Screenshot", command=lambda: self.save_screenshot(), image=icon, **self.tab_button_style).pack(side=tk.LEFT)
+
+        self.current_team_ctkentry = customtkinter.CTkEntry(frame1_3_top, placeholder_text=config_utils.config_values.get("survival_team", ""))
+        self.current_team_ctkentry.pack(side=tk.LEFT)
+        customtkinter.CTkButton(frame1_3_top, text="Save Team", command=self.update_survival_team, image=self.get_icon("plus"), **self.tab_button_style).pack(side=tk.LEFT)
+        current_run.survival_mode_current_team = config_utils.config_values.get("survival_team", "")
+        if custom_utils.is_survival_mode():
+            log.info(f"CURRENT SURVIVAL MODE TEAM: {current_run.survival_mode_current_team}")
+
+    def update_survival_team(self):
+        new_text = self.current_team_ctkentry.get()
+        self.update_combobox_config("survival_team", new_text)
+        current_run.survival_mode_current_team = new_text
+        log.info(f"SURVIVAL MODE TEAM UPDATED TO: {new_text}")
 
     def set_stage_var(self, choice):
         current_run.current_stage = [k for k, v in constants.move_stages.items() if v == choice][0]
@@ -385,7 +397,7 @@ class ImageSelectorApp():
         frame3_4_top_2.pack(side=tk.LEFT)
         
         customtkinter.CTkComboBox(frame3_4_top_1, values=constants.move_stages.values(),
-                                     command=self.set_stage_var, variable=self.stage_combobox_var, state="readonly", **self.tab_comboboxmenu_style).pack(side=tk.BOTTOM)
+                                     command=self.set_stage_var, variable=self.stage_combobox_var, **self.tab_comboboxmenu_style).pack(side=tk.BOTTOM)
         
         customtkinter.CTkComboBox(frame3_4_top_1, values=constants.move_strategy.values(),
                                      command=self.set_strategy_var, variable=self.strategy_combobox_var, state="readonly", **self.tab_comboboxmenu_style).pack(side=tk.BOTTOM)

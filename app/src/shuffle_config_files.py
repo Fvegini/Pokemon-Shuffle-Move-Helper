@@ -110,7 +110,8 @@ def update_shuffle_move_files(current_board: Board, source=None, stage=None):
         update_teams_file(complete_names_list, mega_name, current_board.extra_supports_list, stage)
         update_gradingModes_file(source, mega_activated, current_board)
         if custom_utils.custom_utils.is_survival_mode():
-            current_run.survival_mode_current_team = ",".join(sorted(set(complete_names_list) - set(current_board.extra_supports_list) - set(constants.NON_POKEMON_NAMES_LIST)))
+            if not current_run.survival_mode_current_team:
+                current_run.survival_mode_current_team = ",".join(sorted(set(complete_names_list) - set(current_board.extra_supports_list) - set(constants.NON_POKEMON_NAMES_LIST)))
         current_run.has_modifications = False
     elif custom_utils.is_meowth_stage():
         update_gradingModes_file(source, mega_activated, current_board)

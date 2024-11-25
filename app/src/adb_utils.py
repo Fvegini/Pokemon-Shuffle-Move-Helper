@@ -244,6 +244,10 @@ def check_buttons_to_click(original_image, source):
     if current_run.non_stage_count > 5:
         run_capture_logic_test(original_image, source)
 
+    if current_run.non_stage_count > 20:
+        adb_run_tap(get_screen().get_position('Hearts')[0], get_screen().get_position('Hearts')[1], source)
+        current_run.non_stage_count = 0
+
     current_stage_image_path = constants.CURRENT_STAGE_IMAGE
     if custom_utils.is_meowth_stage():
         current_stage_image_path = constants.MEOWTH_STAGE_IMAGE
