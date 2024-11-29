@@ -100,7 +100,7 @@ def update_shuffle_move_files(current_board: Board, source=None, stage=None):
         mega_activated = MEGA_ACTIVATED
     current_board.mega_name = mega_name
     
-    if custom_utils.is_survival_mode() or current_run.current_stage == "RANDOM":
+    if custom_utils.is_survival_mode() or current_run.current_stage == "RANDOM" or current_run.current_stage == "SURVIVAL_MODE":
         stage = get_stage_real_number(current_board.stage_name)
         log.info(f"Current Stage: {stage} - {current_board.stage_name}")
         update_teams_file(complete_names_list, mega_name, current_board.extra_supports_list, stage)

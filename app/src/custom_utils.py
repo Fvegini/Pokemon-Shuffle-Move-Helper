@@ -789,7 +789,7 @@ def is_timed_stage():
     return config_utils.config_values.get("timed_stage")
 
 def is_survival_mode():
-    return config_utils.config_values.get("survival_mode")
+    return config_utils.config_values.get("survival_mode") or current_run.current_stage == "SURVIVAL_MODE"
 
 def is_meowth_stage():
     return config_utils.config_values.get("meowth_37")

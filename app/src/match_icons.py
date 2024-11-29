@@ -187,14 +187,25 @@ def verify_and_execute_tapper(source, current_board: Board):
         return executed_tapper
     return False
 
-def update_board_with_stage_parameters(current_screen_image, current_board):
-    current_board.moves_left = adb_utils.get_moves_left(current_screen_image)
-    log.debug(f"Stage Moves Left: {current_board.moves_left}")
+def get_stage_parameters(current_screen_image):
+    moves_left = adb_utils.get_moves_left(current_screen_image)
+    current_score = ""
+    current_stage_name = ""
     if not custom_utils.is_timed_stage():
         if custom_utils.is_meowth_stage():
-            current_board.current_score = adb_utils.get_current_score(current_screen_image)
+            current_score = adb_utils.get_current_score(current_screen_image)
         if custom_utils.is_survival_mode() or current_run.current_stage == "RANDOM":
-            current_board.stage_name = adb_utils.get_current_stage_name(current_screen_image)
+            current_stage_name = adb_utils.get_current_stage_name(current_screen_image)
+    return moves_left, current_score, current_stage_name
+
+# def update_board_with_stage_parameters(current_screen_image, current_board):
+#     current_board.moves_left = adb_utils.get_moves_left(current_screen_image)
+#     log.debug(f"Stage Moves Left: {current_board.moves_left}")
+#     if not custom_utils.is_timed_stage():
+#         if custom_utils.is_meowth_stage():
+#             current_board.current_score = adb_utils.get_current_score(current_screen_image)
+#         if custom_utils.is_survival_mode() or current_run.current_stage == "RANDOM":
+#             current_board.stage_name = adb_utils.get_current_stage_name(current_screen_image)
 
 def save_debug_objects(result="", match_list=[], is_manual=False):
     try:
@@ -325,7 +336,7 @@ def click_buttons_to_enter_new_stage(current_screen_image, source):
     adb_utils.check_buttons_to_click(current_screen_image, source)
     # log.debug("Finished Click Buttons Check")
 
-def match_cell_with_icons(icons_list, cell_list, has_barriers, source, combo_is_running=False) -> List[Match]:
+def match_cell_with_icons(icons_list, cell_list, has_barriers, source, combo_is_running=False, current_stage_name="") -> List[Match]:
     match_list: List[Match] = []
     timed_stage = custom_utils.is_timed_stage()
     for idx, cell in enumerate(cell_list):
@@ -336,10 +347,11 @@ def match_cell_with_icons(icons_list, cell_list, has_barriers, source, combo_is_
     if timed_stage:
         mask_already_existant_matches(match_list, icons_list)
     if current_run.bad_board_count > 10:
-        log.info("WOULD RUN THE BAD_BOARD_COUNT > 10 LOGIC, IGNORING")
-        # mask_already_existant_matches(match_list, icons_list)
+        mask_already_existant_matches(match_list, icons_list)
     if current_run.survival_mode_current_stage_loop_count > 200:
         mask_already_existant_matches(match_list, icons_list)
+    if source == "loop" and custom_utils.is_survival_mode():
+        survival_mode_custom_logics1(match_list, icons_list, current_stage_name)
     return match_list
 
 def mask_already_existant_matches(match_list: List[Match], icons_list) -> List[Match]:
@@ -473,11 +485,10 @@ def start_from_helper(pokemon_list: list[Pokemon], has_barriers, root=None, sour
         if not can_swipe and (custom_utils.is_meowth_stage() or not custom_utils.is_tapper_active()):
             return MatchResult()
         initialize_run_flags()
-
+        moves_left, current_score, current_stage_name = get_stage_parameters(current_screen_image)
         cell_list = make_cell_list(adb_utils.crop_board(current_screen_image))
-        match_list = match_cell_with_icons(icons_list, cell_list, has_barriers, source, current_run.is_combo_active)
-        current_board = Board(match_list, pokemon_list, icons_list, current_run.fake_matches)
-        update_board_with_stage_parameters(current_screen_image, current_board)
+        match_list = match_cell_with_icons(icons_list, cell_list, has_barriers, source, current_run.is_combo_active, current_stage_name)
+        current_board = Board(match_list, pokemon_list, icons_list, current_run.fake_matches, moves_left, current_score, current_stage_name)
         shuffle_config_files.update_shuffle_move_files(current_board, source)
 
         if verify_and_execute_tapper(source, current_board):
@@ -489,8 +500,7 @@ def start_from_helper(pokemon_list: list[Pokemon], has_barriers, root=None, sour
             can_swipe = execute_puzzle_logic(current_board, current_screen_image, source)
 
         if source == "loop" and custom_utils.is_survival_mode():
-        # if True:
-            restart_loop = survival_mode_custom_logics(current_screen_image, current_board, source)
+            restart_loop = survival_mode_custom_logics2(current_screen_image, current_board, source, match_list, icons_list)
             if restart_loop:
                 return MatchResult()
 
@@ -531,7 +541,13 @@ def execute_puzzle_logic(current_board: Board, current_screen_image, source):
         return False
     return True
 
-def survival_mode_custom_logics(original_image, current_board, source):
+def survival_mode_custom_logics1(match_list, icons_list, current_stage_name):
+    if current_stage_name == "Munna":
+        mask_already_existant_matches(match_list, icons_list)
+
+def survival_mode_custom_logics2(original_image, current_board, source, match_list, icons_list):
+
+
     if not current_run.survival_mode_current_stage_loop_count > 200:
         current_run.survival_mode_current_stage_loop_count+= 1
     else:

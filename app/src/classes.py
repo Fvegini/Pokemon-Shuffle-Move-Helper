@@ -133,7 +133,7 @@ class Board():
     current_score: int = 0
     stage_name: str = ""
     
-    def __init__(self, match_sequence: List[Match], pokemon_list: List[Pokemon], icons_list: List[Icon], fake_matches: List[Match]):
+    def __init__(self, match_sequence: List[Match], pokemon_list: List[Pokemon], icons_list: List[Icon], fake_matches: List[Match], moves_left, current_score, current_stage_name):
         self.match_sequence = match_sequence
         self.extra_supports_list = [pokemon.name for pokemon in pokemon_list if pokemon.stage_added]
         self.extra_supports_list.extend([match.name for match in fake_matches])
@@ -143,6 +143,9 @@ class Board():
         self.pokemon_board_sequence = [match.name for match in self.match_sequence]
         self.barrier_list = []
         self.has_mega = False
+        self.moves_left = moves_left
+        self.current_score = current_score
+        self.stage_name = current_stage_name
 
 class Screen():
     
