@@ -39,6 +39,8 @@ def get_current_stage_and_team(expand_megas=False):
     return get_team_from_stage_name(stage_name, expand_megas), stage_name
 
 def get_team_from_stage_name(stage_name, expand_megas=False):
+    if stage_name == constants.SURVIVAL_MODE_STAGE_NAME:
+        return get_team_from_config_file_line(constants.SURVIVAL_TEAM_STRING, expand_megas)
     current_stage_string = f"TEAM {stage_name}"
     with open(TEAMS_DATA_PATH, 'r') as file:
         lines = file.readlines()

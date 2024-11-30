@@ -38,6 +38,9 @@ class TeamLoader(tk.Toplevel):
         self.teams: list[TeamData] = []
         tmp_teams: list[TeamData] = []
         for line in lines:
+            if constants.SURVIVAL_MODE_STAGE_NAME in line:
+                log.info("Updating the survival mode team string to the fixed one")
+                line = constants.SURVIVAL_TEAM_STRING
             parts = line.strip().split()
             if not parts[0] == "TEAM":
                 continue
