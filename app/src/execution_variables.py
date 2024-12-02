@@ -27,7 +27,7 @@ class ExecutionVariable:
         self.mega_activated_this_round = False
         self.last_execution_swiped = False
         self.last_pokemon_board_sequence = None
-        self.metal_icon = classes.Icon("Metal", Path("Metal.png"), False)
+        self.metal_icon = classes.Icon("Metal", Path("Metal.png"), False, True)
         self.metal_match = classes.Match(None, None, self.metal_icon)
         self.is_combo_active = False
         self.id = None
@@ -96,7 +96,7 @@ class ExecutionVariable:
         log.info("RUNNING THE LOAD_FAKE_MATCHS LOGIC")
         for image_path in Path(constants.IMAGES_PATH).glob("*.png"):
             if image_path.stem not in original_icons:
-                icon = classes.Icon(image_path.stem, image_path, False)
+                icon = classes.Icon(image_path.stem, image_path, False, True)
                 match = classes.Match(None, None, icon)
                 self.fake_matches.append(match)
                 if len(self.fake_matches) > 15:
