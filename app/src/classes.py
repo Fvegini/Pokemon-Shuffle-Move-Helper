@@ -36,8 +36,9 @@ class Icon():
     barrier_type: str
     original_path: Path
     images_list: List[CustomImage]
+    stage_added: bool
 
-    def __init__(self, name, path, barrier):
+    def __init__(self, name, path, barrier, stage_added=False):
         if name == "_Empty":
             self.name = "Air"
         elif name.startswith("_"):
@@ -50,6 +51,7 @@ class Icon():
         if self.barrier:
             self.name = f"{constants.BARRIER_PREFIX}{self.name}"
         self.populate_images()
+        self.stage_added = stage_added
 
     def __repr__(self):
         return self.name

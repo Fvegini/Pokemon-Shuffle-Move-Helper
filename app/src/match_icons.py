@@ -30,7 +30,7 @@ def load_icon_classes(values_to_execute: list[Pokemon], has_barriers):
         if pokemon.name in loaded_icons_cache:
             icons_list.append(loaded_icons_cache.get(pokemon.name))
         else:
-            new_icon = Icon(pokemon.name, pokemon.path, False)
+            new_icon = Icon(pokemon.name, pokemon.path, False, pokemon.stage_added)
             icons_list.append(new_icon)
             loaded_icons_cache[new_icon.name] = new_icon
         if has_barriers and not custom_utils.is_fake_barrier_active():
@@ -38,13 +38,13 @@ def load_icon_classes(values_to_execute: list[Pokemon], has_barriers):
             if pokemon_barrier_name in loaded_icons_cache:
                 icons_list.append(loaded_icons_cache.get(pokemon_barrier_name))
             else:
-                new_icon = Icon(pokemon.name, pokemon.path, True)
+                new_icon = Icon(pokemon.name, pokemon.path, True, pokemon.stage_added)
                 icons_list.append(new_icon)
                 loaded_icons_cache[new_icon.name] = new_icon
     if custom_utils.is_survival_mode():
         for pokemon in values_to_execute:
             if pokemon.stage_added:
-                icon = Icon(pokemon.name, pokemon.path, False)
+                icon = Icon(pokemon.name, pokemon.path, False, True)
                 match = Match(None, None, icon)
                 current_run.fake_matches.append(match)
                 if len(current_run.fake_matches) > 20:
@@ -355,7 +355,14 @@ def match_cell_with_icons(icons_list, cell_list, has_barriers, source, combo_is_
     return match_list
 
 def mask_already_existant_matches(match_list: List[Match], icons_list) -> List[Match]:
-    if len(current_run.fake_matches) == 0:
+    if len(current_run.fake_matches) == 0 and custom_utils.is_survival_mode():
+        for pokemon_icon in icons_list:
+            if pokemon_icon.stage_added:
+                match = Match(None, None, pokemon_icon)
+                current_run.fake_matches.append(match)
+                if len(current_run.fake_matches) > 20:
+                    break
+    elif len(current_run.fake_matches) == 0:
         current_run.has_modifications = True
         current_run.load_fake_matchs([icon.name for icon in icons_list])
     match_list = custom_utils.replace_all_3_matches_indices_and_air(match_list, current_run.metal_match, current_run)
