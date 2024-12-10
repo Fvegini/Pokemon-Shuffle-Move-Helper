@@ -364,7 +364,7 @@ def mask_already_existant_matches(match_list: List[Match], icons_list) -> List[M
                     break
     elif len(current_run.fake_matches) == 0:
         current_run.has_modifications = True
-        current_run.load_fake_matchs([icon.name for icon in icons_list])
+        current_run.load_fake_matchs([icon.name for icon in icons_list if icon.stage_added == False])
     match_list = custom_utils.replace_all_3_matches_indices_and_air(match_list, current_run.metal_match, current_run)
     return match_list
 
@@ -511,7 +511,7 @@ def start_from_helper(pokemon_list: list[Pokemon], has_barriers, root=None, sour
             if restart_loop:
                 return MatchResult()
 
-        if can_swipe and int(current_board.moves_left) > 0:
+        if can_swipe and custom_utils.safe_convert_to_int(current_board.moves_left, 0) > 0:
             swiped = adb_utils.execute_play(result, current_board, source)
             if source == "loop" and (custom_utils.is_survival_mode() or custom_utils.is_fast_swipe()) and swiped and not custom_utils.is_tapper_active():
                 time.sleep(2)

@@ -519,7 +519,7 @@ def replace_all_3_matches_indices_and_air(mylist: List[Match], replace_match, cu
     matrix_index_list = list(set(matrix_index_list))
     for matrix_index in matrix_index_list:
         index = coordinates_to_index(matrix_index[0], matrix_index[1], start_at_1=False)
-        mylist[index] = replace_match
+        mylist[index] = current_run.get_next_timed_fake_icon()
     for matrix_index in matrix_air_index_list:
         index = coordinates_to_index(matrix_index[0], matrix_index[1], start_at_1=False)
         mylist[index] = current_run.get_next_timed_fake_icon()
@@ -695,7 +695,7 @@ def safe_convert_to_int(s: str, default=99999) -> int:
             numeric_string = re.sub(r'\D', '', s)
             return int(numeric_string)
         except:
-            return 999999
+            return default
 
 
 def started_stage(stage_number, stage_text, stage, moves):
