@@ -8,7 +8,7 @@ from src.execution_variables import current_run
 
 log = log_utils.get_logger()
 exception_list = ["Empty", "Coin", "Metal", "Wood", "Fog"]
-stages_fixed_list = ['BUG', 'DARK', 'DRAGON', 'ELECTRIC', 'FAIRY', 'FIGHTING', 'FIRE', 'FLYING', 'GHOST', 'GRASS', 'GROUND', 'ICE', 'MEOWTH COIN MANIA', 'NONE', 'NORMAL', 'POISON', 'PSYCHIC', 'ROCK', 'STEEL', 'WATER', 'SP_084', 'MEOWTH COIN MANIA', constants.SURVIVAL_MODE_STAGE_NAME, '037']
+stages_fixed_list = ['BUG', 'DARK', 'DRAGON', 'ELECTRIC', 'FAIRY', 'FIGHTING', 'FIRE', 'FLYING', 'GHOST', 'GRASS', 'GROUND', 'ICE', 'MEOWTH COIN MANIA', 'NONE', 'NORMAL', 'POISON', 'PSYCHIC', 'ROCK', 'STEEL', 'WATER', 'SP_084', 'MEOWTH COIN MANIA', constants.SURVIVAL_MODE_STAGE_NAME, '037', "RANDOM"]
 stages_set = set(stages_fixed_list)
 
 class TeamData():
@@ -42,7 +42,7 @@ class TeamLoader(tk.Toplevel):
                 log.info("Updating the survival mode team string to the fixed one")
                 line = constants.SURVIVAL_TEAM_STRING
             parts = line.strip().split()
-            if not parts[0] == "TEAM":
+            if len(parts) == 0 or not parts[0] == "TEAM":
                 continue
             team_name = parts[1]
             if team_name not in stages_fixed_list:
@@ -152,9 +152,16 @@ class TeamLoader(tk.Toplevel):
                 self.root.insert_image_widget(f"{pokemon}.png", stage_added=True)
             #Then Append the others
             for pokemon in selected_team.icons:
-                is_stage_added = pokemon in selected_team.stage_added
-                if not is_stage_added:
+                if not pokemon in selected_team.stage_added and f"{pokemon}.png" not in self.root.mega_list:
                     self.root.insert_image_widget(f"{pokemon}.png", stage_added=False)
+            for pokemon in selected_team.icons:
+                if not pokemon in selected_team.stage_added and f"{pokemon}.png" in self.root.mega_list:
+                    self.root.insert_image_widget(f"{pokemon}.png", stage_added=False)
+
+
+
+
+
             self.update_idletasks()
 
         self.root.stage_combobox.set(current_run.current_stage)

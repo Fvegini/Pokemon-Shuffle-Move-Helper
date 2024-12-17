@@ -362,6 +362,8 @@ class ImageSelectorApp():
         self.remove_button = customtkinter.CTkButton(frame3_2_top, text="Clear Current Team", command=lambda: self.remove_all_icons(), image=self.get_icon("trash-alt"), **self.tab_button_style)
         self.remove_button.pack(side=tk.LEFT)
 
+        customtkinter.CTkButton(frame3_2_top, text="Reorder Team", command=lambda: self.reorder_icons(), image=self.get_icon("trash-alt"), **self.tab_button_style).pack(side=tk.LEFT)
+
         frame3_3 = customtkinter.CTkFrame(self.tab3, fg_color="transparent")
         frame3_3_top = customtkinter.CTkFrame(frame3_3, fg_color="transparent")
         frame3_3_bottom = customtkinter.CTkFrame(frame3_3, fg_color="transparent")
@@ -814,7 +816,7 @@ class ImageSelectorApp():
                 self.master.after(current_run.thread_sleep_timer * 1000, self.control_loop_function)                
                 return
 
-    def extract_pokemon_list(self):
+    def extract_pokemon_list(self) -> list[Pokemon]:
         pokemons_list = []
         for image_widgets in self.get_selected_images_widgets_list():
             if hasattr(image_widgets[0].master, "pokemon"):
@@ -933,7 +935,7 @@ class ImageSelectorApp():
         label.image = photo
         label.pack()
 
-    def load_last_team(self):
+    def load_last_team(self, forced_current_team=[]):
         try:
             self.destroy_selected_pokemons()
 
@@ -942,21 +944,27 @@ class ImageSelectorApp():
             else:
                 current_team, stage_name = shuffle_config_files.get_current_stage_and_team()
 
+            if forced_current_team:
+                current_team = forced_current_team
             current_team = custom_utils.sort_by_class_attribute(current_team, "name", reverse=True)
             current_run.current_stage = stage_name
             current_run.current_strategy = constants.GRADING_DISRUPTION_BOOSTED_SCORE
             self.stage_combobox.set(constants.move_stages.get(current_run.current_stage, "NONE"))
             self.strategy_combobox.set(constants.move_strategy.get(current_run.current_strategy))
+            #Fix Names
             for pokemon in current_team:
                 if pokemon.name in load_from_shuffle.exception_list:
                     pokemon.name = f"_{pokemon.name}"
+            for pokemon in current_team:
                 if pokemon.stage_added:
                     self.insert_image_widget(pokemon.name, skip_barrier=True, stage_added=True)
             for pokemon in current_team:
-                if pokemon.name in load_from_shuffle.exception_list:
-                    pokemon.name = f"_{pokemon.name}"
-                if not pokemon.stage_added:
+                if not pokemon.stage_added and pokemon.path.name not in self.mega_list:
                     self.insert_image_widget(pokemon.name, skip_barrier=True, stage_added=False)
+            for pokemon in current_team:
+                if not pokemon.stage_added and pokemon.path.name in self.mega_list:
+                    self.insert_image_widget(pokemon.name, skip_barrier=True, stage_added=False)
+
             if self.frame3_1_top_1_2_var_control_barrier.get():
                 self.reveal_or_hide_barrier_img()
         except Exception as ex:
@@ -1000,6 +1008,10 @@ class ImageSelectorApp():
         self.insert_image_widget(f"_Empty.png")
         self.insert_image_widget(f"_Metal.png")
         self.insert_image_widget(f"_Wood.png")
+
+    def reorder_icons(self):
+        pokemons_list = self.extract_pokemon_list()
+        self.load_last_team(pokemons_list)
 
 def merge_pil_images(image1, image2):
     # Get the width and height of each image

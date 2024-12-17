@@ -583,6 +583,10 @@ def first_move_survival_test(stage_name):
         time.sleep(3)
         adb_utils.execute_play("4,6 -> 4,5", None, "loop")
         time.sleep(3)
+    if stage_name == "Tangrowth":
+        log.info("Executando a lógica para a fase do Tangrowth")
+        adb_utils.execute_play("1,2 -> 3,4", None, "loop")
+        time.sleep(3)
 
 
         #     #Alterar o Shuffle Move para pegar a lista de jogadas

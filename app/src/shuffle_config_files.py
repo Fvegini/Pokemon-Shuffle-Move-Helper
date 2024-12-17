@@ -48,7 +48,7 @@ def get_team_from_stage_name(stage_name, expand_megas=False):
         if line.lower().startswith(current_stage_string.lower()):
             return get_team_from_config_file_line(line.strip(), expand_megas)
 
-def get_team_from_config_file_line(line, expand_megas):
+def get_team_from_config_file_line(line, expand_megas) -> list[Pokemon]:
     if line.startswith(("TEAM", "STAGE")):
         values_list = line.split()[2:]
     else:
@@ -105,6 +105,7 @@ def update_shuffle_move_files(current_board: Board, source=None, stage=None):
     if custom_utils.is_survival_mode() or current_run.current_stage == "RANDOM" or current_run.current_stage == "SURVIVAL_MODE":
         stage = get_stage_real_number(current_board.stage_name)
         log.info(f"Current Stage: {stage} - {current_board.stage_name}")
+        update_teams_file(complete_names_list, mega_name, current_board.extra_supports_list, current_run.current_stage)
         update_teams_file(complete_names_list, mega_name, current_board.extra_supports_list, stage)
     update_board_file(names_list, barrier_list, mega_activated, stage)
     update_preferences(current_board.current_score, current_board.moves_left)
