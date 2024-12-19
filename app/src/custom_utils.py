@@ -27,6 +27,7 @@ log = log_utils.get_logger()
 FROZEN_IMAGE = cv2.imread(Path(constants.ASSETS_PATH, "barrier.png").as_posix(), cv2.IMREAD_UNCHANGED)
 invalid_values = ["Wood", "Barrier", "Metal"]
 time_pattern = re.compile(r"\b(\d{1,2})\s*:\s*(\d{1,2})\b")
+mega_list: list[str] = []
 
 def resize_cv2_image(image, target_size):
     try:
@@ -785,11 +786,30 @@ def append_to_sqlite(db_path, table_name, df: pd.DataFrame):
     except Exception as ex:
         log.error(f"Error with sqlite: {ex}")
 
+def search_mega_name(names_list):
+    global mega_list
+    for name in names_list:
+        if name in mega_list:
+            return name
+    return "-"
+
+def update_mega_list():
+    global mega_list
+    folder_path = constants.IMAGES_PATH
+    image_files = [f for f in os.listdir(folder_path) if f.lower().endswith((".png", ".jpg", ".jpeg", ".gif")) and "mega_" in f.lower()]
+    for image_file in image_files:
+        if image_file.startswith(constants.MEGA_PREFIX):
+            path_pokemon_name = image_file.split(constants.MEGA_PREFIX)[1]
+            mega_list.append(path_pokemon_name)
+            mega_list.append(path_pokemon_name.replace(".png", ""))
+
+
+
 def is_timed_stage():
     return config_utils.config_values.get("timed_stage")
 
 def is_survival_mode():
-    return config_utils.config_values.get("survival_mode") or current_run.current_stage == "SURVIVAL_MODE"
+    return config_utils.config_values.get("survival_mode") or current_run.current_stage == constants.SURVIVAL_MODE
 
 def is_meowth_stage():
     return config_utils.config_values.get("meowth_37")
@@ -836,6 +856,9 @@ def is_puzzle_stage():
 def paused_survival_mode():
     return config_utils.config_values.get("pause_survival")
 
+def is_expand_mega():
+    return config_utils.config_values.get("expand_mega")
+
 
 def save_extra_debug_image(points_list, suffix):
     os.makedirs(constants.DEBUG_EXTRA_IMAGE_FOLDER, exist_ok=True)
@@ -855,3 +878,13 @@ def send_telegram_message(text):
         current_bot.send_message(text)
     except Exception as ex:
         log.error(f"Error on sending telegram message - {ex}")
+
+def convert_position(pos):
+    try:
+        column = ord(pos[0].upper()) - ord('A') + 1 
+        row = int(pos[1])
+        return f"{row},{column}"
+    except:
+        return pos
+
+update_mega_list()

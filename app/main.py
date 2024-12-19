@@ -1,3 +1,4 @@
+from json import load
 import os
 import tkinter as tk
 from tkinter import ttk
@@ -27,11 +28,12 @@ import time
 from src import log_utils
 import sys
 import traceback
+from src.telegram_utils import current_bot
 
 
 log = log_utils.get_logger()
 warnings.filterwarnings("ignore", category=UserWarning, message="CTkButton Warning: Given image is not CTkImage but*")
-# from viztracer.decorator import trace_and_save
+from viztracer.decorator import trace_and_save
 
 customtkinter.set_appearance_mode("dark")  # Modes: "System" (standard), "Dark", "Light"
 # customtkinter.set_appearance_mode("light")
@@ -39,9 +41,12 @@ customtkinter.set_default_color_theme("dark-blue")  # Themes: "blue" (standard),
 
 class ImageSelectorApp():
 
-    def __init__(self, master):
+    # @trace_and_save
+    def __init__(self, master: customtkinter.CTk):
         self.analysis_lock = threading.Lock()
-        self.master = master
+        self.widget_dict = {} #type: ignore
+        self.adb_utils = adb_utils
+        self.master: customtkinter.CTk = master
         self.master.title(f"Pokemon Shuffle Helper {version.current_version}")
         self.create_tab_menu()
         
@@ -58,12 +63,13 @@ class ImageSelectorApp():
         self.listener.start()
 
         self.update_image_list()
-        self.set_mega_list()
         self.load_last_team()
         self.update_preview_image()
         self.configure_initial_geometry()
         splash.close_splash()
         version.verify_new_version()
+        current_bot.root = self
+        current_run.root = self
 
     def create_tab_menu(self):
         self.tabview = customtkinter.CTkTabview(self.master, height=100)
@@ -285,10 +291,12 @@ class ImageSelectorApp():
         self.frame3_1_top_1_3_switch.pack(side=tk.TOP, anchor=tk.W, padx=1)
         self.frame3_1_top_1_4_switch.pack(side=tk.TOP, anchor=tk.W, padx=1)
 
+        self.widget_dict["switch_control_loop"] = self.frame3_1_top_1_1_switch_control_loop
+        self.widget_dict["switch_has_barriers"] = self.frame3_1_top_1_2_switch
+        self.widget_dict["switch_adb_board"] = self.frame3_1_top_1_3_switch
+        self.widget_dict["switch_adb_move"] = self.frame3_1_top_1_4_switch
 
-        # keyboard.add_hotkey('f3', lambda:  self.frame3_1_top_1_1_switch_control_loop.toggle())
-        # keyboard.add_hotkey('f4', lambda: self.frame3_1_top_1_2_switch.toggle())
-        
+
         self.frame3_1_top_2_1_var = tk.BooleanVar(value=config_utils.config_values.get("auto_next_stage"))      
         self.frame3_1_top_2_2_var = tk.BooleanVar(value=config_utils.config_values.get("timed_stage")) 
         self.frame3_1_top_2_3_var = tk.BooleanVar(value=config_utils.config_values.get("tapper")) 
@@ -306,6 +314,11 @@ class ImageSelectorApp():
         self.frame3_1_top_2_4_switch.pack(side=tk.TOP, anchor=tk.W, padx=1)
 
 
+        self.widget_dict["switch_auto_next_stage"] = self.frame3_1_top_2_1_switch
+        self.widget_dict["switch_timed_stage"] = self.frame3_1_top_2_2_switch
+        self.widget_dict["switch_tapper"] = self.frame3_1_top_2_3_switch
+        self.widget_dict["switch_meowth_37"] = self.frame3_1_top_2_4_switch
+
         self.frame3_1_top_3_1_var = tk.BooleanVar(value=config_utils.config_values.get("fast_swipe"))      
         self.frame3_1_top_3_2_var = tk.BooleanVar(value=config_utils.config_values.get("escalation_battle")) 
         self.frame3_1_top_3_3_var = tk.BooleanVar(value=config_utils.config_values.get("coin_stage")) 
@@ -322,6 +335,11 @@ class ImageSelectorApp():
         self.frame3_1_top_3_3_switch.pack(side=tk.TOP, anchor=tk.W, padx=1)
         self.frame3_1_top_3_4_switch.pack(side=tk.TOP, anchor=tk.W, padx=1)
 
+        self.widget_dict["switch_fast_swipe"] = self.frame3_1_top_3_1_switch
+        self.widget_dict["switch_escalation_battle"] = self.frame3_1_top_3_2_switch
+        self.widget_dict["switch_coin_stage"] = self.frame3_1_top_3_3_switch
+        self.widget_dict["switch_survival_mode"] = self.frame3_1_top_3_4_switch
+
         self.frame3_1_top_4_1_var = tk.BooleanVar(value=config_utils.config_values.get("debug_mode"))      
         self.frame3_1_top_4_2_var = tk.BooleanVar(value=config_utils.config_values.get("fake_barrier")) 
         self.frame3_1_top_4_3_var = tk.BooleanVar(value=config_utils.config_values.get("extra_debug")) 
@@ -337,6 +355,10 @@ class ImageSelectorApp():
         self.frame3_1_top_4_3_switch.pack(side=tk.TOP, anchor=tk.W, padx=1)
         self.frame3_1_top_4_4_switch.pack(side=tk.TOP, anchor=tk.W, padx=1)
         
+        self.widget_dict["switch_debug_mode"] = self.frame3_1_top_4_1_switch
+        self.widget_dict["switch_fake_barrier"] = self.frame3_1_top_4_2_switch
+        self.widget_dict["switch_extra_debug"] = self.frame3_1_top_4_3_switch
+        self.widget_dict["switch_sleep_machine"] = self.frame3_1_top_4_4_switch
 
         frame3_2 = customtkinter.CTkFrame(self.tab3, fg_color="transparent")
         frame3_2_top = customtkinter.CTkFrame(frame3_2, fg_color="transparent")
@@ -443,17 +465,24 @@ class ImageSelectorApp():
         self.frame4_1_top_1_3_switch.pack(side=tk.TOP, anchor=tk.W, padx=1)
         self.frame4_1_top_1_4_switch.pack(side=tk.TOP, anchor=tk.W, padx=1)
 
+        self.widget_dict["switch_greatball"] = self.frame4_1_top_1_1_switch
+        self.widget_dict["switch_stage_pause"] = self.frame4_1_top_1_2_switch
+        self.widget_dict["switch_check_drop"] = self.frame4_1_top_1_3_switch
+        self.widget_dict["switch_mega_boosted_score"] = self.frame4_1_top_1_4_switch
 
         self.frame4_1_top_2_1_var = tk.BooleanVar(value=config_utils.config_values.get("is_puzzle_stage"))      
         self.frame4_1_top_2_2_var = tk.BooleanVar(value=config_utils.config_values.get("pause_survival")) 
-        self.frame4_1_top_2_3_var = tk.BooleanVar(value=config_utils.config_values.get("placeholder")) 
+        self.frame4_1_top_2_3_var = tk.BooleanVar(value=config_utils.config_values.get("expand_mega")) 
         self.frame4_1_top_2_4_var = tk.BooleanVar(value=config_utils.config_values.get("placeholder"))
         
         self.frame4_1_top_2_1_switch = customtkinter.CTkSwitch(frame4_1_top_2, variable=self.frame4_1_top_2_1_var, command=lambda: self.update_switch_config(self.frame4_1_top_2_1_var, "is_puzzle_stage"), text="Puzzle Stage", onvalue=True, offvalue=False)
         self.frame4_1_top_2_2_switch = customtkinter.CTkSwitch(frame4_1_top_2, variable=self.frame4_1_top_2_2_var, command=lambda: self.update_switch_config(self.frame4_1_top_2_2_var, "pause_survival"), text="Pause Survival", onvalue=True, offvalue=False)
-        self.frame4_1_top_2_3_switch = customtkinter.CTkSwitch(frame4_1_top_2, variable=self.frame4_1_top_2_3_var, command=lambda: self.update_switch_config(self.frame4_1_top_2_3_var, "placeholder"), text="placeholder", onvalue=True, offvalue=False)
+        self.frame4_1_top_2_3_switch = customtkinter.CTkSwitch(frame4_1_top_2, variable=self.frame4_1_top_2_3_var, command=lambda: self.update_switch_config(self.frame4_1_top_2_3_var, "expand_mega"), text="Expand Mega", onvalue=True, offvalue=False)
         self.frame4_1_top_2_4_switch = customtkinter.CTkSwitch(frame4_1_top_2, variable=self.frame4_1_top_2_4_var, command=lambda: self.update_switch_config(self.frame4_1_top_2_4_var, "placeholder"), text="placeholder", onvalue=True, offvalue=False)
         
+        self.widget_dict["switch_is_puzzle_stage"] = self.frame4_1_top_2_1_switch
+        self.widget_dict["switch_pause_survival"] = self.frame4_1_top_2_2_switch
+        self.widget_dict["switch_expand_mega"] = self.frame4_1_top_2_3_switch
 
         self.frame4_1_top_2_1_switch.pack(side=tk.TOP, anchor=tk.W, padx=1)
         self.frame4_1_top_2_2_switch.pack(side=tk.TOP, anchor=tk.W, padx=1)
@@ -584,16 +613,6 @@ class ImageSelectorApp():
         except:
             pass
 
-    def set_mega_list(self):
-        self.mega_list = []
-        folder_path = constants.IMAGES_PATH
-        image_files = [f for f in os.listdir(folder_path) if f.lower().endswith((".png", ".jpg", ".jpeg", ".gif")) and "mega_" in f.lower()]
-        for image_file in image_files:
-            if image_file.startswith(constants.MEGA_PREFIX):
-             self.mega_list.append(image_file.split(constants.MEGA_PREFIX)[1])
-
-       
-
     def update_image_list(self, *args):
         search_term = self.search_var.get().lower()
         search_term = search_term.replace(" ", "_")
@@ -644,7 +663,7 @@ class ImageSelectorApp():
         selected_image_label = customtkinter.CTkLabel(selected_image_frame, image=photo, text=selected_file.replace(".png",""), compound=tk.TOP)
         selected_image_label.pack()
         
-        self.insert_extra_images_tooltip(image_path, selected_image_label)
+        # self.insert_extra_images_tooltip(image_path, selected_image_label)
         
         remove_button = customtkinter.CTkButton(selected_image_frame, text="Remove", width=80, command=lambda: self.remove_selected_image(selected_image_frame, image_path))
         remove_button.pack(pady=5)
@@ -662,7 +681,8 @@ class ImageSelectorApp():
         if stage_added:
             checkbox_stage_added.toggle()
 
-        if selected_file in self.mega_list:
+        if selected_file in custom_utils.mega_list:
+            selected_image_frame.pokemon_mega = Pokemon(f"{constants.MEGA_PREFIX}{selected_image_frame.name}", False, False)
             checkbox_mega = customtkinter.CTkCheckBox(selected_image_frame, text="Mega", checkbox_width=12, checkbox_height=12, corner_radius=0, onvalue=True, offvalue=False, command=lambda: self.checkbox_mega_click(checkbox_mega, selected_image_frame)) #type: ignore
             checkbox_mega.pack(padx=(25, 0))
             selected_image_frame.megaed = False
@@ -766,6 +786,7 @@ class ImageSelectorApp():
         current_lock = self.analysis_lock
         if source == "manual":
             pokemons_list = self.extract_pokemon_list()
+
             match_result = match_icons.start_from_helper(pokemons_list, self.frame3_1_top_1_2_var_control_barrier.get(), root=self, source=source, create_image=create_image, skip_shuffle_move=skip_shuffle_move, forced_board_image=forced_board_image, forced_swipe_skip=forced_swipe_skip)
             return MatchResult()
 
@@ -816,12 +837,21 @@ class ImageSelectorApp():
                 self.master.after(current_run.thread_sleep_timer * 1000, self.control_loop_function)                
                 return
 
-    def extract_pokemon_list(self) -> list[Pokemon]:
+    def extract_pokemon_list(self, can_expand_megas=True) -> list[Pokemon]:
+        expand_megas = False
         pokemons_list = []
+        if can_expand_megas and custom_utils.is_expand_mega():
+            expand_megas = True
         for image_widgets in self.get_selected_images_widgets_list():
             if hasattr(image_widgets[0].master, "pokemon"):
-                pokemon = image_widgets[0].master.pokemon
+                pokemon: Pokemon = image_widgets[0].master.pokemon
                 pokemons_list.append(pokemon)
+                if expand_megas and not pokemon.disabled and not pokemon.stage_added and hasattr(image_widgets[0].master, "pokemon_mega"):
+                    pokemons_list.append(image_widgets[0].master.pokemon_mega)
+                
+                    
+                
+
         return pokemons_list
 
     def get_execution_values(self, image_widgets):
@@ -844,13 +874,30 @@ class ImageSelectorApp():
         if self.frame3_1_top_1_1_var_control_loop.get():
             self.frame3_1_top_1_1_switch_control_loop.toggle()
 
-    def disable_switch(self, frame_widget):
+    def disable_switch(self, custom_id, update_view=False):
+        frame_widget = self.get_widget_by_id(custom_id)
+        if not frame_widget:
+            log.error(f"Widget {custom_id} not found")
+            return
         if frame_widget.get():
             frame_widget.toggle()
+        if update_view:
+            self.master.update()
 
-    def enable_switch(self, frame_widget):
+
+    def activate_switch(self, custom_id):
+        frame_widget = self.get_widget_by_id(custom_id)
+        if not frame_widget:
+            log.error(f"Widget {custom_id} not found")
+            return
         if not frame_widget.get():
             frame_widget.toggle()
+
+    def get_widget_by_id(self, custom_id):
+        frame_widget = self.widget_dict.get(custom_id)
+        if not frame_widget:
+            frame_widget = self.widget_dict.get(f"switch_{custom_id}")
+        return frame_widget
 
     def get_icon(self, icon_name):
         if customtkinter.get_appearance_mode() == "Dark":
@@ -935,21 +982,24 @@ class ImageSelectorApp():
         label.image = photo
         label.pack()
 
+    # @trace_and_save
     def load_last_team(self, forced_current_team=[]):
         try:
             self.destroy_selected_pokemons()
 
             if custom_utils.is_survival_mode():
-                current_team, stage_name = shuffle_config_files.get_team_from_stage_name("SURVIVAL_MODE", False), "SURVIVAL_MODE"
+                current_team, stage_name = shuffle_config_files.get_team_from_stage_name(constants.SURVIVAL_MODE, False), constants.SURVIVAL_MODE
             else:
                 current_team, stage_name = shuffle_config_files.get_current_stage_and_team()
+                if stage_name not in load_from_shuffle.stages_fixed_list:
+                    stage_name = constants.RANDOM
 
             if forced_current_team:
                 current_team = forced_current_team
             current_team = custom_utils.sort_by_class_attribute(current_team, "name", reverse=True)
             current_run.current_stage = stage_name
             current_run.current_strategy = constants.GRADING_DISRUPTION_BOOSTED_SCORE
-            self.stage_combobox.set(constants.move_stages.get(current_run.current_stage, "NONE"))
+            self.stage_combobox.set(constants.move_stages.get(current_run.current_stage, "RANDOM"))
             self.strategy_combobox.set(constants.move_strategy.get(current_run.current_strategy))
             #Fix Names
             for pokemon in current_team:
@@ -959,10 +1009,10 @@ class ImageSelectorApp():
                 if pokemon.stage_added:
                     self.insert_image_widget(pokemon.name, skip_barrier=True, stage_added=True)
             for pokemon in current_team:
-                if not pokemon.stage_added and pokemon.path.name not in self.mega_list:
+                if not pokemon.stage_added and pokemon.path.name not in custom_utils.mega_list:
                     self.insert_image_widget(pokemon.name, skip_barrier=True, stage_added=False)
             for pokemon in current_team:
-                if not pokemon.stage_added and pokemon.path.name in self.mega_list:
+                if not pokemon.stage_added and pokemon.path.name in custom_utils.mega_list:
                     self.insert_image_widget(pokemon.name, skip_barrier=True, stage_added=False)
 
             if self.frame3_1_top_1_2_var_control_barrier.get():
@@ -1010,7 +1060,7 @@ class ImageSelectorApp():
         self.insert_image_widget(f"_Wood.png")
 
     def reorder_icons(self):
-        pokemons_list = self.extract_pokemon_list()
+        pokemons_list = self.extract_pokemon_list(can_expand_megas=False)
         self.load_last_team(pokemons_list)
 
 def merge_pil_images(image1, image2):

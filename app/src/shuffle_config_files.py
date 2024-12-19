@@ -39,7 +39,7 @@ def get_current_stage_and_team(expand_megas=False):
     return get_team_from_stage_name(stage_name, expand_megas), stage_name
 
 def get_team_from_stage_name(stage_name, expand_megas=False):
-    if stage_name == constants.SURVIVAL_MODE_STAGE_NAME:
+    if stage_name == constants.SURVIVAL_MODE:
         return get_team_from_config_file_line(constants.SURVIVAL_TEAM_STRING, expand_megas)
     current_stage_string = f"TEAM {stage_name}"
     with open(TEAMS_DATA_PATH, 'r') as file:
@@ -95,6 +95,8 @@ def update_shuffle_move_files(current_board: Board, source=None, stage=None):
 
     names_list, barrier_list, mega_name = process_pokemon_names_list(current_board.sequence_names_list)
     complete_names_list, _, forced_mega_name = process_pokemon_names_list(current_board.original_complete_names_list)
+    if mega_name == "-" and custom_utils.is_expand_mega():
+        forced_mega_name = custom_utils.search_mega_name(current_board.sequence_names_list)
     current_board.barrier_list = barrier_list
     if mega_name == "-":
         mega_name = forced_mega_name
@@ -102,9 +104,9 @@ def update_shuffle_move_files(current_board: Board, source=None, stage=None):
         mega_activated = MEGA_ACTIVATED
     current_board.mega_name = mega_name
     
-    if custom_utils.is_survival_mode() or current_run.current_stage == "RANDOM" or current_run.current_stage == "SURVIVAL_MODE":
+    if custom_utils.is_survival_mode() or current_run.current_stage == constants.RANDOM or current_run.current_stage == constants.SURVIVAL_MODE:
         stage = get_stage_real_number(current_board.stage_name)
-        log.info(f"Current Stage: {stage} - {current_board.stage_name}")
+        log.info(f"Current Stage: {current_run.survival_mode_current_stage} - {current_run.survival_current_stage_info.get('Stage Text')} - {current_board.stage_name}")
         update_teams_file(complete_names_list, mega_name, current_board.extra_supports_list, current_run.current_stage)
         update_teams_file(complete_names_list, mega_name, current_board.extra_supports_list, stage)
     update_board_file(names_list, barrier_list, mega_activated, stage)
@@ -281,8 +283,8 @@ def update_teams_file_with_move_string(move_string, stage_name):
     # Write the modified content back to the file
     with open(TEAMS_DATA_PATH, 'w') as file:
         file.writelines(lines)
-    if custom_utils.custom_utils.is_survival_mode() and stage_name != constants.SURVIVAL_MODE_STAGE_NAME:
-        new_stage_name = constants.SURVIVAL_MODE_STAGE_NAME
+    if custom_utils.custom_utils.is_survival_mode() and stage_name != constants.SURVIVAL_MODE:
+        new_stage_name = constants.SURVIVAL_MODE
         new_move_string = move_string.replace(team_stage_string, f"TEAM {new_stage_name}")
         update_teams_file_with_move_string(new_move_string, new_stage_name)
     return move_string

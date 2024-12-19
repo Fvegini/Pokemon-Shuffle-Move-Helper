@@ -5,10 +5,14 @@ from src import constants, custom_utils, log_utils
 from pathlib import Path
 from src.execution_variables import current_run
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from main import ImageSelectorApp
 
 log = log_utils.get_logger()
 exception_list = ["Empty", "Coin", "Metal", "Wood", "Fog"]
-stages_fixed_list = ['BUG', 'DARK', 'DRAGON', 'ELECTRIC', 'FAIRY', 'FIGHTING', 'FIRE', 'FLYING', 'GHOST', 'GRASS', 'GROUND', 'ICE', 'MEOWTH COIN MANIA', 'NONE', 'NORMAL', 'POISON', 'PSYCHIC', 'ROCK', 'STEEL', 'WATER', 'SP_084', 'MEOWTH COIN MANIA', constants.SURVIVAL_MODE_STAGE_NAME, '037', "RANDOM"]
+stages_fixed_list = ['BUG', 'DARK', 'DRAGON', 'ELECTRIC', 'FAIRY', 'FIGHTING', 'FIRE', 'FLYING', 'GHOST', 'GRASS', 'GROUND', 'ICE', 'MEOWTH COIN MANIA', 'NORMAL', 'POISON', 'PSYCHIC', 'ROCK', 'STEEL', 'WATER', 'SP_084', 'MEOWTH COIN MANIA', constants.SURVIVAL_MODE, '037', constants.RANDOM]
 stages_set = set(stages_fixed_list)
 
 class TeamData():
@@ -21,7 +25,7 @@ class TeamData():
 
 class TeamLoader(tk.Toplevel):
      
-    def __init__(self, master = None, root = None, folder = ""):
+    def __init__(self, master = None, root: "ImageSelectorApp" = None, folder = ""): #type: ignore
          
         super().__init__(master = master)
         self.title(f"Select a Team")
@@ -38,7 +42,7 @@ class TeamLoader(tk.Toplevel):
         self.teams: list[TeamData] = []
         tmp_teams: list[TeamData] = []
         for line in lines:
-            if constants.SURVIVAL_MODE_STAGE_NAME in line:
+            if constants.SURVIVAL_MODE in line:
                 log.info("Updating the survival mode team string to the fixed one")
                 line = constants.SURVIVAL_TEAM_STRING
             parts = line.strip().split()
@@ -118,27 +122,30 @@ class TeamLoader(tk.Toplevel):
         selected_index = self.listbox.curselection()
         if selected_index:
             current_run.current_stage = self.teams[selected_index[0]].stage
-            if current_run.current_stage == constants.SURVIVAL_MODE_STAGE_NAME:
+            if current_run.current_stage == constants.SURVIVAL_MODE:
                 log.info(f"CURRENT SURVIVAL MODE TEAM: {current_run.survival_mode_current_team}")
                 new_pokemon_list = custom_utils.load_file_as_list(constants.SURVIVAL_MODE_TXT)
                 self.teams[selected_index[0]].stage_added.extend(new_pokemon_list)
                 self.teams[selected_index[0]].icons.extend(new_pokemon_list)
-                self.root.disable_switch(self.root.frame4_1_top_1_3_switch) #check_drop
-                self.root.disable_switch(self.root.frame4_1_top_2_1_switch) #is_puzzle_stage
-                self.root.disable_switch(self.root.frame4_1_top_2_2_switch) #pause_survival
-                self.root.disable_switch(self.root.frame3_1_top_4_1_switch) #debug_mode
-                self.root.disable_switch(self.root.frame3_1_top_3_3_switch) #coin_stage
-                self.root.disable_switch(self.root.frame3_1_top_3_2_switch) #escalation_battle
-                self.root.disable_switch(self.root.frame3_1_top_2_4_switch) #meowth_37
-                self.root.disable_switch(self.root.frame3_1_top_2_2_switch) #timed_stage
-                self.root.disable_switch(self.root.frame3_1_top_2_3_switch) #tapper
-                self.root.disable_switch(self.root.frame4_1_top_1_4_switch) #mega_boosted_score
-                self.root.enable_switch(self.root.frame3_1_top_3_4_switch) #survival_mode
-                self.root.enable_switch(self.root.frame3_1_top_2_1_switch) #auto_next_stage
-                self.root.enable_switch(self.root.frame3_1_top_3_1_switch) #fast_swipe
+                self.root.disable_switch("check_drop")
+                self.root.disable_switch("is_puzzle_stage")
+                self.root.disable_switch("pause_survival")
+                self.root.disable_switch("debug_mode")
+                self.root.disable_switch("coin_stage")
+                self.root.disable_switch("escalation_battle")
+                self.root.disable_switch("meowth_37")
+                self.root.disable_switch("timed_stage")
+                self.root.disable_switch("tapper")
+                self.root.disable_switch("mega_boosted_score")
+                self.root.disable_switch("expand_mega")
+                self.root.activate_switch("survival_mode")
+                self.root.activate_switch("auto_next_stage")
+                self.root.activate_switch("fast_swipe")
             else:
-                self.root.disable_switch(self.root.frame3_1_top_3_4_switch) #survival_mode
-                self.root.disable_switch(self.root.frame4_1_top_1_4_switch) #mega_boosted_score
+                self.root.disable_switch("survival_mode")
+                self.root.disable_switch("mega_boosted_score")
+                self.root.activate_switch("expand_mega")
+
             if current_run.current_stage == "MEOWTH COIN MANIA":
                 current_run.current_stage = "SP_084"
             if current_run.current_stage == "SP_084":
@@ -152,10 +159,10 @@ class TeamLoader(tk.Toplevel):
                 self.root.insert_image_widget(f"{pokemon}.png", stage_added=True)
             #Then Append the others
             for pokemon in selected_team.icons:
-                if not pokemon in selected_team.stage_added and f"{pokemon}.png" not in self.root.mega_list:
+                if not pokemon in selected_team.stage_added and f"{pokemon}.png" not in custom_utils.mega_list:
                     self.root.insert_image_widget(f"{pokemon}.png", stage_added=False)
             for pokemon in selected_team.icons:
-                if not pokemon in selected_team.stage_added and f"{pokemon}.png" in self.root.mega_list:
+                if not pokemon in selected_team.stage_added and f"{pokemon}.png" in custom_utils.mega_list:
                     self.root.insert_image_widget(f"{pokemon}.png", stage_added=False)
 
 

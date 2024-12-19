@@ -21,12 +21,12 @@ from datetime import datetime
 log = log_utils.get_logger()
 
 
-def get_new_screenshot():
+def get_new_screenshot(local_save=False):
     try:
         pil_screenshot = adb_run_screenshot()
         img = custom_utils.pil_to_cv2(pil_screenshot)
-
-        cv2.imwrite(constants.LAST_SCREEN_IMAGE_PATH, img)
+        if local_save:
+            cv2.imwrite(constants.LAST_SCREEN_IMAGE_PATH, img)
         current_run.abd_not_found_count = 0
         return img
     except:
@@ -39,11 +39,12 @@ def get_new_screenshot():
         raise
 
 
-def crop_board(img):
+def crop_board(img, local_save=False):
     if not get_screen().loaded:
         update_adb_connection(True)
     img = img[get_screen().board_top_left[1]:get_screen().board_bottom_right[1], get_screen().board_top_left[0]:get_screen().board_bottom_right[0]].copy()
-    cv2.imwrite(constants.LAST_BOARD_IMAGE_PATH, img)
+    if local_save:
+        cv2.imwrite(constants.LAST_BOARD_IMAGE_PATH, img)
     return img
 
 def execute_play(result, board_results, source):
@@ -126,6 +127,9 @@ def check_hearts(original_image, source):
             current_run.hearts_loop_counter = 0
         if is_escalation_battle():
             escalation_hearts_processing(original_image, hearts_number, source)
+        elif custom_utils.is_survival_mode():
+            if hearts_number < 3:
+                wait_until_fill_hearts(original_image, hearts_number, aimed_hearts=3)
         elif hearts_number < config_utils.config_values.get("stage_hearts", 1):
             wait_until_fill_hearts(original_image, hearts_number)
     except Exception as ex:

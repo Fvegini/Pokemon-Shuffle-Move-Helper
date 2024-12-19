@@ -15,6 +15,11 @@ from datetime import datetime
 import traceback
 import re
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from main import ImageSelectorApp
+
 log = log_utils.get_logger()
 
 loaded_icons_cache: dict[str, Icon] = {}
@@ -182,7 +187,7 @@ def initialize_run_flags():
     current_run.last_execution_swiped = False
 
 def verify_and_execute_tapper(source, current_board: Board):
-    if custom_utils.is_tapper_active() and int(current_board.moves_left) > 0:
+    if custom_utils.is_tapper_active() and custom_utils.safe_convert_to_int(current_board.moves_left, 0) > 0:
         executed_tapper = execute_tapper(current_board, source)
         return executed_tapper
     return False
@@ -194,7 +199,7 @@ def get_stage_parameters(current_screen_image):
     if not custom_utils.is_timed_stage():
         if custom_utils.is_meowth_stage():
             current_score = adb_utils.get_current_score(current_screen_image)
-        if custom_utils.is_survival_mode() or current_run.current_stage == "RANDOM":
+        if custom_utils.is_survival_mode() or current_run.current_stage == constants.RANDOM:
             current_stage_name = adb_utils.get_current_stage_name(current_screen_image)
     return moves_left, current_score, current_stage_name
 
@@ -469,7 +474,7 @@ def update_fog_match(result, icons_list, has_barriers, idx, source):
 #         result_image = custom_utils.make_match_image_comparison(result, match_list)
 #     return MatchResult(result=result, match_image=result_image, match_list=match_list)
 
-def start_from_helper(pokemon_list: list[Pokemon], has_barriers, root=None, source=None, create_image=False, skip_shuffle_move=False, forced_board_image=None, forced_swipe_skip=False) -> MatchResult:
+def start_from_helper(pokemon_list: list[Pokemon], has_barriers, root: "ImageSelectorApp"= None, source=None, create_image=False, skip_shuffle_move=False, forced_board_image=None, forced_swipe_skip=False) -> MatchResult: #type: ignore
     try:
         log.debug(f"Starting a new {source} execution")
         icons_list = load_icon_classes(pokemon_list, has_barriers)

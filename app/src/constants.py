@@ -13,7 +13,8 @@ IMAGES_PATH = r"assets\icons_processed"
 ASSETS_PATH = r"assets"
 BARRIER_TYPE_REAL = "Real"
 BARRIER_TYPE_FAKE = "Fake"
-
+RANDOM = "RANDOM"
+SURVIVAL_MODE = "SURVIVAL_MODE"
 GRADING_TOTAL_SCORE = "grading.score"
 GRADING_MEGA_PROGRESS = "grading.megaprogress"
 GRADING_WEEKEND_MEOWTH = "WeekendMeowth"
@@ -143,8 +144,6 @@ RESOLUTIONS = {
         "Drops": (613, 449, 892, 538),
     }
 }
-
-SURVIVAL_MODE_STAGE_NAME = "SURVIVAL_MODE"
 
 SURVIVAL_MODE_TXT = r"assets\survival_list.txt"
 ADB_IMAGE_FOLDER = r"assets\adb"

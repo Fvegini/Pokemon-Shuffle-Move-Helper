@@ -4,11 +4,16 @@ from adbutils import AdbDevice
 from typing import Optional
 from datetime import datetime
 
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from main import ImageSelectorApp
+
 log = log_utils.get_logger()
 class ExecutionVariable:
     
     current_stage: str
     current_strategy: str
+    root: "ImageSelectorApp" = None #type:ignore
     adb_device: Optional[AdbDevice]
 
     def __init__(self):

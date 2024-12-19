@@ -9,19 +9,24 @@ import cv2
 from src import log_utils
 import src.file_utils
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from main import ImageSelectorApp
+
 log = log_utils.get_logger()
 
 
 class BoardIconSelector(tk.Toplevel):
      
-    def __init__(self, master = None, root = None, folder = ""):
+    def __init__(self, master = None, root: "ImageSelectorApp" = None, folder = ""): #type: ignore
          
         super().__init__(master = master)
         self.title(f"Select a Icon to be Saved as a new {folder} type")
         self.root = root
         self.folder = folder
         self.selected_image = None
-        self.image_widgets = []
+        self.image_widgets = [] #type: ignore
         self.create_widgets()
 
     def create_widgets(self):
