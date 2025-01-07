@@ -700,58 +700,70 @@ def safe_convert_to_int(s: str, default=99999) -> int:
 
 
 def started_stage(stage_number, stage_text, stage, moves):
-   log.debug("Executing started_stage_function")
-   current_run.survival_current_stage_info = {
-       "Stage Number": current_run.survival_mode_current_stage,
-       'Stage Text': stage_text,
-       "Stage Number Test": safe_convert_to_int(stage_text),
-       'Stage': stage,
-       'Starting Moves': safe_convert_to_int(moves),
-       'Start Time': datetime.now(),
-       'Start Time Text': datetime.now()
-   }
+    try:
+        log.debug("Executing started_stage_function")
+        current_run.survival_current_stage_info = {
+            "Stage Number": current_run.survival_mode_current_stage,
+            'Stage Text': stage_text,
+            "Stage Number Test": safe_convert_to_int(stage_text),
+            'Stage': stage,
+            'Starting Moves': safe_convert_to_int(moves),
+            'Start Time': datetime.now(),
+            'Start Time Text': datetime.now()
+        }
+    except:
+        log.error("Erro  na fase do survival")
+
 
 def ended_the_stage(won_stage=True, file_path='survival_mode_data.xlsx', sheet_name='Stage Data'):
-    log.debug("Executing ended_the_stage function")
-    current_run.survival_current_stage_info["End Time"] = datetime.now()
-    current_run.survival_current_stage_info["Stage Time"] = int((current_run.survival_current_stage_info.get("End Time") - current_run.survival_current_stage_info.get("Start Time")).total_seconds()) #type: ignore
-    current_run.survival_current_stage_info["Global Time"] = int((current_run.survival_current_stage_info.get("End Time") - current_run.survival_mode_run_started_time).total_seconds() / 60) #type: ignore
-    current_run.survival_current_stage_info["won_stage"] = won_stage
-    
-    if won_stage and (current_run.survival_old_stage_info.get('Stage Number') == 60 or current_run.survival_old_stage_info.get('Stage Number Test') == 60):
-        last_stage = True
-    elif won_stage:
-        last_stage = False
-    else:
-        last_stage = True
-
-    if current_run.survival_old_stage_info:
-        if last_stage:
-            current_run.survival_old_stage_info['Used Moves'] = 0
-        else:
-            current_run.survival_old_stage_info['Used Moves'] = current_run.survival_old_stage_info.get('Starting Moves') - (current_run.survival_current_stage_info.get("Starting Moves") - 5) #type: ignore
-
-        old_stage_data = pd.DataFrame({
-            "id": [current_run.survival_mode_current_id],
-            "stage_number": [current_run.survival_old_stage_info.get('Stage Number')],
-            "stage_text": [current_run.survival_old_stage_info.get('Stage Text')],
-            "stage_number_test": [current_run.survival_old_stage_info.get('Stage Number Test')],
-            "stage": [current_run.survival_old_stage_info.get('Stage')],
-            "starting_moves": [current_run.survival_old_stage_info.get('Starting Moves')],
-            "moves": [current_run.survival_old_stage_info.get('Used Moves')],
-            "stage_time": [current_run.survival_old_stage_info.get('Stage Time')],
-            "accumulated_time": [current_run.survival_old_stage_info.get('Global Time')],
-            "start_time": [current_run.survival_old_stage_info.get('Start Time Text')],
-            "won_stage": won_stage,
-            "lost_stage": not won_stage,
-            "last_run_stage": last_stage,
-            "current_team": current_run.survival_mode_current_team
-        })
+    try:
+        if not current_run.survival_mode_current_running and custom_utils.is_survival_mode():
+            current_run.survival_mode_current_running = True
+            current_run.survival_mode_current_id = datetime.now()
+            current_run.survival_mode_current_running_path = Path(constants.DEBUG_SURVIVAL_IMAGE_FOLDER, current_run.survival_mode_current_id.strftime('%Y_%m_%d_%H_%M'))
+ 
+        log.debug("Executing ended_the_stage function")
+        current_run.survival_current_stage_info["End Time"] = datetime.now()
+        current_run.survival_current_stage_info["Stage Time"] = int((current_run.survival_current_stage_info.get("End Time") - current_run.survival_current_stage_info.get("Start Time")).total_seconds()) #type: ignore
+        current_run.survival_current_stage_info["Global Time"] = int((current_run.survival_current_stage_info.get("End Time") - current_run.survival_mode_run_started_time).total_seconds() / 60) #type: ignore
+        current_run.survival_current_stage_info["won_stage"] = won_stage
         
-        # append_to_excel(file_path, sheet_name, old_stage_data)
-        append_to_sqlite("shuffle.sqlite3", "survival_mode", old_stage_data)
-    current_run.survival_old_stage_info = current_run.survival_current_stage_info
-    log.debug("Finished ended_the_stage function")
+        if won_stage and (current_run.survival_old_stage_info.get('Stage Number') == 60 or current_run.survival_old_stage_info.get('Stage Number Test') == 60):
+            last_stage = True
+        elif won_stage:
+            last_stage = False
+        else:
+            last_stage = True
+
+        if current_run.survival_old_stage_info:
+            if last_stage:
+                current_run.survival_old_stage_info['Used Moves'] = 0
+            else:
+                current_run.survival_old_stage_info['Used Moves'] = current_run.survival_old_stage_info.get('Starting Moves') - (current_run.survival_current_stage_info.get("Starting Moves") - 5) #type: ignore
+
+            old_stage_data = pd.DataFrame({
+                "id": [current_run.survival_mode_current_id],
+                "stage_number": [current_run.survival_old_stage_info.get('Stage Number')],
+                "stage_text": [current_run.survival_old_stage_info.get('Stage Text')],
+                "stage_number_test": [current_run.survival_old_stage_info.get('Stage Number Test')],
+                "stage": [current_run.survival_old_stage_info.get('Stage')],
+                "starting_moves": [current_run.survival_old_stage_info.get('Starting Moves')],
+                "moves": [current_run.survival_old_stage_info.get('Used Moves')],
+                "stage_time": [current_run.survival_old_stage_info.get('Stage Time')],
+                "accumulated_time": [current_run.survival_old_stage_info.get('Global Time')],
+                "start_time": [current_run.survival_old_stage_info.get('Start Time Text')],
+                "won_stage": won_stage,
+                "lost_stage": not won_stage,
+                "last_run_stage": last_stage,
+                "current_team": current_run.survival_mode_current_team
+            })
+            
+            # append_to_excel(file_path, sheet_name, old_stage_data)
+            append_to_sqlite("shuffle.sqlite3", "survival_mode", old_stage_data)
+        current_run.survival_old_stage_info = current_run.survival_current_stage_info
+        log.debug("Finished ended_the_stage function")
+    except:
+        log.error("Erro  na fase do survival")
 
 def append_to_excel(file_path, sheet_name, data):
     try:

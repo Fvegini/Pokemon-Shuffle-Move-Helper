@@ -29,6 +29,7 @@ from src import log_utils
 import sys
 import traceback
 from src.telegram_utils import current_bot
+from src.discord_utils import discord_bot, discord_thread
 
 
 log = log_utils.get_logger()
@@ -70,6 +71,8 @@ class ImageSelectorApp():
         version.verify_new_version()
         current_bot.root = self
         current_run.root = self
+        discord_bot.root = self
+        discord_thread.start()
 
     def create_tab_menu(self):
         self.tabview = customtkinter.CTkTabview(self.master, height=100)

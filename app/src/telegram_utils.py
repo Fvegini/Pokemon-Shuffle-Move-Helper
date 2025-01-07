@@ -18,7 +18,7 @@ USER_ID = os.getenv("TELEGRAM_USER_ID", "")
 class TelegramBot:
     def __init__(self):
         self.bot = Bot(token=BOT_TOKEN)
-        self.root: "ImageSelectorApp" = None #type: ignore
+        self.root: "ImageSelectorApp" = None # type: ignore
         self.application = Application.builder().token(BOT_TOKEN).build()
 
         self.commands = [
@@ -31,7 +31,8 @@ class TelegramBot:
             "disable_pause_survival_mode",
             "activate_pause_survival_mode",
             "get_current_screen_image",
-            "execute_move"
+            "execute_move",
+            "execute_helper"
         ]
 
         for command in self.commands:
@@ -39,7 +40,8 @@ class TelegramBot:
             handler_function = getattr(self, handler_name)
             self.application.add_handler(CommandHandler(command, handler_function))
 
-        self.application.add_handler(MessageHandler(filters.TEXT, self.handle_message))
+        # self.application.add_handler(MessageHandler(filters.TEXT, self.handle_message))
+        self.application.add_handler(MessageHandler(filters.TEXT & ~filters.UpdateType.EDITED_MESSAGE, self.handle_message))
 
         self.loop = asyncio.new_event_loop()
         self.thread = threading.Thread(target=self.run_bot, daemon=True)
@@ -50,8 +52,15 @@ class TelegramBot:
         await self.bot.send_message(chat_id=USER_ID, text=text)
 
     async def handle_message(self, update: Update, context: CallbackContext):
-        message = "The commands you must input are: /" + " /".join(self.commands)
-        await self.bot.send_message(chat_id=USER_ID, text=message)
+        message_text: str = update.message.text # type: ignore
+        # Check if the message starts with '/' and is a valid command
+        if message_text.startswith("/") and message_text[1:] in self.commands:
+            command_name = message_text[1:]
+            handler_function = getattr(self, command_name)
+            await handler_function(update, context)
+        else:
+            message = "The commands you must input are: /" + " /".join(self.commands)
+            await self.bot.send_message(chat_id=USER_ID, text=message)
     
     async def disable_loop(self, update: Update, context: CallbackContext):
         self.root.disable_switch("control_loop")
@@ -90,15 +99,21 @@ class TelegramBot:
         await self.bot.send_photo(chat_id=USER_ID, photo=photo)
 
     async def execute_move(self, update: Update, context: CallbackContext):
-        if len(context.args) != 2: #type: ignore
+        if len(context.args) != 2: # type: ignore
             await self.bot.send_message(chat_id=USER_ID, text="Please provide two arguments.")
             return
-        arg1, arg2 = context.args #type: ignore
+        arg1, arg2 = context.args # type: ignore
         self.root.adb_utils.execute_play(f"{custom_utils.convert_position(arg1)} -> {custom_utils.convert_position(arg2)}", None, "manual")
         await self.bot.send_message(chat_id=USER_ID, text=f"Executing move: {arg1} -> {arg2}")
         time.sleep(4)
         photo = self.get_current_screen_screenshot()
         await self.bot.send_photo(chat_id=USER_ID, photo=photo)
+
+    def execute_helper(self, update: Update, context: CallbackContext):
+        result = self.root.execute_board_analysis(source="manual")
+        # if result and result.result:
+            # await self.bot.send_message(chat_id=USER_ID, text=f"{result.result}")
+
 
     def get_current_screen_screenshot(self):
         screenshot = self.root.adb_utils.get_new_screenshot()
@@ -111,7 +126,7 @@ class TelegramBot:
 
     def run_bot(self):
         asyncio.set_event_loop(self.loop)
-        self.loop.run_until_complete(self.application.run_polling()) #type: ignore
+        self.loop.run_until_complete(self.application.run_polling()) # type: ignore
 
     def send_message(self, text):
         asyncio.run_coroutine_threadsafe(self.send_to_telegram(text), self.loop)
