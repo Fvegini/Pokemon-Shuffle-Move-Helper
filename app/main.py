@@ -851,10 +851,6 @@ class ImageSelectorApp():
                 pokemons_list.append(pokemon)
                 if expand_megas and not pokemon.disabled and not pokemon.stage_added and hasattr(image_widgets[0].master, "pokemon_mega"):
                     pokemons_list.append(image_widgets[0].master.pokemon_mega)
-                
-                    
-                
-
         return pokemons_list
 
     def get_execution_values(self, image_widgets):

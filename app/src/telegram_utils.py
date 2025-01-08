@@ -40,6 +40,7 @@ class TelegramBot:
             handler_function = getattr(self, handler_name)
             self.application.add_handler(CommandHandler(command, handler_function))
 
+        self.application.add_handler(CommandHandler("pause_loop", self.disable_loop))
         # self.application.add_handler(MessageHandler(filters.TEXT, self.handle_message))
         self.application.add_handler(MessageHandler(filters.TEXT & ~filters.UpdateType.EDITED_MESSAGE, self.handle_message))
 
@@ -59,7 +60,7 @@ class TelegramBot:
             handler_function = getattr(self, command_name)
             await handler_function(update, context)
         else:
-            message = "The commands you must input are: /" + " /".join(self.commands)
+            message = "The commands you must input are: \n/" + "\n /".join(self.commands)
             await self.bot.send_message(chat_id=USER_ID, text=message)
     
     async def disable_loop(self, update: Update, context: CallbackContext):
