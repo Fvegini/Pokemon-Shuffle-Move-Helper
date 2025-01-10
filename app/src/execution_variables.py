@@ -59,6 +59,11 @@ class ExecutionVariable:
         self.survival_mode_current_running_path = None
         self.survival_mode_current_id = datetime.now()
         self.survival_mode_current_team = ""
+        self.escalation_stage_number = ""
+        self.stage_name = ""
+        self.stage_shuflle_move_id = ""
+        self.stage_score = ""
+        self.remaining_moves = ""
 
     def clear_survival_variables(self):
         self.survival_mode_current_stage_loop_count = 0
@@ -96,6 +101,11 @@ class ExecutionVariable:
         self.has_drops = False
         self.abd_not_found_count = 0
         self.survival_mode_current_stage_loop_count = 0
+        self.escalation_stage_number = ""
+        self.stage_name = ""
+        self.stage_shuflle_move_id = ""
+        self.stage_score = ""
+        self.remaining_moves = ""
         
     def load_fake_matchs(self, original_icons, keep_current_stage_add=False):
         log.info("RUNNING THE LOAD_FAKE_MATCHS LOGIC")

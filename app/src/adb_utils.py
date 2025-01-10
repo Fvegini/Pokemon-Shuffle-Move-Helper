@@ -293,6 +293,7 @@ def check_buttons_to_click(original_image, source):
             # current_run.survival_mode_current_running = True
             current_run.survival_mode_run_started_time = datetime.now()
             was_clicked = True
+            custom_utils.send_telegram_message(f"Started a new Survival Mode Run")
             original_image = get_new_screenshot()  
     if has_text_match(original_image, "No", source, extra_timeout=1+timeout_increase):
         was_clicked = True

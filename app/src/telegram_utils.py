@@ -7,6 +7,7 @@ from src.execution_variables import current_run
 from src import log_utils, custom_utils, config_utils, adb_commands
 from io import BytesIO
 import time
+from datetime import datetime
 
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
@@ -32,7 +33,8 @@ class TelegramBot:
             "activate_pause_survival_mode",
             "get_current_screen_image",
             "execute_move",
-            "execute_helper"
+            "execute_helper",
+            "status"
         ]
 
         for command in self.commands:
@@ -109,6 +111,11 @@ class TelegramBot:
         time.sleep(4)
         photo = self.get_current_screen_screenshot()
         await self.bot.send_photo(chat_id=USER_ID, photo=photo)
+
+    async def status(self, update: Update, context: CallbackContext):
+        seconds_time = int((datetime.now() - current_run.survival_current_stage_info.get("Start Time", datetime.now())).total_seconds())
+        stage_name = current_run.survival_current_stage_info.get("Stage")
+        custom_utils.send_telegram_message(f"At Stage {current_run.survival_mode_current_stage} ({stage_name}) for {seconds_time} seconds")
 
     def execute_helper(self, update: Update, context: CallbackContext):
         result = self.root.execute_board_analysis(source="manual")

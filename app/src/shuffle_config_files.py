@@ -104,13 +104,13 @@ def update_shuffle_move_files(current_board: Board, source=None, stage=None):
         mega_activated = MEGA_ACTIVATED
     current_board.mega_name = mega_name
     
-    if custom_utils.is_survival_mode() or current_run.current_stage == constants.RANDOM or current_run.current_stage == constants.SURVIVAL_MODE:
-        stage = get_stage_real_number(current_board.stage_name)
+    if custom_utils.is_survival_mode() or current_run.current_stage == constants.RANDOM or current_run.current_stage == constants.SURVIVAL_MODE or custom_utils.is_escalation_battle():
+        stage = get_stage_shuffle_move_id(current_board.stage_name)
         log.info(f"Current Stage: {current_run.survival_mode_current_stage} - {current_run.survival_current_stage_info.get('Stage Text')} - {current_board.stage_name}")
         update_teams_file(complete_names_list, mega_name, current_board.extra_supports_list, current_run.current_stage)
-        update_teams_file(complete_names_list, mega_name, current_board.extra_supports_list, stage)
+        update_teams_file(complete_names_list, mega_name, current_board.extra_supports_list, current_run.stage_shuflle_move_id)
     update_board_file(names_list, barrier_list, mega_activated, stage)
-    update_preferences(current_board.current_score, current_board.moves_left)
+    update_preferences(current_board.current_score, current_board.moves_left, current_run.escalation_stage_number)
     if current_run.has_modifications or source == "bot":
         update_teams_file(complete_names_list, mega_name, current_board.extra_supports_list, stage)
         update_gradingModes_file(source, mega_activated, current_board)
@@ -126,7 +126,7 @@ def update_shuffle_move_files(current_board: Board, source=None, stage=None):
     current_board.has_mega = has_mega
     return
 
-def get_stage_real_number(stage_name, get_stage_name=False):
+def get_stage_shuffle_move_id(stage_name, get_stage_name=False):
     global stages_dict
     if len(stages_dict) == 0:
         stages_dict = load_stages_dict()
@@ -153,7 +153,8 @@ def load_stages_dict():
                 words = line.strip().split()
                 if len(words) >= 3:
                     key, value = words[2], words[1]
-                    stage_dict[key] = value
+                    if key not in stage_dict:
+                        stage_dict[key] = value
     return stage_dict
 
 def process_pokemon_names_list(original_names_list):
@@ -187,11 +188,14 @@ def update_current_stage(current_stage):
         file.writelines(lines)
     return
 
-def update_preferences(current_score=0, moves_left=5):
+def update_preferences(current_score=0, moves_left=5, escalation_stage_number=None):
     preferences = {
-        "INTEGER STAGE_CURRENT_SCORE": current_score,
-        "INTEGER STAGE_MOVES_REMAINING": moves_left
+        "INTEGER STAGE_MOVES_REMAINING": moves_left,
     }
+    if current_score:
+        preferences[ "INTEGER STAGE_CURRENT_SCORE"] = current_score
+    if escalation_stage_number:
+        preferences["INTEGER ESCALATION_LEVEL"] = escalation_stage_number
 
     # Read existing lines from the file
     with open(PREFERENCES_PATH, 'r') as file:

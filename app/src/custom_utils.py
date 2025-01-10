@@ -871,6 +871,8 @@ def paused_survival_mode():
 def is_expand_mega():
     return config_utils.config_values.get("expand_mega")
 
+def is_escalation_battle():
+    return config_utils.config_values.get("escalation_battle")
 
 def save_extra_debug_image(points_list, suffix):
     os.makedirs(constants.DEBUG_EXTRA_IMAGE_FOLDER, exist_ok=True)

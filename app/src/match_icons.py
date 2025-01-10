@@ -196,11 +196,21 @@ def get_stage_parameters(current_screen_image):
     moves_left = adb_utils.get_moves_left(current_screen_image)
     current_score = ""
     current_stage_name = ""
+    current_stage_number = ""
     if not custom_utils.is_timed_stage():
         if custom_utils.is_meowth_stage():
             current_score = adb_utils.get_current_score(current_screen_image)
         if custom_utils.is_survival_mode() or current_run.current_stage == constants.RANDOM:
             current_stage_name = adb_utils.get_current_stage_name(current_screen_image)
+            current_run.stage_shuflle_move_id = shuffle_config_files.get_stage_shuffle_move_id(current_stage_name)
+        if custom_utils.adb_utils.is_escalation_battle():
+            current_score = adb_utils.get_current_score(current_screen_image)
+            current_stage_name = adb_utils.get_current_stage_name(current_screen_image)
+            current_run.stage_shuflle_move_id = shuffle_config_files.get_stage_shuffle_move_id(current_stage_name)
+            current_run.escalation_stage_number = adb_utils.get_current_stage_number(current_screen_image)
+    current_run.remaining_moves = moves_left
+    current_run.stage_name = current_stage_name
+    current_run.stage_score = current_score
     return moves_left, current_score, current_stage_name
 
 # def update_board_with_stage_parameters(current_screen_image, current_board):
@@ -220,8 +230,13 @@ def save_debug_objects(result="", match_list=[], is_manual=False):
             current_move = custom_utils.get_next_filename_number_on_start(session_folder, "match_image.png")[0:2]
         elif not current_run.id:
             return
+        elif custom_utils.is_escalation_battle():
+            folder_name = f"{current_run.stage_name}_{current_run.escalation_stage_number}_{current_run.id.strftime('%Y_%m_%d_%H_%M')}"
+            session_folder = Path(constants.DEBUG_STAGES_IMAGE_FOLDER, folder_name)
+            current_run.move_number+= 1
+            current_move = f"{current_run.move_number:02d}"
         else:
-            session_folder = Path(constants.DEBUG_STAGES_IMAGE_FOLDER, current_run.id)
+            session_folder = Path(constants.DEBUG_STAGES_IMAGE_FOLDER, current_run.id.strftime('%Y_%m_%d_%H_%M'))
             current_run.move_number+= 1
             current_move = f"{current_run.move_number:02d}"
         id_folder = Path(session_folder, "configs", f"{current_move}")
@@ -385,12 +400,12 @@ def is_on_stage(original_image, source):
                 original_image = adb_utils.get_new_screenshot()
                 current_run.survival_mode_current_stage+= 1
                 read_stage_name = adb_utils.get_current_stage_name(original_image)
-                real_stage_name = shuffle_config_files.get_stage_real_number(read_stage_name, True)
+                real_stage_name = shuffle_config_files.get_stage_shuffle_move_id(read_stage_name, True)
                 if real_stage_name == "NONE":
                     time.sleep(4)
                     original_image = adb_utils.get_new_screenshot()
                     read_stage_name = adb_utils.get_current_stage_name(original_image)
-                    real_stage_name = shuffle_config_files.get_stage_real_number(read_stage_name, True)
+                    real_stage_name = shuffle_config_files.get_stage_shuffle_move_id(read_stage_name, True)
                 moves = adb_utils.get_moves_left(original_image)
                 stage_text = adb_utils.get_current_stage_number(original_image)
                 current_run.survival_mode_current_stage_name = real_stage_name
@@ -401,9 +416,13 @@ def is_on_stage(original_image, source):
                 time.sleep(2)
                 original_image = adb_utils.get_new_screenshot()
                 stage_text = adb_utils.get_current_stage_number(original_image)
+            elif custom_utils.is_escalation_battle():
+                time.sleep(4)
+                stage_text = adb_utils.get_current_stage_number(original_image)
             else:
                 stage_text = adb_utils.get_current_stage_number(original_image)
-            custom_utils.send_telegram_message(f"Stage - {stage_text}")
+            if not custom_utils.is_survival_mode():
+                custom_utils.send_telegram_message(f"Stage - {stage_text}")
             current_run.first_move = True
             current_run.stage_timer = time.time()
             current_run.move_number = 0
@@ -425,10 +444,12 @@ def is_on_stage(original_image, source):
                 original_image = adb_utils.get_new_screenshot()
                 custom_utils.ended_the_stage()
                 if "---" in adb_utils.get_end_stage_score(original_image):
+                    custom_utils.send_telegram_message(f"Lost Survival Mode at stage {current_run.survival_mode_current_stage}")
                     custom_utils.ended_the_stage(False)
                     current_run.clear_survival_variables()
                 elif current_run.survival_mode_current_stage == 60:
                     custom_utils.ended_the_stage(True)
+                    custom_utils.send_telegram_message(f"Won Survival Mode")
                     current_run.clear_survival_variables()
             else:
                 if custom_utils.is_stage_pause():
@@ -490,7 +511,7 @@ def start_from_helper(pokemon_list: list[Pokemon], has_barriers, root: "ImageSel
             result = verify_or_enter_stage(current_screen_image, source)
             if result is not None:
                 return result
-        if current_run.first_move and custom_utils.is_survival_mode():
+        if current_run.first_move and (custom_utils.is_survival_mode() or custom_utils.is_escalation_battle()):
             current_screen_image = adb_utils.get_new_screenshot()
         can_swipe = can_swipe and not forced_swipe_skip and is_swipe_enabled(source)
         verify_drops_logic(current_screen_image)
