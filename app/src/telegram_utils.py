@@ -115,7 +115,8 @@ class TelegramBot:
     async def status(self, update: Update, context: CallbackContext):
         seconds_time = int((datetime.now() - current_run.survival_current_stage_info.get("Start Time", datetime.now())).total_seconds())
         stage_name = current_run.survival_current_stage_info.get("Stage")
-        custom_utils.send_telegram_message(f"At Stage {current_run.survival_mode_current_stage} ({stage_name}) for {seconds_time} seconds")
+        moves = current_run.survival_current_stage_info.get("Starting Moves")
+        custom_utils.send_telegram_message(f"At Stage {current_run.survival_mode_current_stage} ({stage_name}) with {moves} moves for {seconds_time} seconds")
 
     def execute_helper(self, update: Update, context: CallbackContext):
         result = self.root.execute_board_analysis(source="manual")

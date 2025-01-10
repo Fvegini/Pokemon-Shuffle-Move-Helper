@@ -1,5 +1,5 @@
-<?xml version="1.0" encoding="UTF-8"?><sqlb_project><db path="shuffle.sqlite3" readonly="0" foreign_keys="1" case_sensitive_like="0" temp_store="0" wal_autocheckpoint="1000" synchronous="2"/><attached/><window><main_tabs open="structure browser pragmas query" current="3"/></window><tab_structure><column_width id="0" width="300"/><column_width id="1" width="0"/><column_width id="2" width="100"/><column_width id="3" width="2520"/><column_width id="4" width="0"/><expanded_item id="0" parent="1"/><expanded_item id="1" parent="1"/><expanded_item id="2" parent="1"/><expanded_item id="3" parent="1"/></tab_structure><tab_browse><table title="survival_mode" custom_title="0" dock_id="5" table="4,13:mainsurvival_mode"/><dock_state state="000000ff00000000fd00000001000000020000083b00000398fc0100000004fc000000000000043b0000000000fffffffa000000000100000002fb000000160064006f0063006b00420072006f00770073006500310100000000ffffffff0000000000000000fb000000160064006f0063006b00420072006f00770073006500320100000000ffffffff0000000000000000fb000000160064006f0063006b00420072006f00770073006500330100000000ffffffff0000000000000000fb000000160064006f0063006b00420072006f007700730065003401000000000000043b0000000000000000fb000000160064006f0063006b00420072006f007700730065003501000000000000083b0000011e00ffffff0000083b0000000000000004000000040000000800000008fc00000000"/><default_encoding codec=""/><browse_table_settings><table schema="main" name="survival_mode" show_row_id="0" encoding="" plot_x_axis="" unlock_view_pk="_rowid_" freeze_columns="0"><sort/><column_widths><column index="1" value="39"/><column index="2" value="135"/><column index="3" value="91"/><column index="4" value="71"/><column index="5" value="121"/><column index="6" value="127"/><column index="7" value="98"/><column index="8" value="46"/><column index="9" value="73"/><column index="10" value="114"/><column index="11" value="135"/><column index="12" value="70"/><column index="13" value="68"/><column index="14" value="94"/><column index="15" value="300"/><column index="16" value="67"/><column index="17" value="75"/></column_widths><filter_values/><conditional_formats/><row_id_formats/><display_formats/><hidden_columns/><plot_y_axes/><global_filter/></table></browse_table_settings></tab_browse><tab_sql><sql name="DELETE QUERIES">-- SELECT * FROM survival_mode
-DELETE FROM survival_mode
+<?xml version="1.0" encoding="UTF-8"?><sqlb_project><db path="shuffle.sqlite3" readonly="0" foreign_keys="1" case_sensitive_like="0" temp_store="0" wal_autocheckpoint="1000" synchronous="2"/><attached/><window><main_tabs open="structure browser pragmas query" current="3"/></window><tab_structure><column_width id="0" width="300"/><column_width id="1" width="0"/><column_width id="2" width="100"/><column_width id="3" width="2520"/><column_width id="4" width="0"/><expanded_item id="0" parent="1"/><expanded_item id="1" parent="1"/><expanded_item id="2" parent="1"/><expanded_item id="3" parent="1"/></tab_structure><tab_browse><table title="survival_mode" custom_title="0" dock_id="5" table="4,13:mainsurvival_mode"/><dock_state state="000000ff00000000fd00000001000000020000083b00000398fc0100000004fc000000000000043b0000000000fffffffa000000000100000002fb000000160064006f0063006b00420072006f00770073006500310100000000ffffffff0000000000000000fb000000160064006f0063006b00420072006f00770073006500320100000000ffffffff0000000000000000fb000000160064006f0063006b00420072006f00770073006500330100000000ffffffff0000000000000000fb000000160064006f0063006b00420072006f007700730065003401000000000000043b0000000000000000fb000000160064006f0063006b00420072006f007700730065003501000000000000083b0000016b00ffffff0000083b0000000000000004000000040000000800000008fc00000000"/><default_encoding codec=""/><browse_table_settings><table schema="main" name="survival_mode" show_row_id="0" encoding="" plot_x_axis="" unlock_view_pk="_rowid_" freeze_columns="0"><sort/><column_widths><column index="1" value="39"/><column index="2" value="278"/><column index="3" value="91"/><column index="4" value="71"/><column index="5" value="121"/><column index="6" value="127"/><column index="7" value="98"/><column index="8" value="46"/><column index="9" value="73"/><column index="10" value="114"/><column index="11" value="255"/><column index="12" value="70"/><column index="13" value="68"/><column index="14" value="94"/><column index="15" value="300"/><column index="16" value="67"/><column index="17" value="75"/></column_widths><filter_values/><conditional_formats/><row_id_formats/><display_formats/><hidden_columns/><plot_y_axes/><global_filter/></table></browse_table_settings></tab_browse><tab_sql><sql name="DELETE QUERIES*">SELECT * FROM survival_mode
+-- DELETE FROM survival_mode
 WHERE id in (
 SELECT id
 FROM (
@@ -10,8 +10,8 @@ FROM (
 WHERE record_numbers &gt; 60
 );
 
--- SELECT * FROM survival_mode
-DELETE FROM survival_mode
+SELECT * FROM survival_mode
+-- DELETE FROM survival_mode
 WHERE id IN (
     SELECT id
     FROM (
@@ -21,42 +21,46 @@ WHERE id IN (
     ) subquery
     WHERE complete_run = 0
 );
-
-</sql><sql name="WINNING GROUPS*">WITH mode AS (SELECT 'all' AS value)
-SELECT 
-    CASE 
-        WHEN mode.value = 'daily' THEN DATE(id)
-        WHEN mode.value = 'weekly' THEN strftime('%Y-%W', id)
-        WHEN mode.value = 'yearly' THEN strftime('%Y', id)
-        WHEN mode.value = 'all' THEN 'All'
-    END AS date_group,
-    current_team,
-    SUM(last_run_stage) AS total_complete_runs,
-    SUM(CASE WHEN stage_number = 50 AND won_stage = 1 THEN 1 ELSE 0 END) AS won_stage_50,
-    SUM(CASE WHEN stage_number = 55 AND won_stage = 1 THEN 1 ELSE 0 END) AS won_stage_55,
-    SUM(CASE WHEN stage_number = 60 AND won_stage = 1 THEN 1 ELSE 0 END) AS won_stage_60,
-    COUNT(*) as total_stages_won,
-    CASE 
-        WHEN SUM(CASE WHEN stage_number = 60 AND won_stage = 1 THEN 1 ELSE 0 END) &gt; 0 
-        THEN CAST((SUM(CASE WHEN stage_number = 60 AND won_stage = 1 THEN 1 ELSE 0 END) * 100.0 / SUM(last_run_stage)) AS INTEGER)
-        ELSE 0 
-    END AS win_ratio_60,
-    CASE 
-        WHEN SUM(CASE WHEN stage_number = 55 AND won_stage = 1 THEN 1 ELSE 0 END) &gt; 0
-        THEN CAST((SUM(CASE WHEN stage_number = 55 AND won_stage = 1 THEN 1 ELSE 0 END) * 100.0 / SUM(last_run_stage)) AS INTEGER)
-        ELSE 0
-    END AS win_ratio_stage_55,
-    CASE 
-        WHEN SUM(CASE WHEN stage_number = 50 AND won_stage = 1 THEN 1 ELSE 0 END) &gt; 0
-        THEN CAST((SUM(CASE WHEN stage_number = 50 AND won_stage = 1 THEN 1 ELSE 0 END) * 100.0 / SUM(last_run_stage)) AS INTEGER)
-        ELSE 0
-    END AS win_ratio_stage_50
-FROM 
-    survival_mode, mode
-GROUP BY 
-    date_group, current_team
-ORDER BY 
-    date_group DESC, current_team;
+
+
+-- SELECT * FROM survival_mode
+-- DELETE FROM survival_mode
+-- WHERE id = '2025-01-10 13:17:59.518116';
+</sql><sql name="WINNING GROUPS*">WITH mode AS (SELECT 'all' AS value)
+SELECT 
+    CASE 
+        WHEN mode.value = 'daily' THEN DATE(id)
+        WHEN mode.value = 'weekly' THEN strftime('%Y-%W', id)
+        WHEN mode.value = 'yearly' THEN strftime('%Y', id)
+        WHEN mode.value = 'all' THEN 'All'
+    END AS date_group,
+    current_team,
+    SUM(last_run_stage) AS total_complete_runs,
+--     SUM(CASE WHEN stage_number = 50 AND won_stage = 1 THEN 1 ELSE 0 END) AS won_stage_50,
+--     SUM(CASE WHEN stage_number = 55 AND won_stage = 1 THEN 1 ELSE 0 END) AS won_stage_55,
+--     SUM(CASE WHEN stage_number = 60 AND won_stage = 1 THEN 1 ELSE 0 END) AS won_stage_60,
+--     COUNT(*) as total_stages_won,
+    CASE 
+        WHEN SUM(CASE WHEN stage_number = 60 AND won_stage = 1 THEN 1 ELSE 0 END) &gt; 0 
+        THEN CAST((SUM(CASE WHEN stage_number = 60 AND won_stage = 1 THEN 1 ELSE 0 END) * 100.0 / SUM(last_run_stage)) AS INTEGER)
+        ELSE 0 
+    END AS win_ratio_60,
+    CASE 
+        WHEN SUM(CASE WHEN stage_number = 55 AND won_stage = 1 THEN 1 ELSE 0 END) &gt; 0
+        THEN CAST((SUM(CASE WHEN stage_number = 55 AND won_stage = 1 THEN 1 ELSE 0 END) * 100.0 / SUM(last_run_stage)) AS INTEGER)
+        ELSE 0
+    END AS win_ratio_stage_55,
+    CASE 
+        WHEN SUM(CASE WHEN stage_number = 50 AND won_stage = 1 THEN 1 ELSE 0 END) &gt; 0
+        THEN CAST((SUM(CASE WHEN stage_number = 50 AND won_stage = 1 THEN 1 ELSE 0 END) * 100.0 / SUM(last_run_stage)) AS INTEGER)
+        ELSE 0
+    END AS win_ratio_stage_50
+FROM 
+    survival_mode, mode
+GROUP BY 
+    date_group, current_team
+ORDER BY 
+    date_group DESC, win_ratio_60 DESC, current_team;
 </sql><sql name="LAST RUN STAGES">SELECT id, stage_number, stage, starting_moves, moves, stage_time, won_stage, accumulated_time, current_team
 FROM survival_mode
 WHERE 1 = 1
@@ -101,14 +105,77 @@ ORDER BY time_per_move DESC;</sql><sql name="UPDATE QUERIES">-- UPDATE survival_
 --         ELSE 0
 --     END
 --     WHERE rowid = NEW.rowid;
--- END;</sql><sql name="MOVES PER TEAM PER STAGE">SELECT 
+-- END;</sql><sql name="MOVES PER TEAM PER STAGE*">SELECT 
 	stage, current_team, MAX(moves) AS max_moves, MIN(moves) AS min_moves, AVG(moves) AS avg_moves, COUNT(*) as count
 FROM 
     survival_mode
-WHERE
-		fixed_stage = 0
-	AND id &gt;= datetime(&quot;now&quot;, &quot;-999 days&quot;, &quot;localtime&quot;)
+WHERE
+	1 = 1
+-- 	AND fixed_stage = 0
+	AND id &gt;= datetime(&quot;now&quot;, &quot;-999 days&quot;, &quot;localtime&quot;)
+	AND moves &gt; 0
+	AND current_team in ('Charizard_x,Metagross_s,Sylveon,Hawlucha_s', 'Charizard_x,Metagross_s,Sylveon,Chimchar_w')
 GROUP BY 
     stage, current_team
 ORDER BY
-	stage, current_team</sql><current_tab id="6"/></tab_sql></sqlb_project>
+	stage, current_team</sql><sql name="Compare Teams*">WITH 
+    teams AS (
+        SELECT 
+            'Charizard_x,Metagross_s,Sylveon,Hawlucha_s' AS team1, 
+            'Charizard_x,Metagross_s,Sylveon,Chimchar_w' AS team2
+    ),
+    team1_avg AS (
+        SELECT 
+            stage, 
+            AVG(moves) AS avg_moves_team1
+        FROM 
+            survival_mode 
+        WHERE 
+            id &gt;= datetime(&quot;now&quot;, &quot;-999 days&quot;, &quot;localtime&quot;)
+            AND moves &gt; 0
+            AND current_team = (SELECT team1 FROM teams)
+        GROUP BY 
+            stage
+    ),
+    team2_avg AS (
+        SELECT 
+            stage, 
+            AVG(moves) AS avg_moves_team2
+        FROM 
+            survival_mode 
+        WHERE 
+            id &gt;= datetime(&quot;now&quot;, &quot;-999 days&quot;, &quot;localtime&quot;)
+            AND moves &gt; 0
+            AND current_team = (SELECT team2 FROM teams)
+        GROUP BY 
+            stage
+    )
+SELECT 
+    s.stage, 
+    s.current_team, 
+    MAX(s.moves) AS max_moves, 
+    MIN(s.moves) AS min_moves, 
+    AVG(s.moves) AS avg_moves, 
+    COUNT(*) as count,
+    CASE 
+        WHEN s.current_team = (SELECT team1 FROM teams) THEN 
+            AVG(s.moves) - (SELECT t2.avg_moves_team2 
+                            FROM team2_avg t2 
+                            WHERE t2.stage = s.stage)
+        WHEN s.current_team = (SELECT team2 FROM teams) THEN 
+            (SELECT t1.avg_moves_team1 
+             FROM team1_avg t1 
+             WHERE t1.stage = s.stage) - AVG(s.moves)
+        ELSE NULL
+    END AS avg_moves_difference
+FROM 
+    survival_mode s
+WHERE
+    id &gt;= datetime(&quot;now&quot;, &quot;-999 days&quot;, &quot;localtime&quot;)
+    AND moves &gt; 0
+    AND s.current_team in ((SELECT team1 FROM teams), (SELECT team2 FROM teams))
+GROUP BY 
+    s.stage, s.current_team
+ORDER BY
+    avg_moves_difference DESC, s.stage, s.current_team;
+</sql><current_tab id="0"/></tab_sql></sqlb_project>

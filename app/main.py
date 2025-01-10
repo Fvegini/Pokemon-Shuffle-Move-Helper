@@ -833,6 +833,8 @@ class ImageSelectorApp():
             current_run.clear_survival_variables()
             return
         else:
+            if custom_utils.custom_utils.is_survival_mode() and custom_utils.paused_survival_mode():
+                self.disable_switch("pause_survival")
             self.execute_board_analysis_threaded(source="loop")
             current_run.is_loop_active = True
             if current_run.thread_sleep_timer:
@@ -1046,7 +1048,7 @@ class ImageSelectorApp():
             if key == keyboard.Key.f3:  # Check if the key is F3
                 self.frame3_1_top_1_1_switch_control_loop.toggle()
             elif key == keyboard.Key.f2:
-                    current_run.clear_stage_variables()
+                    current_run.clear_stage_variables(keep_id=True)
                     self.execute_board_analysis_threaded(source="manual")
         except AttributeError:
             pass  # Handle special keys if necessary

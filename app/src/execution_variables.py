@@ -77,7 +77,7 @@ class ExecutionVariable:
         self.survival_mode_current_running_path = None
         self.survival_mode_current_id = datetime.now()
 
-    def clear_stage_variables(self):
+    def clear_stage_variables(self, keep_id=False):
         if self.angry_mode_active:
             log.warning("ANGRY MODE IS BEING DEACTIVATED BY CLEAR_STAGE_VARIABLES")
         if self.last_stage_had_anger:
@@ -88,7 +88,6 @@ class ExecutionVariable:
         self.mega_activated_this_round = False
         self.last_execution_swiped = False
         self.stage_timer = None
-        self.id = None
         self.move_number = 0
         self.first_move = False
         self.angry_mode_active = False
@@ -106,6 +105,8 @@ class ExecutionVariable:
         self.stage_shuflle_move_id = ""
         self.stage_score = ""
         self.remaining_moves = ""
+        if not keep_id:
+            self.id = None
         
     def load_fake_matchs(self, original_icons, keep_current_stage_add=False):
         log.info("RUNNING THE LOAD_FAKE_MATCHS LOGIC")
