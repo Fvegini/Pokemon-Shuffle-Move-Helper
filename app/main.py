@@ -833,8 +833,6 @@ class ImageSelectorApp():
             current_run.clear_survival_variables()
             return
         else:
-            if custom_utils.custom_utils.is_survival_mode() and custom_utils.paused_survival_mode():
-                self.disable_switch("pause_survival")
             self.execute_board_analysis_threaded(source="loop")
             current_run.is_loop_active = True
             if current_run.thread_sleep_timer:
