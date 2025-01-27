@@ -106,7 +106,7 @@ def update_shuffle_move_files(current_board: Board, source=None, stage=None):
     
     if custom_utils.is_survival_mode() or current_run.current_stage == constants.RANDOM or current_run.current_stage == constants.SURVIVAL_MODE or custom_utils.is_escalation_battle():
         stage = get_stage_shuffle_move_id(current_board.stage_name)
-        log.info(f"Current Stage: {current_run.survival_mode_current_stage} - {current_run.survival_current_stage_info.get('Stage Text')} - {current_board.stage_name}")
+        log.info(f"Current Stage: {current_run.survival_mode_current_stage} - {current_run.survival_current_stage_info.get('Stage Text')} - {current_board.stage_name} - {current_run.remaining_moves} moves remaining")
         update_teams_file(complete_names_list, mega_name, current_board.extra_supports_list, current_run.current_stage)
         update_teams_file(complete_names_list, mega_name, current_board.extra_supports_list, current_run.stage_shuflle_move_id)
     update_board_file(names_list, barrier_list, mega_activated, stage)
