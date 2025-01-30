@@ -377,7 +377,7 @@ def match_cell_with_icons(icons_list, cell_list, has_barriers, source, combo_is_
 def mask_already_existant_matches(match_list: List[Match], icons_list) -> List[Match]:
     if len(current_run.fake_matches) == 0 and custom_utils.is_survival_mode():
         for pokemon_icon in icons_list:
-            if pokemon_icon.stage_added:
+            if pokemon_icon.stage_added and not any([match.name == pokemon_icon.name for match in current_run.fake_matches]):
                 match = Match(None, None, pokemon_icon)
                 current_run.fake_matches.append(match)
                 if len(current_run.fake_matches) > 20:
