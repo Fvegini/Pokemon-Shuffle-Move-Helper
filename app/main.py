@@ -544,6 +544,12 @@ class ImageSelectorApp():
         self.search_entry = customtkinter.CTkEntry(self.images_frame, placeholder_text="Search...", textvariable=self.search_var, width=100)
         self.search_entry.grid(row=0, column=1, sticky='w', padx=(0, 0), pady=(5, 0))
         
+        self.new_filter_var = tk.StringVar()
+        self.new_filter_var.trace("w", self.update_image_widgets)
+
+        self.new_filter_entry = customtkinter.CTkEntry(self.images_frame, placeholder_text="New Filter...", textvariable=self.new_filter_var, width=100)
+        self.new_filter_entry.grid(row=0, column=2, sticky='w', padx=(0, 0), pady=(5, 0))
+
         self.image_listbox = tk.Listbox(self.images_frame, selectmode=tk.SINGLE, width=20)
         self.image_listbox.grid(row=1, column=0, sticky='w', padx=(10, 0), pady=(10,10), columnspan=2)
 
@@ -616,6 +622,14 @@ class ImageSelectorApp():
         except:
             pass
 
+    def update_image_widgets(self, *args):
+        new_filter_term = self.new_filter_var.get().lower()
+        for widget in self.get_selected_images_widgets_list():
+            if new_filter_term not in widget[0].master.name.lower():
+                widget[0].master.pack_forget()
+            else:
+                widget[0].master.pack(fill=tk.Y, side=tk.RIGHT, padx=1, anchor=tk.CENTER)
+
     def update_image_list(self, *args):
         search_term = self.search_var.get().lower()
         search_term = search_term.replace(" ", "_")
@@ -654,7 +668,7 @@ class ImageSelectorApp():
 
         # Display in the selected images panel
         selected_image_frame = customtkinter.CTkFrame(self.scrollable_frame)
-        selected_image_frame.pack(fill=tk.Y, side=tk.RIGHT, padx=5, anchor=tk.CENTER)
+        selected_image_frame.pack(fill=tk.Y, side=tk.RIGHT, padx=1, anchor=tk.CENTER)
         selected_image_frame.original_fg_color = selected_image_frame._fg_color
         selected_image_frame.name = selected_file
 
@@ -674,20 +688,20 @@ class ImageSelectorApp():
         selected_image_frame.pokemon = Pokemon(selected_image_frame.name, disabled, stage_added)
 
         checkbox_disable = customtkinter.CTkCheckBox(selected_image_frame, text="Disable", checkbox_width=12, checkbox_height=12, corner_radius=0, onvalue=True, offvalue=False, command=lambda: self.checkbox_disable_clicked(checkbox_disable, selected_image_frame)) #type: ignore
-        checkbox_disable.pack(padx=(25, 0))
+        checkbox_disable.pack(padx=(5, 0), anchor="center")
 
         if disabled:
             checkbox_disable.toggle()
 
         checkbox_stage_added = customtkinter.CTkCheckBox(selected_image_frame, text="Stage Add", checkbox_width=12, checkbox_height=12, corner_radius=0, onvalue=True, offvalue=False, command=lambda: self.checkbox_stage_add_clicked(checkbox_stage_added, selected_image_frame)) #type: ignore
-        checkbox_stage_added.pack(padx=(25, 0))
+        checkbox_stage_added.pack(padx=(5, 0), anchor="center")
         if stage_added:
             checkbox_stage_added.toggle()
 
         if selected_file in custom_utils.mega_list:
             selected_image_frame.pokemon_mega = Pokemon(f"{constants.MEGA_PREFIX}{selected_image_frame.name}", False, False)
             checkbox_mega = customtkinter.CTkCheckBox(selected_image_frame, text="Mega", checkbox_width=12, checkbox_height=12, corner_radius=0, onvalue=True, offvalue=False, command=lambda: self.checkbox_mega_click(checkbox_mega, selected_image_frame)) #type: ignore
-            checkbox_mega.pack(padx=(25, 0))
+            checkbox_mega.pack(padx=(5, 0), anchor="center")
             selected_image_frame.megaed = False
             selected_image_frame.checkbox_mega = checkbox_mega
 
