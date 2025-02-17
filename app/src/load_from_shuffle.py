@@ -12,7 +12,7 @@ if TYPE_CHECKING:
 
 log = log_utils.get_logger()
 exception_list = ["Empty", "Coin", "Metal", "Wood", "Fog"]
-stages_fixed_list = ['BUG', 'DARK', 'DRAGON', 'ELECTRIC', 'FAIRY', 'FIGHTING', 'FIRE', 'FLYING', 'GHOST', 'GRASS', 'GROUND', 'ICE', 'MEOWTH COIN MANIA', 'NORMAL', 'POISON', 'PSYCHIC', 'ROCK', 'STEEL', 'WATER', 'SP_084', 'MEOWTH COIN MANIA', constants.SURVIVAL_MODE, '037', constants.RANDOM]
+stages_fixed_list = ['BUG', 'DARK', 'DRAGON', 'ELECTRIC', 'FAIRY', 'FIGHTING', 'FIRE', 'FLYING', 'GHOST', 'GRASS', 'GROUND', 'ICE', 'NORMAL', 'POISON', 'PSYCHIC', 'ROCK', 'STEEL', 'WATER', 'SP_084', 'MEOWTH COIN MANIA', constants.SURVIVAL_MODE, '037', constants.RANDOM]
 stages_set = set(stages_fixed_list)
 
 class TeamData():
@@ -25,7 +25,7 @@ class TeamData():
 
 class TeamLoader(tk.Toplevel):
      
-    def __init__(self, master = None, root: "ImageSelectorApp" = None, folder = ""): #type: ignore
+    def __init__(self, master = None, root: "ImageSelectorApp" = None, folder = "", forced_team=""): #type: ignore
          
         super().__init__(master = master)
         self.title(f"Select a Team")
@@ -68,20 +68,16 @@ class TeamLoader(tk.Toplevel):
             # self.teams.append(TeamData(team_name, icons, stage_added))
             tmp_teams.append(TeamData(team_name, icons, stage_added))
             if team_name == "SP_084":
-                # self.teams.append(TeamData("MEOWTH COIN MANIA", icons))
-                tmp_teams.append(TeamData("MEOWTH COIN MANIA", icons))
+                # self.teams.append(TeamData(constants.MEOWTH_COIN_MANIA, icons))
+                tmp_teams.append(TeamData(constants.MEOWTH_COIN_MANIA, icons))
             
         tmp_teams.sort(key=lambda x: stages_fixed_list.index(x.stage))
         for stage_name in stages_fixed_list:
             if not any([team for team in tmp_teams if stage_name == team.stage]):
                 tmp_teams.append(TeamData(stage_name, ["_Wood","_Metal"], []))
         self.teams.extend(tmp_teams)
-        # self.teams = sorted(self.teams, key=custom_sort)
 
-        # Create the main Tkinter window
-        # root.title("Team List")
 
-        # Create a Tkinter list with the second element of each tuple
         self.listbox = tk.Listbox(self, selectmode=tk.SINGLE)
         for team in self.teams:
             self.listbox.insert(tk.END, team.stage)
@@ -99,8 +95,17 @@ class TeamLoader(tk.Toplevel):
         self.listbox.grid(row=1, column=1, sticky='ns')
         self.rowconfigure(1, weight=1)
         
-        
         self.configure_initial_geometry()
+
+        if forced_team:
+            search_index_number = 0
+            for index in range(self.listbox.size()):
+                if self.listbox.get(index) == forced_team:
+                    search_index_number = index
+                    break
+            self.listbox.selection_set(search_index_number)
+            self.listbox.activate(search_index_number)
+            self.on_double_click(forced_team=forced_team)
 
 
     def configure_initial_geometry(self):
@@ -116,12 +121,13 @@ class TeamLoader(tk.Toplevel):
         # Set window geometry
         self.geometry(f"{app_width}x{screen_height}+{x}+{y}")
 
-    def on_double_click(self, event):
+    def on_double_click(self, event=None, forced_team=None):
         self.withdraw()
         self.root.destroy_selected_pokemons()
         selected_index = self.listbox.curselection()
         if selected_index:
             current_run.current_stage = self.teams[selected_index[0]].stage
+            log.info(f"Loading the team: {current_run.current_stage}")
             if current_run.current_stage == constants.SURVIVAL_MODE:
                 log.info(f"CURRENT SURVIVAL MODE TEAM: {current_run.survival_mode_current_team}")
                 new_pokemon_list = custom_utils.load_file_as_list(constants.SURVIVAL_MODE_TXT)
@@ -147,7 +153,7 @@ class TeamLoader(tk.Toplevel):
                 self.root.disable_switch("fast_swipe")
                 self.root.activate_switch("expand_mega")
 
-            if current_run.current_stage == "MEOWTH COIN MANIA":
+            if current_run.current_stage == constants.MEOWTH_COIN_MANIA:
                 current_run.current_stage = "SP_084"
             if current_run.current_stage == "SP_084":
                 current_run.current_strategy = constants.move_strategy.get(constants.GRADING_WEEKEND_MEOWTH, "")
@@ -155,6 +161,9 @@ class TeamLoader(tk.Toplevel):
                 current_run.current_strategy = constants.move_strategy.get(constants.GRADING_DISRUPTION_BOOSTED_SCORE, "")
             current_run.has_modifications = True
             selected_team: TeamData = self.teams[selected_index[0]]
+            
+            if forced_team:
+                self.root.master.withdraw()
             #First Append all Stage Added Pokemons
             for pokemon in selected_team.stage_added:
                 self.root.insert_image_widget(f"{pokemon}.png", stage_added=True)
@@ -165,6 +174,10 @@ class TeamLoader(tk.Toplevel):
             for pokemon in selected_team.icons:
                 if not pokemon in selected_team.stage_added and f"{pokemon}.png" in custom_utils.mega_list:
                     self.root.insert_image_widget(f"{pokemon}.png", stage_added=False)
+            if forced_team:
+                self.root.master.deiconify()
+                self.root.configure_initial_geometry()
+                self.root.master.update()
 
 
 
@@ -174,4 +187,5 @@ class TeamLoader(tk.Toplevel):
 
         self.root.stage_combobox.set(current_run.current_stage)
         self.root.strategy_combobox.set(current_run.current_strategy)
+        log.info("Loading Finished")
         self.destroy()

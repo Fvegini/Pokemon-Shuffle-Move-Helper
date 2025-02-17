@@ -4,7 +4,7 @@ import threading
 import asyncio
 import os
 from src.execution_variables import current_run
-from src import log_utils, custom_utils, config_utils, adb_commands
+from src import log_utils, custom_utils, config_utils, adb_commands, constants
 from io import BytesIO
 import time
 from datetime import datetime
@@ -34,7 +34,10 @@ class TelegramBot:
             "get_current_screen_image",
             "execute_move",
             "execute_helper",
-            "status"
+            "status",
+            "load_survival_mode_team",
+            "load_random_team",
+            "load_meowth_team",
         ]
 
         for command in self.commands:
@@ -118,11 +121,24 @@ class TelegramBot:
         moves = current_run.survival_current_stage_info.get("Starting Moves")
         custom_utils.send_telegram_message(f"At Stage {current_run.survival_mode_current_stage} ({stage_name}) with {moves} moves for {seconds_time} seconds")
 
-    def execute_helper(self, update: Update, context: CallbackContext):
+    async def execute_helper(self, update: Update, context: CallbackContext):
         result = self.root.execute_board_analysis(source="manual")
-        # if result and result.result:
-            # await self.bot.send_message(chat_id=USER_ID, text=f"{result.result}")
+        if result and result.result:
+            await self.bot.send_message(chat_id=USER_ID, text=f"{result.result}")
+        else:
+            await self.bot.send_message(chat_id=USER_ID, text=f"Caiu no else")
 
+    async def load_survival_mode_team(self, update: Update, context: CallbackContext):
+        self.root.load_team(constants.SURVIVAL_MODE)
+        await self.bot.send_message(chat_id=USER_ID, text="Team Loaded")
+    
+    async def load_random_team(self, update: Update, context: CallbackContext):
+        self.root.load_team(constants.RANDOM)
+        await self.bot.send_message(chat_id=USER_ID, text="Team Loaded")
+
+    async def load_meowth_team(self, update: Update, context: CallbackContext):
+        self.root.load_team(constants.MEOWTH_COIN_MANIA)
+        await self.bot.send_message(chat_id=USER_ID, text="Team Loaded")
 
     def get_current_screen_screenshot(self):
         screenshot = self.root.adb_utils.get_new_screenshot()

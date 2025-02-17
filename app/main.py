@@ -764,7 +764,10 @@ class ImageSelectorApp():
 
     def destroy_selected_pokemons(self):
         for widget in self.scrollable_frame.winfo_children():
-            widget.destroy()
+            try:
+                widget.destroy()
+            except:
+                pass
         
     def remove_selected_image(self, frame, image_path):
         frame.destroy()
@@ -1036,9 +1039,9 @@ class ImageSelectorApp():
             # log.error(ex)
             pass
 
-    def load_team(self):
+    def load_team(self, forced_team=""):
         self.disable_loop()
-        load_from_shuffle.TeamLoader(root=self)
+        load_from_shuffle.TeamLoader(root=self, forced_team=forced_team)
 
     def show_or_hide_widget(self, widget):
         if self.overlay:
