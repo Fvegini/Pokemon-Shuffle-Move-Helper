@@ -7,7 +7,7 @@ import time
 log = log_utils.get_logger()
 
 def update_adb_connection(reconfigure_screen):
-
+    log.info("Starting update_adb_connection")
     current_run.adb_device = None
     # Initialize the ADB client
     adb = adbutils.AdbClient(host="127.0.0.1", port=5037)

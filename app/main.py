@@ -123,7 +123,7 @@ class ImageSelectorApp():
         # btn1_1_1 = customtkinter.CTkButton(frame1_1_top, text="Board Position", command=lambda: self.show_board_position_selector_app(), image=icon, **self.tab_button_style)
         btn1_1_2 = customtkinter.CTkButton(frame1_1_top, text="Select Current Stage", command=lambda: self.show_select_current_stage(), image=icon, **self.tab_button_style)
         btn1_1_3 = customtkinter.CTkButton(frame1_1_top, text="Get Coordinates", command=lambda: self.show_add_auto_click_icon(), image=icon, **self.tab_button_style)
-        btn1_1_4 = customtkinter.CTkButton(frame1_1_top, text="Reload ADB", command=lambda: adb_commands.update_adb_connection(True), image=icon, **self.tab_button_style)
+        btn1_1_4 = customtkinter.CTkButton(frame1_1_top, text="Reload ADB", command=lambda: self.update_adb_connection(), image=icon, **self.tab_button_style)
 
         # CTkToolTip(btn1_1_1, delay=0.5, message="Configure Shuffle Move Board Position")
         CTkToolTip(btn1_1_2, delay=0.5, message="Configure Current Stage for the Auto loop")
@@ -885,6 +885,9 @@ class ImageSelectorApp():
 
     def show_add_auto_click_icon(self):
         mouse_utils.IconCaptureApp(master=self.master, selector_app=self, filename=None)
+
+    def update_adb_connection(self):
+        threading.Thread(target=adb_commands.update_adb_connection, args=([True]), daemon=True).start()
 
     def disable_loop(self):
         if self.frame3_1_top_1_1_var_control_loop.get():
