@@ -85,7 +85,7 @@ def adb_run_screenshot(skip_on_error=False):
         if skip_on_error:
             return
         update_adb_connection(reconfigure_screen=True)
-        adb_run_screenshot(skip_on_error=True)
+        return adb_run_screenshot(skip_on_error=True)
 
 
 def adb_run_screen_size(skip_on_error=False):
@@ -95,7 +95,7 @@ def adb_run_screen_size(skip_on_error=False):
         if skip_on_error:
             log.debug("Couldn't find ADB active connection")
         update_adb_connection(reconfigure_screen=True)
-        adb_run_screen_size(skip_on_error=True)
+        return adb_run_screen_size(skip_on_error=True)
 
 
 def configure_screen():
